@@ -4,14 +4,12 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from typing import List, Optional, Dict, Any, Union
 import numpy as np
 from PIL import Image
 import io
 import json
 
-from vlm import CLIPModel
-from translation import Translation
+from vlm import CLIP
 from faiss_index import FaissIndex
 
 # Initialize the app
@@ -42,11 +40,7 @@ async def startup_event():
     
     # Initialize CLIP model
     print("Loading CLIP model...")
-    MODEL = CLIPModel()
-    
-    # Initialize translator
-    print("Initializing translator...")
-    TRANSLATOR = Translation(backend="google")
+    MODEL = CLIP()
     
     # Initialize FAISS index if available
     faiss_index_dir = "faiss_index"
@@ -55,12 +49,8 @@ async def startup_event():
     
     if os.path.exists(index_path) and os.path.exists(id2path_path):
         print(f"Loading FAISS index from {index_path}...")
-        FAISS_INDEX = FaissIndex(
-            index_path=index_path,
-            id2path_path=id2path_path,
-            model=MODEL,
-            translator=TRANSLATOR
-        )
+        FAISS_INDEX = FaissIndex(model=MODEL)
+        FAISS_INDEX.load(index_path, id2path_path)
         
         # Print index stats
         stats = FAISS_INDEX.get_stats()
