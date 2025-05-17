@@ -64,12 +64,12 @@ To add a new Vision-Language Model, simply create a new class in `vlm.py` that i
 
 ```python
 class NewModel(BaseVLM):
-    def __init__(self, model_name: str = "path/to/model"):
+    def __init__(self, #TODO):
         # Initialize your model
         
-    def encode_text(self, text: str) -> np.ndarray:
+    def encode_text(self, text):
         # Implement text encoding
         
-    def encode_image(self, image: Image.Image) -> np.ndarray:
+    def encode_image(self, image):
         # Implement image encoding
 ```
