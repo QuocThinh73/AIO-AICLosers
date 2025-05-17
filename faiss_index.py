@@ -8,7 +8,6 @@ class FaissIndex:
     def __init__(self, model):   
         self.model = model
 
-    @classmethod
     def load(self, index_path, id2path_path):
         # Load the FAISS index
         self.index = faiss.read_index(index_path)
@@ -17,7 +16,6 @@ class FaissIndex:
         with open(id2path_path, 'rb') as f:
             self.id2path = pickle.load(f)
 
-    @classmethod
     def build(self, image_paths, output_dir="faiss_index"):
         os.makedirs(output_dir, exist_ok=True)
         id2path = {i: path for i, path in enumerate(image_paths)}
