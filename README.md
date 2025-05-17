@@ -35,8 +35,8 @@ project_root/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/username/text-to-video-search.git
-cd text-to-video-search
+git clone https://github.com/QuocThinh73/HCMAI2025.git
+cd HCMAI2025
 ```
 
 2. Install the requirements:
@@ -53,22 +53,8 @@ mkdir -p data/keyframes faiss_index
 
 ### 1. Extract keyframes and build index
 
-To extract keyframes from your videos and build a FAISS index:
-
 ```python
-from vlm import CLIPModel
-from data_preparation import build_index_from_videos
 
-# Initialize the model
-model = CLIPModel()
-
-# Extract keyframes and build the index
-build_index_from_videos(
-    video_directory="path/to/your/videos",  
-    model=model,
-    output_dir="faiss_index",
-    keyframes_dir="data/keyframes"
-)
 ```
 
 ### 2. Run the API
@@ -80,23 +66,6 @@ python app.py
 ```
 
 The API will be available at http://localhost:8000, with interactive documentation at http://localhost:8000/docs.
-
-### 3. Search for videos
-
-#### Using text:
-
-```
-GET /search/text?query=người đang đi dạo trong công viên&top_k=5
-```
-
-#### Using an image:
-
-```
-POST /search/image
-```
-With form data:
-- file: [image file]
-- top_k: 5 (optional)
 
 ## 📦 Extending with New Models
 
@@ -113,17 +82,3 @@ class NewModel(BaseVLM):
     def encode_image(self, image: Image.Image) -> np.ndarray:
         # Implement image encoding
 ```
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
-
-## 👏 Acknowledgements
-
-- OpenAI for the CLIP model
-- Facebook Research for FAISS
-- Hugging Face for the transformers library

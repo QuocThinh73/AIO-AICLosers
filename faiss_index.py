@@ -180,32 +180,3 @@ class FaissIndex:
             "dimension": self.index.d,
             "num_images": len(self.id2path)
         }
-        
-    def get_video_for_frame(self, frame_path: str) -> Optional[str]:
-        """Get the video path for a given frame/keyframe.
-        
-        Args:
-            frame_path (str): Path to the frame
-            
-        Returns:
-            Optional[str]: Path to the source video, or None if not found
-        """
-        # Extract the video name from the frame path
-        # Assuming format like "video_name_frame_X.jpg"
-        try:
-            frame_basename = os.path.basename(frame_path)
-            video_name = frame_basename.split("_frame_")[0]
-            
-            # Look in common video directories
-            video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm']
-            video_dirs = ['data', 'data/videos', '.']
-            
-            for video_dir in video_dirs:
-                for ext in video_extensions:
-                    video_path = os.path.join(video_dir, f"{video_name}{ext}")
-                    if os.path.exists(video_path):
-                        return video_path
-                        
-            return None
-        except:
-            return None 
