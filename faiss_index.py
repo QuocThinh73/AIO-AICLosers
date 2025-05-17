@@ -20,11 +20,10 @@ class FaissIndex:
 
         embeddings = []
         for path in image_paths:
-            with Image.open(path).convert('RGB') as img:
-                emb = self.model.encode_image(img)
-          
-            emb = emb.detach().cpu().numpy()
-            embeddings.append(emb)
+          with Image.open(path).convert('RGB') as img:
+            emb = self.model.encode_image(img)
+
+          embeddings.append(emb)
             
         all_emb = np.vstack(embeddings).astype(np.float32)
 
