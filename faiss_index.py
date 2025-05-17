@@ -9,7 +9,7 @@ class FaissIndex:
         self.model = model
 
     @classmethod
-    def load(index_path, id2path_path):
+    def load(self, index_path, id2path_path):
         # Load the FAISS index
         self.index = faiss.read_index(index_path)
         
@@ -18,23 +18,20 @@ class FaissIndex:
             self.id2path = pickle.load(f)
 
     @classmethod
-    def build(image_paths, model, output_dir="faiss_index", batch_size=32):
+    def build(self, image_paths, model, output_dir="faiss_index", batch_size=32):
         os.makedirs(output_dir, exist_ok=True)
         id2path = {i: path for i, path in enumerate(image_paths)}
 
         embeddings = []
-        for i in range(0, len(image_paths), batch_size):
-            batch = image_paths[i : i + batch_size]
-            imgs = []
-            for p in batch:
-                try:
-                    imgs.append(Image.open(p).convert('RGB'))
-                except Exception:
-                    imgs.append(Image.new('RGB', (224, 224), 'black'))
-            batch_emb = model.encode_batch_images(imgs)
-            embeddings.append(batch_emb)
-            for img in imgs:
-                img.close()
+        for path in image_paths:
+            try:
+                img = Image.open(path).convert('RGB')
+            except Exception:
+                img = Image.new('RGB', (224, 224), 'black')
+            emb = model.encode_image(img)   # dùng phương thức của bạn
+            embeddings.append(emb)
+            img.close()
+            
         all_emb = np.vstack(embeddings).astype(np.float32)
 
         idx = faiss.IndexFlatIP(all_emb.shape[1])
