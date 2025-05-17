@@ -2,7 +2,7 @@ import clip
 import torch
 import numpy as np
 
-from models.vlm import BaseVLM
+from models.base_vlm import BaseVLM
 
 class CLIP(BaseVLM):
     def __init__(self, clip_backbone="ViT-B/32", device="cpu"):
