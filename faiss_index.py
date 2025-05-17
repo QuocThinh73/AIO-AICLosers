@@ -2,70 +2,52 @@ import os
 import faiss
 import numpy as np
 import pickle
-from typing import List, Dict, Tuple, Union, Optional
 from PIL import Image
-import time
-
-from vlm import BaseVLM
-from translation import Translation
 
 class FaissIndex:
-    """FAISS index for efficient image retrieval using text or image queries."""
-    
-    def __init__(
-        self, 
-        index_path: str,
-        id2path_path: str,
-        model: BaseVLM,
-        translator: Optional[Translation] = None,
-        top_k: int = 10
-    ):
-        """Initialize the FAISS index.
-        
-        Args:
-            index_path (str): Path to the FAISS index file
-            id2path_path (str): Path to the ID to image path mapping file
-            model (BaseVLM): Vision-Language Model for encoding queries
-            translator (Translation, optional): Translator for non-English queries
-            top_k (int): Default number of results to return
-        """
+    def __init__(self, model):   
+        self.model = model
+
+    @classmethod
+    def load(index_path, id2path_path):
         # Load the FAISS index
         self.index = faiss.read_index(index_path)
         
         # Load the ID to path mapping
         with open(id2path_path, 'rb') as f:
             self.id2path = pickle.load(f)
-            
-        self.model = model
-        self.translator = translator
-        self.top_k = top_k
+
+    @classmethod
+    def build(image_paths, model, output_dir="faiss_index", batch_size=32):
+        os.makedirs(output_dir, exist_ok=True)
+        id2path = {i: path for i, path in enumerate(image_paths)}
+
+        embeddings = []
+        for i in range(0, len(image_paths), batch_size):
+            batch = image_paths[i : i + batch_size]
+            imgs = []
+            for p in batch:
+                try:
+                    imgs.append(Image.open(p).convert('RGB'))
+                except Exception:
+                    imgs.append(Image.new('RGB', (224, 224), 'black'))
+            batch_emb = model.encode_batch_images(imgs)
+            embeddings.append(batch_emb)
+            for img in imgs:
+                img.close()
+        all_emb = np.vstack(embeddings).astype(np.float32)
+
+        idx = faiss.IndexFlatIP(all_emb.shape[1])
+        idx.add(all_emb)
+
+        # Save
+        index_path = os.path.join(output_dir, "faiss_index.bin")
+        map_path = os.path.join(output_dir, "id2path.pkl")
+        faiss.write_index(idx, index_path)
+        with open(map_path, 'wb') as f:
+            pickle.dump(id2path, f)
         
-    def text_search(
-        self, 
-        query: str, 
-        top_k: Optional[int] = None,
-        return_scores: bool = True
-    ) -> Union[List[str], Tuple[List[float], List[int], List[str]]]:
-        """Search for images matching a text query.
-        
-        Args:
-            query (str): Text query
-            top_k (int, optional): Number of results to return (default: self.top_k)
-            return_scores (bool): Whether to return similarity scores and indices
-        
-        Returns:
-            If return_scores is True:
-                Tuple[List[float], List[int], List[str]]: Similarity scores, indices, and image paths
-            Else:
-                List[str]: List of image paths
-        """
-        if top_k is None:
-            top_k = self.top_k
-            
-        # Translate query if necessary
-        if self.translator is not None:
-            query = self.translator(query)
-            
+    def text_search(self, query, top_k=5, return_scores=True):
         # Encode the query
         query_embedding = self.model.encode_text(query)
         
@@ -83,28 +65,7 @@ class FaissIndex:
         else:
             return paths
     
-    def image_search(
-        self, 
-        query_image: Union[str, Image.Image], 
-        top_k: Optional[int] = None,
-        return_scores: bool = True
-    ) -> Union[List[str], Tuple[List[float], List[int], List[str]]]:
-        """Search for images similar to a query image.
-        
-        Args:
-            query_image (Union[str, Image.Image]): Query image path or PIL Image
-            top_k (int, optional): Number of results to return (default: self.top_k)
-            return_scores (bool): Whether to return similarity scores and indices
-        
-        Returns:
-            If return_scores is True:
-                Tuple[List[float], List[int], List[str]]: Similarity scores, indices, and image paths
-            Else:
-                List[str]: List of image paths
-        """
-        if top_k is None:
-            top_k = self.top_k
-            
+    def image_search(self, query_image, top_k=5, return_scores=True):   
         # Load the image if a path was provided
         if isinstance(query_image, str):
             query_image = Image.open(query_image).convert('RGB')
@@ -125,56 +86,8 @@ class FaissIndex:
             return scores[0].tolist(), indices[0].tolist(), paths
         else:
             return paths
-    
-    def save(self, index_path: str, id2path_path: str):
-        """Save the FAISS index and ID to path mapping.
         
-        Args:
-            index_path (str): Path to save the FAISS index
-            id2path_path (str): Path to save the ID to path mapping
-        """
-        # Save the FAISS index
-        faiss.write_index(self.index, index_path)
-        
-        # Save the ID to path mapping
-        with open(id2path_path, 'wb') as f:
-            pickle.dump(self.id2path, f)
-    
-    @classmethod
-    def load(
-        cls, 
-        index_path: str,
-        id2path_path: str,
-        model: BaseVLM,
-        translator: Optional[Translation] = None,
-        top_k: int = 10
-    ) -> 'FaissIndex':
-        """Load a FaissIndex from saved files.
-        
-        Args:
-            index_path (str): Path to the FAISS index file
-            id2path_path (str): Path to the ID to image path mapping file
-            model (BaseVLM): Vision-Language Model for encoding queries
-            translator (Translation, optional): Translator for non-English queries
-            top_k (int): Default number of results to return
-            
-        Returns:
-            FaissIndex: Loaded FAISS index
-        """
-        return cls(
-            index_path=index_path,
-            id2path_path=id2path_path,
-            model=model,
-            translator=translator,
-            top_k=top_k
-        )
-        
-    def get_stats(self) -> Dict[str, int]:
-        """Get statistics about the index.
-        
-        Returns:
-            Dict[str, int]: Dictionary of statistics
-        """
+    def get_stats(self):
         return {
             "num_vectors": self.index.ntotal,
             "dimension": self.index.d,
