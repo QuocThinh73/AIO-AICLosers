@@ -9,10 +9,8 @@ class FaissIndex:
         self.model = model
 
     def load(self, index_path, id2path_path):
-        # Load the FAISS index
         self.index = faiss.read_index(index_path)
-        
-        # Load the ID to path mapping
+
         with open(id2path_path, 'rb') as f:
             self.id2path = pickle.load(f)
 
@@ -22,13 +20,11 @@ class FaissIndex:
 
         embeddings = []
         for path in image_paths:
-            try:
-                img = Image.open(path).convert('RGB')
-            except Exception:
-                img = Image.new('RGB', (224, 224), 'black')
-            emb = self.model.encode_image(img)
+            with Image.open(path).convert('RGB') as img:
+                emb = self.model.encode_image(img)
+          
+            emb = emb.detach().cpu().numpy()
             embeddings.append(emb)
-            img.close()
             
         all_emb = np.vstack(embeddings).astype(np.float32)
 
