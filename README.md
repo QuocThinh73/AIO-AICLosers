@@ -1,15 +1,6 @@
-# Text-to-Video Search with Vision-Language Models
+# Text-based Image Retrieval 
 
-This project allows you to search videos based on text descriptions using Vision-Language Models (VLMs) like CLIP. It supports both Vietnamese and English queries through an integrated translation module.
-
-## 🌟 Features
-
-- **Cross-modal search**: Search for videos using either text descriptions or example images
-- **Multilingual support**: Automatic translation from Vietnamese to English
-- **Modular design**: Easily extendable with new VLM models
-- **Efficient retrieval**: Fast similarity search using FAISS indices
-- **API-based interface**: Simple REST API built with FastAPI
-- **Keyframe extraction**: Automatic extraction of keyframes from videos
+HCMAI Challenge 2025
 
 ## 📋 Project Structure
 
