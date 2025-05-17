@@ -1,7 +1,10 @@
 import clip
 import torch
+import numpy as np
 
-class MyCLIP(BaseVLM):
+from models.vlm import BaseVLM
+
+class CLIP(BaseVLM):
     def __init__(self, clip_backbone="ViT-B/32", device="cpu"):
         self.device = device
         self.model, self.processor = clip.load(clip_backbone, device=device)

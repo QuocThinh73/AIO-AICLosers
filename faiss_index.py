@@ -18,7 +18,7 @@ class FaissIndex:
             self.id2path = pickle.load(f)
 
     @classmethod
-    def build(self, image_paths, model, output_dir="faiss_index", batch_size=32):
+    def build(self, image_paths, output_dir="faiss_index"):
         os.makedirs(output_dir, exist_ok=True)
         id2path = {i: path for i, path in enumerate(image_paths)}
 
@@ -28,7 +28,7 @@ class FaissIndex:
                 img = Image.open(path).convert('RGB')
             except Exception:
                 img = Image.new('RGB', (224, 224), 'black')
-            emb = model.encode_image(img)   # dùng phương thức của bạn
+            emb = self.model.encode_image(img)
             embeddings.append(emb)
             img.close()
             
