@@ -14,7 +14,7 @@ class FaissIndex:
         with open(id2path_path, 'rb') as f:
             self.id2path = pickle.load(f)
 
-    def build(self, image_paths, output_dir="faiss_index"):
+    def build(self, image_paths, model_name, output_dir="database"):
         os.makedirs(output_dir, exist_ok=True)
         id2path = {i: path for i, path in enumerate(image_paths)}
 
@@ -31,8 +31,8 @@ class FaissIndex:
         idx.add(all_emb)
 
         # Save
-        index_path = os.path.join(output_dir, "faiss_index.bin")
-        map_path = os.path.join(output_dir, "id2path.pkl")
+        index_path = os.path.join(output_dir, f"{model_name}_faiss.bin")
+        map_path = os.path.join(output_dir, f"{model_name}_id2path.pkl")
         faiss.write_index(idx, index_path)
         with open(map_path, 'wb') as f:
             pickle.dump(id2path, f)
