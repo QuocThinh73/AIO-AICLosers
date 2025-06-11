@@ -18,11 +18,13 @@ class BLIP2(BaseVLM):
         with torch.no_grad():
             image_features = self.model.extract_features({"image": image_tensor, "text_input": [""]}, mode="image")
         image_features = image_features.image_embeds[:, 0, :]
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         return image_features.cpu().numpy().astype(np.float32).reshape(-1)
 
     def encode_text(self, text: str) -> np.ndarray:
-        text_input = self.txt_processors["eval"](text).to(self.device)
+        text_input = self.txt_processors["eval"](text)
         with torch.no_grad():
             text_features = self.model.extract_features({"image": None, "text_input": [text_input]}, mode="text")
         text_features = text_features.text_embeds[:, 0, :]
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
         return text_features.cpu().numpy().astype(np.float32).reshape(-1)
