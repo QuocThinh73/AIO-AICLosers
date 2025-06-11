@@ -37,7 +37,17 @@ class FaissIndex:
         with open(map_path, 'wb') as f:
             pickle.dump(id2path, f)
         
-    def text_search(self, query, top_k=5, return_scores=True):
+    def min_max_normalize(self, scores):
+        min_score = np.min(scores)
+        max_score = np.max(scores)
+        return (scores - min_score) / (max_score - min_score)
+
+    def z_score_normalize(self, scores):
+        mean_score = np.mean(scores)
+        std_score = np.std(scores)
+        return (scores - mean_score) / std_score 
+    
+    def text_search(self, query, top_k=5, return_scores=True, normalize_method='min_max'):
         # Encode the query
         query_embedding = self.model.encode_text(query)
         
@@ -47,6 +57,12 @@ class FaissIndex:
         # Search the index
         scores, indices = self.index.search(query_embedding, top_k)
         
+        # Normalize the scores after search
+        if normalize_method == 'min_max':
+            scores = self.min_max_normalize(scores[0])
+        elif normalize_method == 'z_score':
+            scores = self.z_score_normalize(scores[0])
+        
         # Get the image paths for the results
         paths = [self.id2path[int(idx)] for idx in indices[0]]
         
@@ -55,7 +71,7 @@ class FaissIndex:
         else:
             return paths
     
-    def image_search(self, query_image, top_k=5, return_scores=True):   
+    def image_search(self, query_image, top_k=5, return_scores=True, normalize_method='min_max'):   
         # Load the image if a path was provided
         if isinstance(query_image, str):
             query_image = Image.open(query_image).convert('RGB')
@@ -68,6 +84,12 @@ class FaissIndex:
         
         # Search the index
         scores, indices = self.index.search(query_embedding, top_k)
+        
+        # Normalize the scores after search
+        if normalize_method == 'min_max':
+            scores = self.min_max_normalize(scores[0])
+        elif normalize_method == 'z_score':
+            scores = self.z_score_normalize(scores[0])
         
         # Get the image paths for the results
         paths = [self.id2path[int(idx)] for idx in indices[0]]
