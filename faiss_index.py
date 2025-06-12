@@ -37,7 +37,7 @@ class FaissIndex:
         with open(map_path, 'wb') as f:
             pickle.dump(id2path, f)
     
-    def text_search(self, query, top_k=5, return_scores=True, normalize_method='min_max'):
+    def text_search(self, query, top_k=5, return_scores=True):
         # Encode the query
         query_embedding = self.model.encode_text(query)
         
