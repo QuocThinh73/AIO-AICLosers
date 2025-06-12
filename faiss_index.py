@@ -47,12 +47,6 @@ class FaissIndex:
         # Search the index
         scores, indices = self.index.search(query_embedding, top_k)
         
-        # Normalize the scores after search
-        if normalize_method == 'min_max':
-            scores = self.min_max_normalize(scores[0])
-        elif normalize_method == 'z_score':
-            scores = self.z_score_normalize(scores[0])
-        
         # Get the image paths for the results
         paths = [self.id2path[int(idx)] for idx in indices[0]]
         
