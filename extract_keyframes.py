@@ -55,9 +55,8 @@ def main():
                         start, end = map(int, parts)
                         shots.append((start, end))
             # Tìm file video tương ứng
-            # Bạn chỉnh lại nếu video_name không khớp tên file gốc
             video_path = None
-            for ext in ['.mp4', '.avi', '.mov', '.mkv']:
+            for ext in ['.mp4', '.avi', '.mov3', '.mkv']:
                 candidate = os.path.join(VIDEO_FOLDER, video_name + ext)
                 if os.path.isfile(candidate):
                     video_path = candidate
