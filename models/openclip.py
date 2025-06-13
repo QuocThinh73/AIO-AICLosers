@@ -1,5 +1,5 @@
 import torch
-import models.openclip as openclip
+import open_clip
 import numpy as np
 
 from models.base_vlm import BaseVLM
@@ -7,9 +7,9 @@ from models.base_vlm import BaseVLM
 class OpenCLIP(BaseVLM):
     def __init__(self, backbone, pretrained, device="cpu"):
         self.device = device
-        self.model, _, self.preprocess = openclip.create_model_and_transforms(backbone, pretrained)
+        self.model, _, self.preprocess = open_clip.create_model_and_transforms(backbone, pretrained)
         self.model.eval()
-        self.tokenizer = openclip.get_tokenizer(backbone)
+        self.tokenizer = open_clip.get_tokenizer(backbone)
 
     def encode_image(self, image):
         image = self.preprocess(image).unsqueeze(0)
