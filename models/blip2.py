@@ -9,7 +9,7 @@ class BLIP2(BaseVLM):
     def __init__(self, model_type="pretrain", device="cpu"):
         self.device = device
         self.model, self.vis_processors, self.txt_processors = load_model_and_preprocess(
-            name="blip2_feature_extractor", model_type=model_type, is_eval=True, device=device
+            name="blip2_feature_extractor", model_type=model_type, is_eval=True, device=self.device
         )
         self.model.eval()
 
