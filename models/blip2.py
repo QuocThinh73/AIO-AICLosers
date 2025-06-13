@@ -1,7 +1,6 @@
 from lavis.models import load_model_and_preprocess
 import torch
 import numpy as np
-from PIL import Image
 
 from models.base_vlm import BaseVLM
 
