@@ -8,9 +8,9 @@ from PIL import Image
 sys.stdout.reconfigure(encoding='utf-8')
 
 try:
-    from models.clip import CLIP
-    from models.openclip import OpenCLIP
-    from faiss_index import FaissIndex
+    from .models.clip import CLIP
+    from .models.openclip import OpenCLIP
+    from .faiss_index import FaissIndex
 except ImportError as e:
     print(f"Lỗi import: {e}")
     print("Vui lòng đảm bảo đã cài đặt đầy đủ các thư viện cần thiết.")

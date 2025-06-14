@@ -103,12 +103,24 @@ function updateModelInfo(modelName) {
     modelInfo.style.color = '#666';
 }
 
+// Lấy giá trị top-k từ thanh trượt
+const topKSlider = document.getElementById('topK');
+const topKValue = document.getElementById('topKValue');
+
+// Cập nhật giá trị hiển thị khi thanh trượt thay đổi
+if (topKSlider && topKValue) {
+    topKSlider.addEventListener('input', function() {
+        topKValue.textContent = this.value;
+    });
+}
+
 // Xử lý tìm kiếm
 function handleSearch(e) {
     e.preventDefault();
     
     const query = searchInput.value.trim();
     const model = modelSelect.value;
+    const topK = topKSlider ? parseInt(topKSlider.value) : 10;
     
     // Validate input
     if (!query) {
@@ -121,7 +133,7 @@ function handleSearch(e) {
         return;
     }
     
-    console.log('Đang tìm kiếm:', { query, model });
+    console.log('Đang tìm kiếm:', { query, model, topK });
     
     // Hiển thị loading
     if (loadingDiv) loadingDiv.style.display = 'flex';
@@ -142,7 +154,7 @@ function handleSearch(e) {
     // Thêm tham số vào URL
     url.searchParams.append('query', query);
     url.searchParams.append('model_name', model);
-    url.searchParams.append('top_k', '12');
+    url.searchParams.append('top_k', topK.toString());
     
     // Gọi API tìm kiếm với GET
     fetch(url.toString(), {

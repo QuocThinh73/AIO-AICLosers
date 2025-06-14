@@ -28,6 +28,11 @@
                 <select id="modelSelect" class="search-input" style="max-width: 200px;">
                     <option value="">Đang tải models...</option>
                 </select>
+                <div class="topk-slider" style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
+                    <label for="topK" style="white-space: nowrap;">Top K:</label>
+                    <input type="range" id="topK" name="topK" min="1" max="50" value="10" class="slider">
+                    <span id="topKValue">10</span>
+                </div>
                 <button type="submit" class="btn">
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>

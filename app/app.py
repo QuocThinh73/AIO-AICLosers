@@ -6,8 +6,15 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 import torch
-import clip
-import open_clip
+import sys
+
+# Add the root directory to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+
+from models.clip import CLIP
+from models.openclip import OpenCLIP
+from app.faiss_index import FaissIndex
 
 # Khởi tạo Flask app
 app = Flask(__name__, 
@@ -43,18 +50,15 @@ for folder in [app.config['UPLOAD_FOLDER'],
 
 # Khởi tạo models và FAISS indexes
 models = {}
-faiss_indexes = {}
-id_maps = {}
+faiss_handlers = {}
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def load_models_and_indexes():
     """Tải các model và FAISS indexes từ thư mục database"""
-    global models, faiss_indexes, id_maps
+    global models, faiss_handlers
     
     # In thông tin thư mục database (sử dụng encoding phù hợp cho Windows)
-    import sys
     import io
-    # Đặt lại stdout để hỗ trợ in Unicode trên Windows
     if sys.platform == 'win32':
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
     
@@ -66,32 +70,25 @@ def load_models_and_indexes():
     if not os.path.exists(database_path):
         print(f"LỖI: Thư mục {database_path} không tồn tại")
         return
-        
-    # Liệt kê tất cả file trong thư mục
+    
+    # Khởi tạo các models
     try:
-        # Khởi tạo các models
-        models = {}
-
-        # Tải OpenCLIP model
-        print("\nĐang tải OpenCLIP model...")
-        try:
-            openclip_model, _, openclip_preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s34b_b79k')
-            openclip_model = openclip_model.to(device)
-            openclip_tokenizer = open_clip.get_tokenizer('ViT-B-32')
-            models['openclip'] = (openclip_model, openclip_preprocess, openclip_tokenizer)
-            print("Đã tải xong OpenCLIP model")
-        except Exception as e:
-            print(f"Không thể tải OpenCLIP model: {str(e)}")
-            
-        # Tải CLIP model
         print("\nĐang tải CLIP model...")
         try:
-            clip_model, clip_preprocess = clip.load('ViT-B/32', device=device)
-            models['clip'] = (clip_model, clip_preprocess)
+            clip_model = CLIP(device=device)
+            models['clip'] = clip_model
             print("Đã tải xong CLIP model")
         except Exception as e:
             print(f"Không thể tải CLIP model: {str(e)}")
-
+            
+        print("\nĐang tải OpenCLIP model...")
+        try:
+            openclip_model = OpenCLIP(backbone='ViT-B-32', pretrained='laion2b_s34b_b79k', device=device)
+            models['openclip'] = openclip_model
+            print("Đã tải xong OpenCLIP model")
+        except Exception as e:
+            print(f"Không thể tải OpenCLIP model: {str(e)}")
+        
         # In danh sách các model đã tải thành công
         if models:
             print("\nCác model đã tải thành công:")
@@ -99,94 +96,42 @@ def load_models_and_indexes():
                 print(f"- {name}")
         else:
             print("\nCảnh báo: Không có model nào được tải thành công")
-
-        # Liệt kê tất cả file trong thư mục
-        database_files = os.listdir(database_path)
-        print(f"Tìm thấy {len(database_files)} file trong thư mục database:")
-        for f in database_files:
-            print(f"- {f}")
+            return
+            
+        # Tải các FAISS index tương ứng
+        for model_name, model in models.items():
+            index_path = os.path.join(database_path, f'{model_name}_faiss.bin')
+            id_map_path = os.path.join(database_path, f'{model_name}_id2path.pkl')
+            
+            if not os.path.exists(index_path):
+                print(f"Cảnh báo: Không tìm thấy file index cho model {model_name}: {index_path}")
+                continue
+                
+            if not os.path.exists(id_map_path):
+                print(f"Cảnh báo: Không tìm thấy file id map cho model {model_name}: {id_map_path}")
+                continue
+                
+            try:
+                print(f"\nĐang tải FAISS index cho {model_name}...")
+                faiss_handler = FaissIndex(model=model)
+                faiss_handler.load(index_path, id_map_path)
+                faiss_handlers[model_name] = faiss_handler
+                print(f"Đã tải xong FAISS index cho {model_name}")
+            except Exception as e:
+                print(f"Lỗi khi tải FAISS index cho {model_name}: {str(e)}")
+    
     except Exception as e:
-        print(f"Lỗi khi đọc thư mục database: {str(e)}")
-        return
-    
-    # Tìm tất cả các file index trong thư mục database
-    available_models = set()
-    for filename in database_files:
-        if filename.endswith('_faiss.bin'):
-            model_name = filename.replace('_faiss.bin', '')
-            available_models.add(model_name)
-    
-    print(f"\nTìm thấy các model có sẵn: {available_models}")
-    
-    if not available_models:
-        print("Cảnh báo: Không tìm thấy file FAISS index nào trong thư mục database")
-        print("Vui lòng đảm bảo có ít nhất một file có đuôi '_faiss.bin'")
-    
-    # Chỉ tải các model có đầy đủ file cần thiết
-    for model_name in available_models:
-        index_path = os.path.join(database_path, f'{model_name}_faiss.bin')
-        print(f"\nĐang xử lý model: {model_name}")
-        print(f"- Đường dẫn index: {index_path}")
-        
-        # Thử tìm file id_map với các định dạng khác nhau
-        possible_id_maps = [
-            f'{model_name}_id_map.json',
-            f'{model_name}_id2path.json',
-            f'{model_name}_id2path.pkl',
-            f'{model_name}_map.json',
-            f'{model_name}_mapping.json'
-        ]
-        
-        id_map_path = None
-        for possible_map in possible_id_maps:
-            full_path = os.path.join(database_path, possible_map)
-            if os.path.exists(full_path):
-                id_map_path = full_path
-                print(f"- Tìm thấy file ánh xạ: {possible_map}")
-                break
-        
-        if not id_map_path:
-            print(f"Cảnh báo: Không tìm thấy file ánh xạ cho model {model_name}")
-            print("Đã thử các định dạng:", ", ".join(possible_id_maps))
-            continue
-            
-        try:
-            # Tải FAISS index
-            print(f"- Đang tải FAISS index từ: {os.path.basename(index_path)}")
-            faiss_indexes[model_name] = faiss.read_index(index_path)
-            print(f"  -> Đã tải xong FAISS index")
-            
-            # Tải ID map với hỗ trợ nhiều định dạng
-            print(f"- Đang tải file ánh xạ từ: {os.path.basename(id_map_path)}")
-            if id_map_path.endswith('.pkl'):
-                import pickle
-                with open(id_map_path, 'rb') as f:
-                    id_maps[model_name] = pickle.load(f)
-                # Nếu là dict với key là số, chuyển sang string để đồng bộ
-                if id_maps[model_name] and isinstance(next(iter(id_maps[model_name].keys())), (int, np.integer)):
-                    id_maps[model_name] = {str(k): v for k, v in id_maps[model_name].items()}
-            else:
-                with open(id_map_path, 'r', encoding='utf-8') as f:
-                    id_maps[model_name] = json.load(f)
-            
-            print(f"  -> Đã tải xong file ánh xạ, tổng cộng {len(id_maps[model_name])} ảnh")
-            
-        except Exception as e:
-            import traceback
-            print(f"Lỗi khi tải {model_name}:\n{traceback.format_exc()}")
-            if model_name in faiss_indexes:
-                del faiss_indexes[model_name]
-            if model_name in id_maps:
-                del id_maps[model_name]
+        import traceback
+        print(f"Lỗi khi khởi tạo models: {str(e)}\n{traceback.format_exc()}")
     
     # In thông tin các model đã tải
     print("\n" + "="*50)
     print("TÓM TẮT CÁC MODEL ĐÃ TẢI:")
-    if not faiss_indexes:
+    if not faiss_handlers:
         print("KHÔNG CÓ MODEL NÀO ĐƯỢC TẢI THÀNH CÔNG")
     else:
-        for model_name in faiss_indexes.keys():
-            print(f"- {model_name}: {len(id_maps.get(model_name, {}))} ảnh")
+        for model_name, handler in faiss_handlers.items():
+            print(f"- {model_name}: Đã sẵn sàng")
     print("="*50 + "\n")
 
 # Khởi tạo models và indexes khi khởi động ứng dụng
@@ -352,8 +297,7 @@ def search():
         
         # Lấy tham số từ dữ liệu đầu vào
         query = data.get('query')
-        # Sử dụng OpenCLIP làm mặc định
-        model_name = data.get('model_name', 'openclip')
+        model_name = data.get('model_name', 'openclip')  # Mặc định là openclip
         top_k = min(int(data.get('top_k', 12)), 50)  # Giới hạn tối đa 50 kết quả
 
         if not query:
@@ -363,126 +307,61 @@ def search():
         app.logger.info(f'Search params - query: {query}, model: {model_name}, top_k: {top_k}')
 
         # Kiểm tra model có tồn tại không
-        available_models = list(faiss_indexes.keys())
-        if model_name not in available_models:
-            error_msg = f'Model {model_name} not found. Available models: {available_models}'
+        if model_name not in faiss_handlers:
+            available_models = list(faiss_handlers.keys())
+            error_msg = f'Model {model_name} not found or not loaded. Available models: {available_models}'
             app.logger.error(error_msg)
             return jsonify({
                 'error': error_msg,
                 'available_models': available_models
             }), 400
 
-        # Kiểm tra xem model có được load không
-        loaded_models = list(models.keys())
-        if model_name not in loaded_models:
-            error_msg = f'Model {model_name} is not loaded. Available models: {loaded_models}'
-            app.logger.error(error_msg)
-            return jsonify({
-                'error': error_msg,
-                'available_models': loaded_models
-            }), 500
-
-        # Kiểm tra xem có ID map cho model không
-        if model_name not in id_maps or not id_maps[model_name]:
-            error_msg = f'No ID map found for model {model_name}'
-            app.logger.error(error_msg)
-            return jsonify({'error': error_msg}), 500
-
-        # Lấy embedding cho query
-        app.logger.info(f'Getting text embedding for query: {query}')
+        # Thực hiện tìm kiếm
         try:
-            query_embedding = get_text_embedding(query, model_name)
-            app.logger.info(f'Successfully got text embedding. Shape: {query_embedding.shape if hasattr(query_embedding, "shape") else "N/A"}')
-        except Exception as e:
-            error_msg = f'Error getting text embedding: {str(e)}'
-            app.logger.error(error_msg, exc_info=True)
-            return jsonify({'error': error_msg}), 500
-        
-        # Kiểm tra FAISS index
-        if faiss_indexes.get(model_name) is None:
-            error_msg = f'FAISS index for model {model_name} is not loaded'
-            app.logger.error(error_msg)
-            return jsonify({'error': error_msg}), 500
+            app.logger.info(f'Searching with {model_name}...')
+            faiss_handler = faiss_handlers[model_name]
             
-        # Tìm kiếm trong FAISS
-        app.logger.info('Searching in FAISS index...')
-        try:
-            # Đảm bảo query_embedding có đúng shape (1, embedding_dim)
-            if len(query_embedding.shape) == 1:
-                query_embedding = query_embedding.reshape(1, -1)
+            # Gọi phương thức text_search từ FaissIndex
+            scores, indices, paths = faiss_handler.text_search(query, top_k=top_k)
             
-            # Chuyển đổi sang mảng numpy nếu cần
-            if not isinstance(query_embedding, np.ndarray):
-                query_embedding = np.array(query_embedding, dtype=np.float32)
+            app.logger.info(f'Search completed. Found {len(paths)} results')
             
-            # Thực hiện tìm kiếm
-            distances, indices = faiss_indexes[model_name].search(query_embedding, top_k)
-            app.logger.info(f'FAISS search completed. Found {len(indices[0])} results')
-            
-            # Đổi tên biến để nhất quán với phần code bên dưới
-            D, I = distances, indices
-            
-        except Exception as e:
-            error_msg = f'Error during FAISS search: {str(e)}'
-            app.logger.error(error_msg, exc_info=True)
-            return jsonify({'error': error_msg, 'details': str(e)}), 500
-        
-        # Lấy đường dẫn ảnh từ id_map
-        id_map = id_maps.get(model_name, {})
-        if not id_map:
-            app.logger.warning(f'No ID map found for model {model_name}')
-        
-        results = []
-        valid_results = 0
-        
-        for idx, score in zip(I[0], D[0]):
-            if str(idx) in id_map and idx != -1:  # -1 có thể là kết quả không hợp lệ
+            # Tạo danh sách kết quả
+            results = []
+            for score, idx, path in zip(scores, indices, paths):
                 results.append({
-                    'path': id_map[str(idx)],
-                    'score': float(score)  # Chuyển numpy.float32 thành float thông thường
+                    'path': path,
+                    'score': float(score)
                 })
-                valid_results += 1
-        
-        app.logger.info(f'Found {valid_results} valid results out of {len(I[0])} total results')
-        
-        # Sắp xếp theo score (từ thấp đến cao vì đây là khoảng cách)
-        results.sort(key=lambda x: x['score'])
-        
-        # Kiểm tra xem có kết quả nào không
-        if not results:
-            app.logger.warning('No valid results found')
+            
+            # Sắp xếp kết quả theo score (từ cao xuống thấp)
+            results.sort(key=lambda x: x['score'], reverse=True)
+            
+            # Tạo response
             response_data = {
                 'query': query,
                 'model': model_name,
-                'message': 'No results found',
-                'paths': [],
-                'scores': []
+                'paths': [r['path'].replace('data/', '', 1) for r in results],
+                'scores': [r['score'] for r in results],
+                'filenames': [os.path.basename(r['path']) for r in results]
             }
+            
             response = jsonify(response_data)
-            response.headers.add('Access-Control-Allow-Origin', '*')
+            origin = request.headers.get('Origin', '*')
+            if origin in ['http://localhost:5000', 'http://127.0.0.1:5000']:
+                response.headers.add('Access-Control-Allow-Origin', origin)
+            else:
+                response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5000')
             response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+            response.headers.add('Vary', 'Origin')
             return response
-        
-        # Trả về kết quả với CORS headers
-        response_data = {
-            'query': query,
-            'model': model_name,
-            'paths': [r['path'].replace('data/', '', 1) for r in results],  # Remove the first occurrence of 'data/'
-            'scores': [r['score'] for r in results],
-            'filenames': [os.path.basename(r['path']) for r in results]  # Add filenames for display
-        }
-        response = jsonify(response_data)
-        origin = request.headers.get('Origin', '*')
-        if origin in ['http://localhost:5000', 'http://127.0.0.1:5000']:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-        else:
-            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5000')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Vary', 'Origin')
-        return response
-        
+            
+        except Exception as e:
+            error_msg = f'Error during search with {model_name}: {str(e)}'
+            app.logger.error(error_msg, exc_info=True)
+            return jsonify({'error': error_msg, 'details': str(e)}), 500
+            
     except Exception as e:
         error_msg = f'Unexpected error during search: {str(e)}'
         app.logger.error(error_msg, exc_info=True)
@@ -512,20 +391,14 @@ def health_check():
 def list_models():
     """Liệt kê các model đã tải"""
     try:
-        # Lấy danh sách các model có sẵn trong thư mục database
-        available_models = list(faiss_indexes.keys())
-        
-        # Lấy danh sách các model đã được tải vào bộ nhớ
-        loaded_models = list(models.keys())
+        # Lấy danh sách các model đã được tải
+        available_models = list(faiss_handlers.keys())
         
         # Tạo thông tin chi tiết về từng model
         models_info = {}
         for model_name in available_models:
             models_info[model_name] = {
-                'status': 'loaded' if model_name in loaded_models else 'not_loaded',
-                'index': 'available' if model_name in faiss_indexes and faiss_indexes[model_name] is not None else 'missing',
-                'id_map': 'available' if model_name in id_maps and id_maps[model_name] else 'missing',
-                'num_images': len(id_maps.get(model_name, {})),
+                'status': 'loaded',
                 'description': {
                     'openclip': 'OpenCLIP model (ViT-B/32) - better for general image search',
                     'clip': 'Original CLIP model (ViT-B/32) - good for general image search'
@@ -545,7 +418,7 @@ def list_models():
         return jsonify({
             'status': 'error',
             'error': str(e),
-            'available_models': list(faiss_indexes.keys())
+            'available_models': list(faiss_handlers.keys())
         }), 500
 
 @app.route('/api/clear_cache', methods=['POST'])

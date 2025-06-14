@@ -4,6 +4,10 @@ setup(
     name="image-search-app",
     version="0.1.0",
     packages=find_packages(),
+    package_data={
+        'app': ['templates/*', 'static/*', 'static/css/*', 'static/js/*', 'static/images/*']
+    },
+    include_package_data=True,
     install_requires=[
         'flask>=2.0.1',
         'flask-cors>=3.0.10',
