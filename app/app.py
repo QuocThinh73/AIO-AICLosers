@@ -18,8 +18,8 @@ from app.faiss_index import FaissIndex
 
 # Khởi tạo Flask app
 app = Flask(__name__, 
-            static_folder='../static',
-            template_folder='../templates')
+            static_folder='static',
+            template_folder='templates')
 
 # Cấu hình CORS chi tiết hơn
 cors = CORS()
