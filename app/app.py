@@ -1,27 +1,18 @@
 import os
-import json
-import faiss
-import numpy as np
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
-from PIL import Image
 import torch
 import sys
-
-# Add the root directory to Python path
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(project_root)
-
 from models.clip import CLIP
 from models.openclip import OpenCLIP
-from app.faiss_index import FaissIndex
+from faiss_index import FaissIndex
 
 # Khởi tạo Flask app
 app = Flask(__name__, 
             static_folder='static',
             template_folder='templates')
 
-# Cấu hình CORS chi tiết hơn
+# Cấu hình CORS
 cors = CORS()
 cors.init_app(app, resources={
     r"/*": {
@@ -36,7 +27,7 @@ cors.init_app(app, resources={
 
 # Cấu hình
 app.config.update(
-    UPLOAD_FOLDER='static/images',
+    UPLOAD_FOLDER='app/static/images',
     DATA_FOLDER='data',
     DATABASE_FOLDER='database',
     MODEL_DEVICE='cuda' if torch.cuda.is_available() else 'cpu'
@@ -209,59 +200,6 @@ def serve_data(filename):
         app.logger.error(f"Unexpected error in serve_data: {str(e)}", exc_info=True)
         return f"Internal server error: {str(e)}", 500
 
-def get_text_embedding(text, model_name=None):
-    """Lấy embedding cho văn bản sử dụng model đã chọn"""
-    if not text:
-        raise ValueError("Vui lòng nhập văn bản để tìm kiếm")
-        
-    if not models:
-        raise RuntimeError("Không có model nào được tải. Vui lòng kiểm tra lại quá trình khởi tạo.")
-    
-    # Nếu không chỉ định model_name, sử dụng model đầu tiên
-    if model_name is None:
-        model_name = next(iter(models.keys()))
-    
-    if model_name not in models:
-        available_models = list(models.keys())
-        raise ValueError(f"Model '{model_name}' không tồn tại. Các model khả dụng: {available_models}")
-    
-    try:
-        print(f"Đang xử lý văn bản với model: {model_name}")
-        
-        if model_name == 'openclip':
-            # Xử lý OpenCLIP model
-            model, _, tokenizer = models[model_name]
-            text_tokens = tokenizer([text]).to(device)
-            with torch.no_grad(), torch.cuda.amp.autocast():
-                text_features = model.encode_text(text_tokens)
-                text_features = text_features / text_features.norm(dim=1, keepdim=True)
-                
-        elif model_name == 'clip':
-            # Xử lý CLIP model
-            model, _ = models[model_name]
-            text_tokens = clip.tokenize([text], truncate=True).to(device)
-            with torch.no_grad():
-                text_features = model.encode_text(text_tokens)
-                text_features = text_features / text_features.norm(dim=1, keepdim=True)
-        else:
-            raise ValueError(f"Model {model_name} không được hỗ trợ")
-        
-        # Chuyển đổi sang numpy array và đảm bảo kiểu float32
-        if isinstance(text_features, torch.Tensor):
-            text_features = text_features.cpu().numpy()
-        
-        # Đảm bảo kết quả là 2D array (batch_size, embedding_dim)
-        if len(text_features.shape) == 1:
-            text_features = text_features.reshape(1, -1)
-            
-        print(f"Tạo embedding thành công với shape: {text_features.shape}")
-        return text_features.astype('float32')
-        
-    except Exception as e:
-        import traceback
-        error_msg = f"Lỗi trong get_text_embedding (model={model_name}): {str(e)}\n{traceback.format_exc()}"
-        print(f"[LỖI] {error_msg}")
-        raise
 
 @app.route('/api/search', methods=['GET', 'POST', 'OPTIONS'])
 def search():
