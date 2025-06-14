@@ -27,8 +27,6 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -48,6 +46,58 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+
+# Project specific
+.env
+.venv
+venv/
+ENV/
+
+# Data files
+data/*
+!data/.gitkeep
+!data/README.md
+
+# Database files
+database/*
+!database/.gitkeep
+!database/README.md
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# PyCharm
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Local development
+.DS_Store
+Thumbs.db
+
+# Model files
+*.bin
+*.pth
+*.pt
+*.pkl
+
+# IDE specific files
+*.sublime-project
+*.sublime-workspace
+
+# Project specific exclusions
+static/images/*
+!static/images/.gitkeep
+!static/images/no-image.png
 .pytest_cache/
 cover/
 
