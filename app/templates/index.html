@@ -8,13 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1><i class="fas fa-search"></i> Tìm kiếm ảnh bằng văn bản</h1>
-            <p>HCMAI Challenge 2025 - Text-based Image Retrieval</p>
-        </div>
-    </header>
-
     <main class="container">
         <section class="search-section">
             <form id="searchForm" class="search-form">
@@ -30,15 +23,14 @@
                 </select>
                 <div class="topk-slider" style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
                     <label for="topK" style="white-space: nowrap;">Top K:</label>
-                    <input type="range" id="topK" name="topK" min="1" max="50" value="10" class="slider">
-                    <span id="topKValue">10</span>
+                    <input type="range" id="topK" name="topK" min="1" max="100" value="100" class="slider">
+                    <span id="topKValue">100</span>
                 </div>
                 <button type="submit" class="btn">
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
             </form>
             <p id="modelInfo" class="hint">Đang tải thông tin models...</p>
-            <p class="hint">Ví dụ: "chó con dễ thương", "phong cảnh biển lúc hoàng hôn", "người đang chơi đàn guitar"</p>
         </section>
 
         <section class="results-section">

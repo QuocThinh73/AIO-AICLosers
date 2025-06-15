@@ -94,7 +94,6 @@ function updateModelInfo(modelName) {
     if (!modelName) return;
     
     const modelInfoMap = {
-        'blip2': 'BLIP-2: Mô hình đa phương tiện mạnh mẽ từ Salesforce',
         'openclip': 'OpenCLIP: Phiên bản mở của CLIP',
         'clip': 'CLIP: Mô hình đa phương tiện từ OpenAI'
     };
@@ -120,7 +119,7 @@ function handleSearch(e) {
     
     const query = searchInput.value.trim();
     const model = modelSelect.value;
-    const topK = topKSlider ? parseInt(topKSlider.value) : 10;
+    const topK = topKSlider ? parseInt(topKSlider.value) : 100;
     
     // Validate input
     if (!query) {
@@ -243,11 +242,6 @@ function displayResults(data) {
     }
     
     let html = `
-        <div class="search-info" style="margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
-            <p>Kết quả tìm kiếm cho: <strong>${data.query || 'Không có từ khóa'}</strong></p>
-            <p>Sử dụng model: <strong>${data.model || 'Không xác định'}</strong></p>
-            <p>Tìm thấy <strong>${data.paths.length}</strong> kết quả</p>
-        </div>
         <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
     `;
     

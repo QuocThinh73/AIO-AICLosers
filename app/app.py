@@ -2,11 +2,8 @@ import os
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import torch
-import sys
-from models.clip import CLIP
-from models.openclip import OpenCLIP
-from faiss_index import FaissIndex
-from config import *
+from app.config import *
+from app.init_app import load_database
 
 # Khởi tạo Flask app
 app = Flask(__name__, 
@@ -34,114 +31,19 @@ app.config.update(
     DEVICE=DEVICE
 )
 
-# Tạo thư mục nếu chưa tồn tại
-for folder in [app.config['UPLOAD_FOLDER'], 
-               os.path.join(app.config['DATA_FOLDER'], 'keyframes'),
-               app.config['DATABASE_FOLDER']]:
-    os.makedirs(folder, exist_ok=True)
-
-# Khởi tạo models và FAISS indexes
-models = {}
-faiss_handlers = {}
-
-def load_models_and_indexes():
-    """Tải các model và FAISS indexes từ thư mục database"""
-    global models, faiss_handlers
-    
-    # In thông tin thư mục database (sử dụng encoding phù hợp cho Windows)
-    import io
-    if sys.platform == 'win32':
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='ignore')
-    
-    database_path = os.path.abspath(app.config['DATABASE_FOLDER'])
-    print("\n" + "="*50)
-    print(f"Đang tải chỉ mục từ thư mục: {database_path}")
-    
-    # Kiểm tra xem thư mục tồn tại không
-    if not os.path.exists(database_path):
-        print(f"LỖI: Thư mục {database_path} không tồn tại")
-        return
-    
-    # Khởi tạo các models
-    try:
-        print("\nĐang tải CLIP model...")
-        try:
-            clip_model = CLIP(device=DEVICE)
-            models['clip'] = clip_model
-            print("Đã tải xong CLIP model")
-        except Exception as e:
-            print(f"Không thể tải CLIP model: {str(e)}")
-            
-        print("\nĐang tải OpenCLIP model...")
-        try:
-            openclip_model = OpenCLIP(backbone='ViT-B-32', pretrained='laion2b_s34b_b79k', device=DEVICE)
-            models['openclip'] = openclip_model
-            print("Đã tải xong OpenCLIP model")
-        except Exception as e:
-            print(f"Không thể tải OpenCLIP model: {str(e)}")
-        
-        # In danh sách các model đã tải thành công
-        if models:
-            print("\nCác model đã tải thành công:")
-            for name in models.keys():
-                print(f"- {name}")
-        else:
-            print("\nCảnh báo: Không có model nào được tải thành công")
-            return
-            
-        # Tải các FAISS index tương ứng
-        for model_name, model in models.items():
-            index_path = os.path.join(database_path, f'{model_name}_faiss.bin')
-            id_map_path = os.path.join(database_path, f'{model_name}_id2path.pkl')
-            
-            if not os.path.exists(index_path):
-                print(f"Cảnh báo: Không tìm thấy file index cho model {model_name}: {index_path}")
-                continue
-                
-            if not os.path.exists(id_map_path):
-                print(f"Cảnh báo: Không tìm thấy file id map cho model {model_name}: {id_map_path}")
-                continue
-                
-            try:
-                print(f"\nĐang tải FAISS index cho {model_name}...")
-                faiss_handler = FaissIndex(model=model)
-                faiss_handler.load(index_path, id_map_path)
-                faiss_handlers[model_name] = faiss_handler
-                print(f"Đã tải xong FAISS index cho {model_name}")
-            except Exception as e:
-                print(f"Lỗi khi tải FAISS index cho {model_name}: {str(e)}")
-    
-    except Exception as e:
-        import traceback
-        print(f"Lỗi khi khởi tạo models: {str(e)}\n{traceback.format_exc()}")
-    
-    # In thông tin các model đã tải
-    print("\n" + "="*50)
-    print("TÓM TẮT CÁC MODEL ĐÃ TẢI:")
-    if not faiss_handlers:
-        print("KHÔNG CÓ MODEL NÀO ĐƯỢC TẢI THÀNH CÔNG")
-    else:
-        for model_name, handler in faiss_handlers.items():
-            print(f"- {model_name}: Đã sẵn sàng")
-    print("="*50 + "\n")
-
-# Khởi tạo models và indexes khi khởi động ứng dụng
+# Khởi động ứng dụng
+database = {}
 with app.app_context():
-    load_models_and_indexes()
+    database = load_database()
 
 # Routes
 @app.route('/')
 def index():
-    """Trang chủ - hiển thị giao diện tìm kiếm"""
     return render_template('index.html')
 
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Phục vụ các file tĩnh"""
-    return send_from_directory('static', filename)
 
-@app.route('/data/<path:filename>')
-def serve_data(filename):
+@app.route('/data/keyframes/<path:keyframe_name>')
+def get_keyframe(keyframe_name):
     """Serve any file from the data/keyframes directory"""
     try:
         # Define paths
@@ -150,10 +52,10 @@ def serve_data(filename):
         # Log the incoming request
         app.logger.info(f"\n=== New Request ===")
         app.logger.info(f"Request URL: {request.url}")
-        app.logger.info(f"Requested filename: {filename}")
+        app.logger.info(f"Requested filename: {keyframe_name}")
         
         # Clean up the filename
-        clean_filename = os.path.basename(filename).lstrip('/')
+        clean_filename = os.path.basename(keyframe_name).lstrip('/')
         app.logger.info(f"Cleaned filename: {clean_filename}")
         
         # Verify the keyframes directory exists
@@ -235,8 +137,8 @@ def search():
         
         # Lấy tham số từ dữ liệu đầu vào
         query = data.get('query')
-        model_name = data.get('model_name', 'openclip')  # Mặc định là openclip
-        top_k = min(int(data.get('top_k', 12)), 50)  # Giới hạn tối đa 50 kết quả
+        model_name = data.get('model_name')  # Mặc định là openclip
+        top_k = min(int(data.get('top_k', 10)), 100)  # Giới hạn tối thiểu 100 kết quả
 
         if not query:
             app.logger.error('No query provided')
@@ -244,20 +146,10 @@ def search():
 
         app.logger.info(f'Search params - query: {query}, model: {model_name}, top_k: {top_k}')
 
-        # Kiểm tra model có tồn tại không
-        if model_name not in faiss_handlers:
-            available_models = list(faiss_handlers.keys())
-            error_msg = f'Model {model_name} not found or not loaded. Available models: {available_models}'
-            app.logger.error(error_msg)
-            return jsonify({
-                'error': error_msg,
-                'available_models': available_models
-            }), 400
-
         # Thực hiện tìm kiếm
         try:
             app.logger.info(f'Searching with {model_name}...')
-            faiss_handler = faiss_handlers[model_name]
+            faiss_handler = database[f'{model_name}_faiss']
             
             # Gọi phương thức text_search từ FaissIndex
             scores, indices, paths = faiss_handler.text_search(query, top_k=top_k)
@@ -266,7 +158,7 @@ def search():
             
             # Tạo danh sách kết quả
             results = []
-            for score, idx, path in zip(scores, indices, paths):
+            for score, _, path in zip(scores, indices, paths):
                 results.append({
                     'path': path,
                     'score': float(score)
@@ -314,27 +206,23 @@ def health_check():
     status = {
         "status": "ok",
         "service": "image-search-api",
-        "models_loaded": list(models.keys()),
-        "faiss_indexes_loaded": list(faiss_indexes.keys()),
+        "faiss_indexes_loaded": list(database.keys()),
         "device": app.config['DEVICE']
     }
     
-    # Kiểm tra số lượng ảnh trong id_maps
-    for model_name, id_map in id_maps.items():
-        status[f"{model_name}_images"] = len(id_map)
-    
     return jsonify(status)
+
 
 @app.route('/api/models', methods=['GET'])
 def list_models():
     """Liệt kê các model đã tải"""
     try:
         # Lấy danh sách các model đã được tải
-        available_models = list(faiss_handlers.keys())
+        embedding_models = EMBEDDING_MODELS
         
         # Tạo thông tin chi tiết về từng model
         models_info = {}
-        for model_name in available_models:
+        for model_name in embedding_models:
             models_info[model_name] = {
                 'status': 'loaded',
                 'description': {
@@ -345,7 +233,7 @@ def list_models():
         
         return jsonify({
             'status': 'success',
-            'available_models': available_models,
+            'available_models': embedding_models,
             'default_model': 'openclip',
             'models': models_info
         })
@@ -356,26 +244,20 @@ def list_models():
         return jsonify({
             'status': 'error',
             'error': str(e),
-            'available_models': list(faiss_handlers.keys())
+            'available_models': list(database.keys())
         }), 500
 
 @app.route('/api/clear_cache', methods=['POST'])
 def clear_cache():
     """Xóa cache và tải lại models"""
     try:
-        global models, faiss_indexes, id_maps
-        
         # Giải phóng bộ nhớ
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         
-        # Xóa models và indexes cũ
-        models = {}
-        faiss_indexes = {}
-        id_maps = {}
-        
         # Tải lại
-        load_models_and_indexes()
+        global database
+        database = load_database()
         
         response = jsonify({"status": "Cache cleared and models reloaded"})
         response.headers.add('Access-Control-Allow-Origin', '*')
