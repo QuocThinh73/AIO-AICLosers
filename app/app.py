@@ -6,6 +6,7 @@ import sys
 from models.clip import CLIP
 from models.openclip import OpenCLIP
 from faiss_index import FaissIndex
+from config import *
 
 # Khởi tạo Flask app
 app = Flask(__name__, 
@@ -27,10 +28,10 @@ cors.init_app(app, resources={
 
 # Cấu hình
 app.config.update(
-    UPLOAD_FOLDER='app/static/images',
-    DATA_FOLDER='data',
-    DATABASE_FOLDER='database',
-    MODEL_DEVICE='cuda' if torch.cuda.is_available() else 'cpu'
+    UPLOAD_FOLDER=UPLOAD_FOLDER,
+    DATA_FOLDER=DATA_FOLDER,
+    DATABASE_FOLDER=DATABASE_FOLDER,
+    DEVICE=DEVICE
 )
 
 # Tạo thư mục nếu chưa tồn tại
@@ -42,7 +43,6 @@ for folder in [app.config['UPLOAD_FOLDER'],
 # Khởi tạo models và FAISS indexes
 models = {}
 faiss_handlers = {}
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def load_models_and_indexes():
     """Tải các model và FAISS indexes từ thư mục database"""
@@ -66,7 +66,7 @@ def load_models_and_indexes():
     try:
         print("\nĐang tải CLIP model...")
         try:
-            clip_model = CLIP(device=device)
+            clip_model = CLIP(device=DEVICE)
             models['clip'] = clip_model
             print("Đã tải xong CLIP model")
         except Exception as e:
@@ -74,7 +74,7 @@ def load_models_and_indexes():
             
         print("\nĐang tải OpenCLIP model...")
         try:
-            openclip_model = OpenCLIP(backbone='ViT-B-32', pretrained='laion2b_s34b_b79k', device=device)
+            openclip_model = OpenCLIP(backbone='ViT-B-32', pretrained='laion2b_s34b_b79k', device=DEVICE)
             models['openclip'] = openclip_model
             print("Đã tải xong OpenCLIP model")
         except Exception as e:
@@ -316,7 +316,7 @@ def health_check():
         "service": "image-search-api",
         "models_loaded": list(models.keys()),
         "faiss_indexes_loaded": list(faiss_indexes.keys()),
-        "device": app.config['MODEL_DEVICE']
+        "device": app.config['DEVICE']
     }
     
     # Kiểm tra số lượng ảnh trong id_maps
