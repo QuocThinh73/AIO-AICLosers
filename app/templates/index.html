@@ -18,9 +18,6 @@
                     placeholder="Nhập mô tả ảnh bạn muốn tìm..."
                     autocomplete="off"
                     required>
-                <select id="modelSelect" class="search-input" style="max-width: 200px;">
-                    <option value="">Đang tải models...</option>
-                </select>
                 <div class="topk-slider" style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
                     <label for="topK" style="white-space: nowrap;">Top K:</label>
                     <input type="range" id="topK" name="topK" min="1" max="100" value="100" class="slider">
@@ -30,7 +27,9 @@
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
             </form>
-            <p id="modelInfo" class="hint">Đang tải thông tin models...</p>
+            <div class="model-selection">
+                <div id="modelSelect"></div>
+            </div>
         </section>
 
         <section class="results-section">
@@ -47,7 +46,7 @@
 
     <footer>
         <div class="container">
-            <p>© 2025 HCMAI Challenge - Text-based Image Retrieval</p>
+            <p>© 2025 HCMAI Challenge</p>
         </div>
     </footer>
 

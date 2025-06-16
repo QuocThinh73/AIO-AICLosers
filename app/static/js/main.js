@@ -5,7 +5,6 @@ const searchInput = document.getElementById('searchInput');
 const resultsDiv = document.getElementById('results');
 const loadingDiv = document.querySelector('.loading');
 const modelSelect = document.getElementById('modelSelect');
-const modelInfo = document.getElementById('modelInfo');
 
 // Hàm chính
 function initApp() {
@@ -15,7 +14,7 @@ function initApp() {
     if (loadingDiv) loadingDiv.style.display = 'none';
     
     // Kiểm tra các phần tử cần thiết
-    if (!searchForm || !searchInput || !resultsDiv || !modelSelect || !modelInfo) {
+    if (!searchForm || !searchInput || !resultsDiv || !modelSelect) {
         console.error('Không tìm thấy các phần tử cần thiết trên trang');
         return;
     }
@@ -29,8 +28,6 @@ function initApp() {
 
 // Hàm tải danh sách model
 function loadModels() {
-    console.log('Đang tải danh sách model...');
-    
     fetch('/api/models')
         .then(response => {
             if (!response.ok) {
@@ -43,63 +40,37 @@ function loadModels() {
             return response.json();
         })
         .then(data => {
-            console.log('Dữ liệu model:', data);
-            
             // Lấy danh sách model từ phản hồi
-            availableModels = data.available_models || [];
+            availableModels = data.models || [];
             
             if (availableModels.length === 0) {
                 console.warn('Không có model nào khả dụng');
-                modelInfo.textContent = 'Không tìm thấy model nào';
-                modelInfo.style.color = 'orange';
             } else {
                 updateModelSelect();
             }
         })
         .catch(error => {
             console.error('Lỗi khi tải model:', error);
-            modelInfo.textContent = 'Lỗi khi tải danh sách model';
-            modelInfo.style.color = 'red';
         });
 }
 
-// Cập nhật dropdown chọn model
 function updateModelSelect() {
-    console.log('Cập nhật dropdown với models:', availableModels);
+    const modelSelect = document.getElementById('modelSelect');
+    modelSelect.innerHTML = ''; 
     
-    modelSelect.innerHTML = ''; // Xóa các option cũ
-    
-    // Thêm option mặc định
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = '-- Chọn model --';
-    defaultOption.disabled = true;
-    defaultOption.selected = true;
-    modelSelect.appendChild(defaultOption);
-    
-    // Thêm các model vào dropdown
+    // Thêm các model vào checkbox
     availableModels.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model;
-        option.textContent = model;
-        modelSelect.appendChild(option);
-    });
-    
-    // Cập nhật thông tin model
-    updateModelInfo(availableModels[0]);
-}
+        const label = document.createElement('label');
+        label.textContent = model;
 
-// Cập nhật thông tin model
-function updateModelInfo(modelName) {
-    if (!modelName) return;
-    
-    const modelInfoMap = {
-        'openclip': 'OpenCLIP: Phiên bản mở của CLIP',
-        'clip': 'CLIP: Mô hình đa phương tiện từ OpenAI'
-    };
-    
-    modelInfo.textContent = modelInfoMap[modelName] || `Model: ${modelName}`;
-    modelInfo.style.color = '#666';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = model;
+        checkbox.name = 'models';
+
+        label.appendChild(checkbox);
+        modelSelect.appendChild(label);
+    });
 }
 
 // Lấy giá trị top-k từ thanh trượt
@@ -118,7 +89,7 @@ function handleSearch(e) {
     e.preventDefault();
     
     const query = searchInput.value.trim();
-    const model = modelSelect.value;
+    const selectedModels = Array.from(document.querySelectorAll('input[name="models"]:checked')).map(checkbox => checkbox.value);
     const topK = topKSlider ? parseInt(topKSlider.value) : 100;
     
     // Validate input
@@ -127,12 +98,10 @@ function handleSearch(e) {
         return;
     }
     
-    if (!model) {
-        alert('Vui lòng chọn model');
+    if (selectedModels.length === 0) {
+        alert('Vui lòng chọn ít nhất một model');
         return;
     }
-    
-    console.log('Đang tìm kiếm:', { query, model, topK });
     
     // Hiển thị loading
     if (loadingDiv) loadingDiv.style.display = 'flex';
@@ -152,7 +121,7 @@ function handleSearch(e) {
     
     // Thêm tham số vào URL
     url.searchParams.append('query', query);
-    url.searchParams.append('model_name', model);
+    url.searchParams.append('models', selectedModels.join(','));
     url.searchParams.append('top_k', topK.toString());
     
     // Gọi API tìm kiếm với GET
@@ -160,7 +129,6 @@ function handleSearch(e) {
         method: 'GET',
         headers: {
             'Accept': 'application/json'
-            // Không thêm header không cần thiết
         },
         signal: controller.signal
     })
@@ -226,6 +194,7 @@ function handleSearch(e) {
         if (loadingDiv) loadingDiv.style.display = 'none';
     });
 }
+
 
 // Hiển thị kết quả tìm kiếm
 function displayResults(data) {

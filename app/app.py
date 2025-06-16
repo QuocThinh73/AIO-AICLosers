@@ -4,6 +4,7 @@ from flask_cors import CORS
 import torch
 from app.config import *
 from app.init_app import load_database
+from app.rerank import rrf
 
 # Khởi tạo Flask app
 app = Flask(__name__, 
@@ -35,7 +36,8 @@ app.config.update(
 database = {}
 with app.app_context():
     database = load_database()
-
+    
+    
 # Routes
 @app.route('/')
 def index():
@@ -103,92 +105,38 @@ def get_keyframe(keyframe_name):
         return f"Internal server error: {str(e)}", 500
 
 
-@app.route('/api/search', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/api/search', methods=['GET'])
 def search():
-    if request.method == 'OPTIONS':
-        # Xử lý preflight request
-        response = jsonify({'status': 'preflight'})
-        origin = request.headers.get('Origin', '*')
-        if origin in ['http://localhost:5000', 'http://127.0.0.1:5000']:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-        else:
-            response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5000')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        response.headers.add('Access-Control-Max-Age', '600')
-        return response
-    
-    # Xử lý dữ liệu đầu vào
-    if request.method == 'GET':
-        # Lấy tham số từ query string
-        data = request.args
-    else:  # POST
-        # Kiểm tra content-type
-        if not request.is_json:
-            app.logger.error('Invalid content-type. Expected application/json')
-            return jsonify({'error': 'Content-Type must be application/json'}), 400
-        data = request.get_json()
-        if not data:
-            app.logger.error('No data received')
-            return jsonify({'error': 'No data received'}), 400
-    
+    data = request.args
+
     try:
-        app.logger.info('Received search request')
-        
-        # Lấy tham số từ dữ liệu đầu vào
         query = data.get('query')
-        model_name = data.get('model_name')  # Mặc định là openclip
-        top_k = min(int(data.get('top_k', 10)), 100)  # Giới hạn tối thiểu 100 kết quả
-
-        if not query:
-            app.logger.error('No query provided')
-            return jsonify({'error': 'Query is required'}), 400
-
-        app.logger.info(f'Search params - query: {query}, model: {model_name}, top_k: {top_k}')
-
+        models = data.get('models').split(',')
+        top_k = int(data.get('top_k', 100))
+        
         # Thực hiện tìm kiếm
         try:
-            app.logger.info(f'Searching with {model_name}...')
-            faiss_handler = database[f'{model_name}_faiss']
+            list_paths = {}
+            for model in models:
+                faiss_handler = database[f'{model}_faiss']
+                _, _, paths = faiss_handler.text_search(query=query, top_k=top_k)
+                list_paths[model] = paths
             
-            # Gọi phương thức text_search từ FaissIndex
-            scores, indices, paths = faiss_handler.text_search(query, top_k=top_k)
-            
-            app.logger.info(f'Search completed. Found {len(paths)} results')
-            
-            # Tạo danh sách kết quả
-            results = []
-            for score, _, path in zip(scores, indices, paths):
-                results.append({
-                    'path': path,
-                    'score': float(score)
-                })
-            
-            # Sắp xếp kết quả theo score (từ cao xuống thấp)
-            results.sort(key=lambda x: x['score'], reverse=True)
+            # Rerank
+            paths, scores = rrf(list_paths, k_rrf=60)
             
             # Tạo response
             response_data = {
-                'query': query,
-                'model': model_name,
-                'paths': [r['path'].replace('data/', '', 1) for r in results],
-                'scores': [r['score'] for r in results],
-                'filenames': [os.path.basename(r['path']) for r in results]
+                'paths': [r.replace('data/', '', 1) for r in paths],
+                'scores': [r for r in scores],
+                'filenames': [os.path.basename(r) for r in paths]
             }
             
             response = jsonify(response_data)
-            origin = request.headers.get('Origin', '*')
-            if origin in ['http://localhost:5000', 'http://127.0.0.1:5000']:
-                response.headers.add('Access-Control-Allow-Origin', origin)
-            else:
-                response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5000')
-            response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-            response.headers.add('Vary', 'Origin')
             return response
             
         except Exception as e:
-            error_msg = f'Error during search with {model_name}: {str(e)}'
+            error_msg = f'Error during search with {models}: {str(e)}'
             app.logger.error(error_msg, exc_info=True)
             return jsonify({'error': error_msg, 'details': str(e)}), 500
             
@@ -215,54 +163,6 @@ def health_check():
 
 @app.route('/api/models', methods=['GET'])
 def list_models():
-    """Liệt kê các model đã tải"""
-    try:
-        # Lấy danh sách các model đã được tải
-        embedding_models = EMBEDDING_MODELS
-        
-        # Tạo thông tin chi tiết về từng model
-        models_info = {}
-        for model_name in embedding_models:
-            models_info[model_name] = {
-                'status': 'loaded',
-                'description': {
-                    'openclip': 'OpenCLIP model (ViT-B/32) - better for general image search',
-                    'clip': 'Original CLIP model (ViT-B/32) - good for general image search'
-                }.get(model_name, 'No description available')
-            }
-        
-        return jsonify({
-            'status': 'success',
-            'available_models': embedding_models,
-            'default_model': 'openclip',
-            'models': models_info
-        })
-        
-    except Exception as e:
-        import traceback
-        app.logger.error(f"Error in list_models: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'available_models': list(database.keys())
-        }), 500
-
-@app.route('/api/clear_cache', methods=['POST'])
-def clear_cache():
-    """Xóa cache và tải lại models"""
-    try:
-        # Giải phóng bộ nhớ
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
-        # Tải lại
-        global database
-        database = load_database()
-        
-        response = jsonify({"status": "Cache cleared and models reloaded"})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
-    except Exception as e:
-        response = jsonify({"error": str(e)})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response, 500
+    return jsonify({
+        'models': EMBEDDING_MODELS
+    })
