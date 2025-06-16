@@ -51,57 +51,37 @@ def get_keyframe(keyframe_name):
         # Define paths
         keyframes_path = os.path.abspath(os.path.join(app.config['DATA_FOLDER'], 'keyframes'))
         
-        # Log the incoming request
-        app.logger.info(f"\n=== New Request ===")
-        app.logger.info(f"Request URL: {request.url}")
-        app.logger.info(f"Requested filename: {keyframe_name}")
-        
         # Clean up the filename
         clean_filename = os.path.basename(keyframe_name).lstrip('/')
-        app.logger.info(f"Cleaned filename: {clean_filename}")
-        
-        # Verify the keyframes directory exists
-        if not os.path.exists(keyframes_path):
-            app.logger.error(f"Keyframes directory not found: {keyframes_path}")
-            return f"Keyframes directory not found: {keyframes_path}", 500
         
         # List all files in the keyframes directory
         try:
             all_files = os.listdir(keyframes_path)
-            app.logger.info(f"Found {len(all_files)} files in keyframes directory")
         except Exception as e:
-            app.logger.error(f"Error listing directory {keyframes_path}: {e}")
             return f"Error listing directory: {e}", 500
         
         # Try exact match first
         if clean_filename in all_files:
             file_path = os.path.join(keyframes_path, clean_filename)
-            app.logger.info(f"✓ Found exact match: {file_path}")
             return send_from_directory(keyframes_path, clean_filename)
         
         # Try case-insensitive match
         filename_lower = clean_filename.lower()
         for file in all_files:
             if file.lower() == filename_lower:
-                app.logger.info(f"✓ Found case-insensitive match: {file}")
                 return send_from_directory(keyframes_path, file)
         
         # Try to find similar files (same base name, different extension)
         base_name = os.path.splitext(clean_filename)[0]
         similar_files = [f for f in all_files if os.path.splitext(f)[0] == base_name]
         if similar_files:
-            app.logger.info(f"✓ Found similar file: {similar_files[0]}")
             return send_from_directory(keyframes_path, similar_files[0])
         
         # If we get here, log available files and return 404
-        app.logger.error("\n=== File Not Found ===")
-        app.logger.error(f"Requested file: {clean_filename}")
-        app.logger.error(f"Available files (first 20): {all_files[:20]}")
         
         return "File not found", 404
         
     except Exception as e:
-        app.logger.error(f"Unexpected error in serve_data: {str(e)}", exc_info=True)
         return f"Internal server error: {str(e)}", 500
 
 
@@ -137,12 +117,10 @@ def search():
             
         except Exception as e:
             error_msg = f'Error during search with {models}: {str(e)}'
-            app.logger.error(error_msg, exc_info=True)
             return jsonify({'error': error_msg, 'details': str(e)}), 500
             
     except Exception as e:
         error_msg = f'Unexpected error during search: {str(e)}'
-        app.logger.error(error_msg, exc_info=True)
         return jsonify({
             'error': 'An error occurred during search',
             'details': str(e)
