@@ -124,19 +124,7 @@ def search():
             'error': 'An error occurred during search',
             'details': str(e)
         }), 500
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Kiểm tra trạng thái của ứng dụng"""
-    status = {
-        "status": "ok",
-        "service": "image-search-api",
-        "faiss_indexes_loaded": list(database.keys()),
-        "device": app.config['DEVICE']
-    }
-    
-    return jsonify(status)
-
+        
 
 @app.route('/api/models', methods=['GET'])
 def list_models():
