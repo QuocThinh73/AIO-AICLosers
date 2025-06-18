@@ -8,8 +8,6 @@ const modelSelect = document.getElementById('modelSelect');
 
 // Hàm chính
 function initApp() {
-    console.log('Khởi tạo ứng dụng...');
-    
     // Ẩn loading khi khởi tạo
     if (loadingDiv) loadingDiv.style.display = 'none';
     
@@ -103,8 +101,6 @@ function handleSearch(e) {
         alert('Vui lòng chọn ít nhất một model');
         return;
     }
-    
-    console.log('Debug - selectedModels:', selectedModels);
     
     // Hiển thị loading
     if (loadingDiv) loadingDiv.style.display = 'flex';
@@ -201,8 +197,6 @@ function handleSearch(e) {
 
 // Hiển thị kết quả tìm kiếm
 function displayResults(data) {
-    console.log('Kết quả tìm kiếm:', data);
-    
     if (!data || !data.paths || data.paths.length === 0) {
         resultsDiv.innerHTML = `
             <div class="no-results" style="text-align: center; padding: 20px; color: #666;">
@@ -236,9 +230,7 @@ function displayResults(data) {
             // Always use the filename in the path to avoid any path traversal issues
             imagePath = `/data/keyframes/${filename}`;
             
-            console.log(`Original path: ${path}, Using image path: ${imagePath}`);
         } catch (e) {
-            console.error('Error constructing image path:', e);
             imagePath = '/static/images/no-image.jpg';
         }
         
