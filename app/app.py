@@ -38,38 +38,14 @@ def index():
 
 @app.route('/data/keyframes/<path:keyframe_name>')
 def get_keyframe(keyframe_name):
-    """Serve any file from the data/keyframes directory"""
+    """Serve file from keyframes directory with exact filename match"""
     try:
-        # Define paths
         keyframes_path = os.path.abspath(os.path.join(DATA_FOLDER, 'keyframes'))
+        keyframe_name = os.path.basename(keyframe_name)
         
-        # Clean up the filename
-        clean_filename = os.path.basename(keyframe_name).lstrip('/')
-        
-        # List all files in the keyframes directory
-        try:
-            all_files = os.listdir(keyframes_path)
-        except Exception as e:
-            return f"Error listing directory: {e}", 500
-        
-        # Try exact match first
-        if clean_filename in all_files:
-            file_path = os.path.join(keyframes_path, clean_filename)
-            return send_from_directory(keyframes_path, clean_filename)
-        
-        # Try case-insensitive match
-        filename_lower = clean_filename.lower()
-        for file in all_files:
-            if file.lower() == filename_lower:
-                return send_from_directory(keyframes_path, file)
-        
-        # Try to find similar files (same base name, different extension)
-        base_name = os.path.splitext(clean_filename)[0]
-        similar_files = [f for f in all_files if os.path.splitext(f)[0] == base_name]
-        if similar_files:
-            return send_from_directory(keyframes_path, similar_files[0])
-        
-        # If we get here, log available files and return 404
+        file_path = os.path.join(keyframes_path, keyframe_name)
+        if os.path.isfile(file_path):
+            return send_from_directory(keyframes_path, keyframe_name)
         
         return "File not found", 404
         
