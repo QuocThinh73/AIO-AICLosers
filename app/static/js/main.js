@@ -73,16 +73,8 @@ function updateModelSelect() {
     });
 }
 
-// Lấy giá trị top-k từ thanh trượt
-const topKSlider = document.getElementById('topK');
-const topKValue = document.getElementById('topKValue');
-
-// Cập nhật giá trị hiển thị khi thanh trượt thay đổi
-if (topKSlider && topKValue) {
-    topKSlider.addEventListener('input', function() {
-        topKValue.textContent = this.value;
-    });
-}
+// Lấy giá trị top-k từ ô nhập liệu
+const topKInput = document.getElementById('topK');
 
 // Xử lý tìm kiếm
 function handleSearch(e) {
@@ -90,11 +82,16 @@ function handleSearch(e) {
     
     const query = searchInput.value.trim();
     const selectedModels = Array.from(document.querySelectorAll('input[name="models"]:checked')).map(checkbox => checkbox.value);
-    const topK = topKSlider ? parseInt(topKSlider.value) : 100;
+    const topK = topKInput ? parseInt(topKInput.value) : 100;
     
     // Validate input
     if (!query) {
         alert('Vui lòng nhập từ khóa tìm kiếm');
+        return;
+    }
+    
+    if (isNaN(topK) || topK < 1) {
+        alert('Giá trị Top K không hợp lệ');
         return;
     }
     

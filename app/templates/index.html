@@ -18,11 +18,7 @@
                     placeholder="Nhập mô tả ảnh bạn muốn tìm..."
                     autocomplete="off"
                     required>
-                <div class="topk-slider" style="display: flex; align-items: center; gap: 10px; margin: 10px 0;">
-                    <label for="topK" style="white-space: nowrap;">Top K:</label>
-                    <input type="range" id="topK" name="topK" min="1" max="100" value="100" class="slider">
-                    <span id="topKValue">100</span>
-                </div>
+                <input type="number" class="topk-input" id="topK" name="topK" placeholder="TopK">
                 <button type="submit" class="btn">
                     <i class="fas fa-search"></i> Tìm kiếm
                 </button>
@@ -38,9 +34,7 @@
                 <div class="spinner"></div>
                 <p>Đang tìm kiếm...</p>
             </div>
-            <div id="results">
-                <p class="no-results">Nhập từ khóa và nhấn Tìm kiếm để bắt đầu</p>
-            </div>
+            <div id="results"></div>
         </section>
     </main>
 
