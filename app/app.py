@@ -38,7 +38,6 @@ def index():
 
 @app.route('/data/keyframes/<path:keyframe_name>')
 def get_keyframe(keyframe_name):
-    """Serve file from keyframes directory with exact filename match"""
     try:
         keyframes_path = os.path.abspath(os.path.join(DATA_FOLDER, 'keyframes'))
         keyframe_name = os.path.basename(keyframe_name)

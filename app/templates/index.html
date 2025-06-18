@@ -38,6 +38,32 @@
         </section>
     </main>
 
+    <!-- Modal để hiển thị keyframe chi tiết -->
+    <div id="imageModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="Keyframe chi tiết">
+            </div>
+            <div class="modal-info">
+                <h3>Chi tiết keyframe</h3>
+                <div class="info-row">
+                    <span class="info-label">Tên file:</span>
+                    <span id="modalFilename">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Đường dẫn:</span>
+                    <span id="modalPath">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Điểm số:</span>
+                    <span id="modalScore">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <div class="container">
             <p>© 2025 HCMAI Challenge</p>

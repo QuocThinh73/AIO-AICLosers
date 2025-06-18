@@ -250,7 +250,8 @@ function displayResults(data) {
                         alt="Kết quả ${index + 1}"
                         onerror="this.onerror=null; this.src='/static/images/no-image.jpg'"
                         loading="lazy"
-                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
+                        onclick="openImageModal('${imagePath}', '${filename}', '${path}', '${score}')"
                     >
                     ${score ? `<div class="score" style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 12px;">${score}</div>` : ''}
                 </div>
@@ -269,6 +270,55 @@ function displayResults(data) {
     html += '</div>';
     resultsDiv.innerHTML = html;
 }
+
+// Chức năng modal cho keyframe
+function openImageModal(imagePath, filename, path, score) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalFilename = document.getElementById('modalFilename');
+    const modalPath = document.getElementById('modalPath');
+    const modalScore = document.getElementById('modalScore');
+    
+    // Set thông tin
+    modalImage.src = imagePath;
+    modalFilename.textContent = filename;
+    modalPath.textContent = path;
+    modalScore.textContent = score || 'Không có điểm số';
+    
+    // Hiển thị modal
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Ngăn scroll body
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto'; // Khôi phục scroll body
+}
+
+// Event listeners cho modal
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('imageModal');
+    const modalClose = document.querySelector('.modal-close');
+    const modalOverlay = document.querySelector('.modal-overlay');
+    
+    // Đóng modal khi click nút X
+    if (modalClose) {
+        modalClose.addEventListener('click', closeImageModal);
+    }
+    
+    // Đóng modal khi click vào overlay
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', closeImageModal);
+    }
+    
+    // Đóng modal khi nhấn ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'block') {
+            closeImageModal();
+        }
+    });
+});
 
 // Chạy ứng dụng khi DOM đã tải xong
 if (document.readyState === 'loading') {
