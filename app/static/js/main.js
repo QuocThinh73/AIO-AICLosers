@@ -61,14 +61,18 @@ function updateModelSelect() {
     // Thêm các model vào checkbox
     availableModels.forEach(model => {
         const label = document.createElement('label');
-        label.textContent = model;
-
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = model;
         checkbox.name = 'models';
+        checkbox.checked = true; // Tự động tick chọn mặc định
+
+        const span = document.createElement('span');
+        span.textContent = model;
 
         label.appendChild(checkbox);
+        label.appendChild(span);
         modelSelect.appendChild(label);
     });
 }
