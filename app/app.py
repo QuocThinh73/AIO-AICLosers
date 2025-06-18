@@ -1,7 +1,6 @@
 import os
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
-import torch
 from app.config import *
 from app.init_app import load_database
 from app.rerank import rrf
@@ -19,7 +18,7 @@ cors.init_app(app, resources={
         "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
         "allow_headers": ["*"],
         "expose_headers": ["Content-Disposition"],
-        "supports_credentials": False,  # Tắt supports_credentials
+        "supports_credentials": False,
         "max_age": 600
     }
 })
@@ -93,12 +92,12 @@ def search():
         query = data.get('query')
         models = data.get('models').split(',')
         top_k = int(data.get('top_k', 100))
-        
+
         # Thực hiện tìm kiếm
         try:
             list_paths = {}
-            for model in models:
-                faiss_handler = database[f'{model}_faiss']
+            for model in models:    
+                faiss_handler = database[f'{model}']
                 _, _, paths = faiss_handler.text_search(query=query, top_k=top_k)
                 list_paths[model] = paths
             
@@ -117,7 +116,7 @@ def search():
             
         except Exception as e:
             error_msg = f'Error during search with {models}: {str(e)}'
-            return jsonify({'error': error_msg, 'details': str(e)}), 500
+            return jsonify({'error': error_msg}), 500
             
     except Exception as e:
         error_msg = f'Unexpected error during search: {str(e)}'
@@ -142,5 +141,5 @@ def health_check():
 @app.route('/api/models', methods=['GET'])
 def list_models():
     return jsonify({
-        'models': EMBEDDING_MODELS
+        'models': list(EMBEDDING_MODELS.keys())
     })
