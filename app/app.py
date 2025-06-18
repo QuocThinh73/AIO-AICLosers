@@ -36,70 +36,85 @@ def index():
 
 @app.route('/data/keyframes/<path:keyframe_name>')
 def get_keyframe(keyframe_name):
-    try:
-        keyframes_path = os.path.abspath(os.path.join(DATA_FOLDER, 'keyframes'))
-        keyframe_name = os.path.basename(keyframe_name)
-        
-        file_path = os.path.join(keyframes_path, keyframe_name)
-        if os.path.isfile(file_path):
-            return send_from_directory(keyframes_path, keyframe_name)
-        
-        return "File not found", 404
-        
-    except Exception as e:
-        return f"Internal server error: {str(e)}", 500
+    """
+    Input:
+        - keyframe_name (string): Keyframe filename (e.g., "image_001.jpg")
+    
+    Output:
+        - Success: Keyframe image file
+        - Error: "File not found" (404)
+    """
+    keyframes_path = os.path.abspath(os.path.join(DATA_FOLDER, 'keyframes'))
+    keyframe_name = os.path.basename(keyframe_name)
+    
+    file_path = os.path.join(keyframes_path, keyframe_name)
+    if os.path.isfile(file_path):
+        return send_from_directory(keyframes_path, keyframe_name)
+    
+    return "File not found", 404
 
 
 @app.route('/api/search', methods=['GET'])
 def search():
-    data = request.args
+    """
+    Input (URL Parameters):
+        - query (string): Text description of image to search (e.g., "a person riding a bicycle")
+        - models (JSON array string): List of models to use for search (e.g., '["clip", "openclip"]')
+        - topK (int): Maximum number of results to return (e.g., 100)
+    
+    Output (JSON):
+        {
+            "paths": ["keyframes/image_001.jpg", "keyframes/image_002.jpg"],
+            "scores": [0.95, 0.87],
+            "filenames": ["image_001.jpg", "image_002.jpg"]
+        }
+    """
+    query = request.args.get('query')            
+    models = json.loads(request.args.get('models'))
+    topK = int(request.args.get('topK'))
 
-    try:
-        query = data.get('query')            
-        models = json.loads(data.get('models'))
-        topK = int(data.get('topK', 100))
-
-        # Thực hiện tìm kiếm
-        try:
-            list_paths = {}
-            for model in models:    
-                faiss_handler = database.embedding_models[f'{model}']
-                _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
-                list_paths[model] = paths
-            
-            # Rerank
-            paths, scores = rrf(list_paths, k_rrf=60)
-            
-            # Tạo response
-            response_data = {
-                'paths': [r.replace('data/', '', 1) for r in paths],
-                'scores': [r for r in scores],
-                'filenames': [os.path.basename(r) for r in paths]
-            }
-            
-            response = jsonify(response_data)
-            return response
-            
-        except Exception as e:
-            error_msg = f'Error during search with {models}: {str(e)}'
-            return jsonify({'error': error_msg}), 500
-            
-    except Exception as e:
-        error_msg = f'Unexpected error during search: {str(e)}'
-        return jsonify({
-            'error': 'An error occurred during search',
-            'details': str(e)
-        }), 500
+    list_paths = {}
+    for model in models:    
+        faiss_handler = database.embedding_models[f'{model}']
+        _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
+        list_paths[model] = paths
+    
+    paths, scores = rrf(list_paths, k_rrf=60)
+    
+    response_data = {
+        'paths': [r.replace('data/', '', 1) for r in paths],
+        'scores': [r for r in scores],
+        'filenames': [os.path.basename(r) for r in paths]
+    }
+    
+    response = jsonify(response_data)
+    return response
         
 
 @app.route('/api/models', methods=['GET'])
 def list_models():
+    """
+    Input: None
+    
+    Output (JSON):
+        {
+            "models": ["clip", "openclip", ...]
+        }
+    """
     return jsonify({
         'models': list(EMBEDDING_MODELS.keys())
     })
     
 @app.route('/api/objects', methods=['GET'])
 def list_objects():
+    """
+    Input: None
+    
+    Output (JSON):
+        {
+            "objects": ["person", "car", "bicycle", ...]
+        }
+    """
     return jsonify({
         'objects': OBJECTS
     })
