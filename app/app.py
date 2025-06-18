@@ -3,7 +3,7 @@ import json
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from app.config import *
-from app.init_app import load_database
+from app.database import Database
 from app.rerank import rrf
 
 # Khởi tạo Flask app
@@ -24,10 +24,8 @@ cors.init_app(app, resources={
     }
 })
 
-# Khởi động ứng dụng
-database = {}
-with app.app_context():
-    database = load_database()
+# Khởi tạo database
+database = Database()
     
     
 # Routes
@@ -65,7 +63,7 @@ def search():
         try:
             list_paths = {}
             for model in models:    
-                faiss_handler = database[f'{model}']
+                faiss_handler = database.embedding_models[f'{model}']
                 _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
                 list_paths[model] = paths
             
