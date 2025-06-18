@@ -19,6 +19,7 @@ EMBEDDING_MODELS = {
         "id2path_name": "openclip_id2path.pkl",
         },
 }
+OBJECTS = ["car", "person", "dog", "cat", "bird", "fish", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "lion", "tiger", "monkey", "snake", "rabbit", "squirrel", "fox", "wolf", "deer", "giraffe", "zebra", "lion", "tiger", "monkey", "snake", "rabbit", "squirrel", "fox", "wolf", "deer"]
 
 
 

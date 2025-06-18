@@ -23,14 +23,6 @@ cors.init_app(app, resources={
     }
 })
 
-# Cấu hình
-app.config.update(
-    UPLOAD_FOLDER=UPLOAD_FOLDER,
-    DATA_FOLDER=DATA_FOLDER,
-    DATABASE_FOLDER=DATABASE_FOLDER,
-    DEVICE=DEVICE
-)
-
 # Khởi động ứng dụng
 database = {}
 with app.app_context():
@@ -48,7 +40,7 @@ def get_keyframe(keyframe_name):
     """Serve any file from the data/keyframes directory"""
     try:
         # Define paths
-        keyframes_path = os.path.abspath(os.path.join(app.config['DATA_FOLDER'], 'keyframes'))
+        keyframes_path = os.path.abspath(os.path.join(DATA_FOLDER, 'keyframes'))
         
         # Clean up the filename
         clean_filename = os.path.basename(keyframe_name).lstrip('/')
@@ -130,4 +122,10 @@ def search():
 def list_models():
     return jsonify({
         'models': list(EMBEDDING_MODELS.keys())
+    })
+    
+@app.route('/api/objects', methods=['GET'])
+def list_objects():
+    return jsonify({
+        'objects': OBJECTS
     })
