@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from app.config import *
@@ -81,16 +82,16 @@ def search():
     data = request.args
 
     try:
-        query = data.get('query')
-        models = data.get('models').split(',')
-        top_k = int(data.get('top_k', 100))
+        query = data.get('query')            
+        models = json.loads(data.get('models'))
+        topK = int(data.get('topK', 100))
 
         # Thực hiện tìm kiếm
         try:
             list_paths = {}
             for model in models:    
                 faiss_handler = database[f'{model}']
-                _, _, paths = faiss_handler.text_search(query=query, top_k=top_k)
+                _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
                 list_paths[model] = paths
             
             # Rerank

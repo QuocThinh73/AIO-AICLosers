@@ -100,6 +100,8 @@ function handleSearch(e) {
         return;
     }
     
+    console.log('Debug - selectedModels:', selectedModels);
+    
     // Hiển thị loading
     if (loadingDiv) loadingDiv.style.display = 'flex';
     resultsDiv.innerHTML = '';
@@ -118,8 +120,8 @@ function handleSearch(e) {
     
     // Thêm tham số vào URL
     url.searchParams.append('query', query);
-    url.searchParams.append('models', selectedModels.join(','));
-    url.searchParams.append('top_k', topK.toString());
+    url.searchParams.append('models', JSON.stringify(selectedModels));
+    url.searchParams.append('topK', topK.toString());
     
     // Gọi API tìm kiếm với GET
     fetch(url.toString(), {
