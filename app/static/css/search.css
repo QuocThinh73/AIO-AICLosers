@@ -1,0 +1,96 @@
+/* ===================================================================
+   SEARCH.CSS - Styles cho search form và input fields
+   ================================================================= */
+
+/* Search Section */
+.search-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.search-form {
+    margin-bottom: 2rem;
+}
+
+.main-search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.additional-search-row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+/* Search Input */
+.search-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+/* Top K Input */
+.topk-input {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    text-align: center;
+    width: 100px;
+    margin: 0;
+}
+
+.topk-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+/* OCR Input */
+.ocr-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    max-width: 400px;
+}
+
+.input-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.input-label i {
+    color: #6c757d;
+}
+
+.ocr-input {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease;
+}
+
+.ocr-input:focus {
+    outline: none;
+    border-color: #28a745;
+    box-shadow: 0 0 5px rgba(40, 167, 69, 0.3);
+} 
