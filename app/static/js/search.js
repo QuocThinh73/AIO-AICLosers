@@ -188,20 +188,6 @@ window.SearchModule = (function() {
     
     function buildResultsHTML(data, searchParams) {
         let html = `
-            <div class="search-summary" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <i class="fas fa-info-circle" style="color: #3498db;"></i>
-                    <strong>Kết quả tìm kiếm:</strong>
-                </div>
-                <div style="font-size: 0.9rem; color: #6c757d;">
-                    ${searchParams.query ? `<div><strong>Query:</strong> "${searchParams.query}"</div>` : ''}
-                    ${searchParams.ocrText ? `<div><strong>OCR Text:</strong> "${searchParams.ocrText}"</div>` : ''}
-                    ${searchParams.selectedObjects && searchParams.selectedObjects.length > 0 ? 
-                        `<div><strong>Objects:</strong> ${searchParams.selectedObjects.join(', ')}</div>` : ''
-                    }
-                    <div><strong>Tổng kết quả:</strong> ${data.paths.length} ảnh</div>
-                </div>
-            </div>
             <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
         `;
         
