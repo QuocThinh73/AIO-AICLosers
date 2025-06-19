@@ -58,8 +58,10 @@ def get_keyframe(keyframe_name):
 def search():
     """
     Input (URL Parameters):
-        - query (string): Text description of image to search (e.g., "a person riding a bicycle")
-        - models (JSON array string): List of models to use for search (e.g., '["clip", "openclip"]')
+        - query (string, optional): Text description of image to search (e.g., "a person riding a bicycle")
+        - ocr_text (string, optional): OCR text to search in images (e.g., "STOP")
+        - models (JSON array string, optional): List of models to use for search (e.g., '["CLIP ViT-B/32", "OpenCLIP ViT-B-32 laion2b_s34b_b79k"]')
+        - objects (JSON array string, optional): List of objects to filter by (e.g., '["car", "person"]')
         - topK (int): Maximum number of results to return (e.g., 100)
     
     Output (JSON):
@@ -69,17 +71,58 @@ def search():
             "filenames": ["image_001.jpg", "image_002.jpg"]
         }
     """
-    query = request.args.get('query')            
-    models = json.loads(request.args.get('models'))
+    # Lấy các tham số từ request
+    query = request.args.get('query', '')
+    ocr_text = request.args.get('ocr_text', '')
+    models_param = request.args.get('models', '[]')
+    objects_param = request.args.get('objects', '[]')
     topK = int(request.args.get('topK'))
-
-    list_paths = {}
-    for model in models:    
-        faiss_handler = database.embedding_models[f'{model}']
-        _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
-        list_paths[model] = paths
     
-    paths, scores = rrf(list_paths, k_rrf=60)
+    # Parse models list
+    try:
+        selected_models = json.loads(models_param) if models_param else []
+    except json.JSONDecodeError:
+        selected_models = []
+    
+    # Parse objects list
+    try:
+        selected_objects = json.loads(objects_param) if objects_param else []
+    except json.JSONDecodeError:
+        selected_objects = []
+    
+    # Log các tham số để debug (có thể bỏ sau này)
+    print(f"Search parameters:")
+    print(f"  - Query: '{query}'")
+    print(f"  - OCR Text: '{ocr_text}'")
+    print(f"  - Selected Models: {selected_models}")
+    print(f"  - Selected Objects: {selected_objects}")
+    print(f"  - TopK: {topK}")
+
+    # Kiểm tra có ít nhất một model được chọn
+    if not selected_models:
+        return jsonify({
+            'error': 'Vui lòng chọn ít nhất một model để tìm kiếm',
+            'paths': [],
+            'scores': [],
+            'filenames': []
+        }), 400
+
+    # Hiện tại chỉ sử dụng query search, OCR và object filtering sẽ implement sau
+    if query:
+        list_paths = {}
+        for model in selected_models:    
+            faiss_handler = database.embedding_models[f'{model}']
+            _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
+            list_paths[model] = paths
+        
+        paths, scores = rrf(list_paths, k_rrf=60)
+        
+        # TODO: Implement OCR text search logic here
+        # TODO: Implement object filtering logic here
+        
+    else:
+        # Nếu không có query, trả về empty results
+        paths, scores = [], []
     
     response_data = {
         'paths': [r.replace('data/', '', 1) for r in paths],

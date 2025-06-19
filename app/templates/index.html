@@ -11,20 +11,86 @@
     <main class="container">
         <section class="search-section">
             <form id="searchForm" class="search-form">
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    class="search-input" 
-                    placeholder="Nhập mô tả ảnh bạn muốn tìm..."
-                    autocomplete="off"
-                    required>
-                <input type="number" class="topk-input" id="topK" name="topK" placeholder="TopK" value="100">
-                <button type="submit" class="btn">
-                    <i class="fas fa-search"></i> Tìm kiếm
-                </button>
+                <div class="main-search-row">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="Nhập mô tả ảnh bạn muốn tìm..."
+                        autocomplete="off"
+                        required>
+                    <input type="number" class="topk-input" id="topK" name="topK" placeholder="TopK" value="100">
+                    <button type="submit" class="btn">
+                        <i class="fas fa-search"></i> Tìm kiếm
+                    </button>
+                </div>
+                
+                <div class="additional-search-row">
+                    <div class="ocr-input-group">
+                        <label for="ocrInput" class="input-label">
+                            <i class="fas fa-text-width"></i> OCR:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="ocrInput" 
+                            class="ocr-input" 
+                            placeholder="Nhập text cần tìm trong ảnh..."
+                            autocomplete="off">
+                    </div>
+                </div>
             </form>
-            <div class="model-selection">
-                <div id="modelSelect"></div>
+            
+            <div class="selection-section">
+                <div class="model-selection">
+                    <h3 class="selection-title">
+                        <i class="fas fa-brain"></i> Chọn Models:
+                    </h3>
+                    <div id="modelSelect"></div>
+                </div>
+                
+                <div class="object-selection">
+                    <h3 class="selection-title">
+                        <i class="fas fa-cube"></i> Chọn Objects:
+                    </h3>
+                    <div class="loading-objects" style="display: none;">
+                        <div class="mini-spinner"></div>
+                        <span>Đang tải objects...</span>
+                    </div>
+                    
+                    <!-- Object Selector Button and Display -->
+                    <div class="object-selector-container">
+                        <div class="object-selector-button" id="objectSelectorBtn">
+                            <span class="selector-text">Chọn objects...</span>
+                            <i class="fas fa-chevron-down selector-arrow"></i>
+                        </div>
+                        
+                        <!-- Selected Objects Display -->
+                        <div class="selected-objects-display" id="selectedObjectsDisplay" style="display: none;">
+                            <div class="selected-objects-list" id="selectedObjectsList"></div>
+                            <button type="button" class="clear-selection-btn" id="clearSelectionBtn">
+                                <i class="fas fa-times"></i> Xóa tất cả
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Object Selection Dropdown -->
+                    <div class="object-dropdown" id="objectDropdown" style="display: none;">
+                        <div class="object-search-container">
+                            <input type="text" class="object-search" id="objectSearch" placeholder="Tìm object...">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        
+                        <div class="object-list-container">
+                            <div id="objectList"></div>
+                        </div>
+                        
+                        <div class="object-dropdown-actions">
+                            <button type="button" class="btn-secondary" id="selectAllObjectsBtn">Chọn tất cả</button>
+                            <button type="button" class="btn-secondary" id="clearAllObjectsBtn">Bỏ chọn tất cả</button>
+                            <button type="button" class="btn-primary" id="confirmSelectionBtn">Chọn</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 

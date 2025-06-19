@@ -1,15 +1,33 @@
 // Biến toàn cục
 let availableModels = [];
+let availableObjects = [];
+let selectedObjects = [];
+let filteredObjects = [];
 const searchForm = document.getElementById('searchForm');
 const searchInput = document.getElementById('searchInput');
+const ocrInput = document.getElementById('ocrInput');
 const resultsDiv = document.getElementById('results');
 const loadingDiv = document.querySelector('.loading');
 const modelSelect = document.getElementById('modelSelect');
+const loadingObjects = document.querySelector('.loading-objects');
+
+// Object selector elements
+const objectSelectorBtn = document.getElementById('objectSelectorBtn');
+const objectDropdown = document.getElementById('objectDropdown');
+const objectSearch = document.getElementById('objectSearch');
+const objectList = document.getElementById('objectList');
+const selectedObjectsDisplay = document.getElementById('selectedObjectsDisplay');
+const selectedObjectsList = document.getElementById('selectedObjectsList');
+const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+const selectAllObjectsBtn = document.getElementById('selectAllObjectsBtn');
+const clearAllObjectsBtn = document.getElementById('clearAllObjectsBtn');
+const confirmSelectionBtn = document.getElementById('confirmSelectionBtn');
 
 // Hàm chính
 function initApp() {
     // Ẩn loading khi khởi tạo
     if (loadingDiv) loadingDiv.style.display = 'none';
+    if (loadingObjects) loadingObjects.style.display = 'none';
     
     // Kiểm tra các phần tử cần thiết
     if (!searchForm || !searchInput || !resultsDiv || !modelSelect) {
@@ -20,8 +38,12 @@ function initApp() {
     // Thêm sự kiện submit form
     searchForm.addEventListener('submit', handleSearch);
     
-    // Tải danh sách model
+    // Thêm event listeners cho object selector
+    setupObjectSelectorEvents();
+    
+    // Tải danh sách model và objects
     loadModels();
+    loadObjects();
 }
 
 // Hàm tải danh sách model
@@ -49,6 +71,59 @@ function loadModels() {
         })
         .catch(error => {
             console.error('Lỗi khi tải model:', error);
+            modelSelect.innerHTML = `
+                <div class="error-message" style="color: #721c24; padding: 10px; background: #f8d7da; border-radius: 4px; font-size: 0.9rem;">
+                    <i class="fas fa-exclamation-triangle"></i> Không thể tải danh sách models: ${error.message}
+                </div>
+            `;
+        });
+}
+
+// Hàm tải danh sách objects
+function loadObjects() {
+    if (loadingObjects) loadingObjects.style.display = 'flex';
+    
+    fetch('/api/objects')
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                }).catch(() => {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Lấy danh sách objects từ phản hồi
+            availableObjects = data.objects || data || [];
+            filteredObjects = [...availableObjects];
+            
+            if (availableObjects.length === 0) {
+                console.warn('Không có object nào khả dụng');
+                if (objectList) {
+                    objectList.innerHTML = `
+                        <div class="no-objects-message">
+                            Không có objects nào khả dụng
+                        </div>
+                    `;
+                }
+            } else {
+                updateObjectList();
+            }
+        })
+        .catch(error => {
+            console.error('Lỗi khi tải objects:', error);
+            if (objectList) {
+                objectList.innerHTML = `
+                    <div class="error-message" style="color: #721c24; padding: 10px; background: #f8d7da; border-radius: 4px; font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-triangle"></i> Không thể tải danh sách objects: ${error.message}
+                    </div>
+                `;
+            }
+        })
+        .finally(() => {
+            if (loadingObjects) loadingObjects.style.display = 'none';
         });
 }
 
@@ -75,6 +150,237 @@ function updateModelSelect() {
     });
 }
 
+// Setup event listeners cho object selector
+function setupObjectSelectorEvents() {
+    // Toggle dropdown
+    if (objectSelectorBtn) {
+        objectSelectorBtn.addEventListener('click', toggleObjectDropdown);
+    }
+    
+    // Search functionality
+    if (objectSearch) {
+        objectSearch.addEventListener('input', handleObjectSearch);
+    }
+    
+    // Clear selection
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', clearObjectSelection);
+    }
+    
+    // Bulk actions
+    if (selectAllObjectsBtn) {
+        selectAllObjectsBtn.addEventListener('click', () => selectAllObjects(true));
+    }
+    
+    if (clearAllObjectsBtn) {
+        clearAllObjectsBtn.addEventListener('click', () => selectAllObjects(false));
+    }
+    
+    // Confirm selection
+    if (confirmSelectionBtn) {
+        confirmSelectionBtn.addEventListener('click', confirmObjectSelection);
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (objectDropdown && !objectDropdown.contains(e.target) && !objectSelectorBtn.contains(e.target)) {
+            closeObjectDropdown();
+        }
+    });
+}
+
+// Toggle dropdown visibility
+function toggleObjectDropdown() {
+    if (objectDropdown) {
+        const isVisible = objectDropdown.style.display === 'flex';
+        if (isVisible) {
+            closeObjectDropdown();
+        } else {
+            openObjectDropdown();
+        }
+    }
+}
+
+function openObjectDropdown() {
+    if (objectDropdown && objectSelectorBtn) {
+        objectDropdown.style.display = 'flex';
+        objectSelectorBtn.classList.add('active');
+        if (objectSearch) {
+            objectSearch.focus();
+        }
+    }
+}
+
+function closeObjectDropdown() {
+    if (objectDropdown && objectSelectorBtn) {
+        objectDropdown.style.display = 'none';
+        objectSelectorBtn.classList.remove('active');
+        if (objectSearch) {
+            objectSearch.value = '';
+            filteredObjects = [...availableObjects];
+            updateObjectList();
+        }
+    }
+}
+
+// Handle object search
+function handleObjectSearch(e) {
+    const searchTerm = e.target.value.toLowerCase().trim();
+    
+    if (searchTerm === '') {
+        filteredObjects = [...availableObjects];
+    } else {
+        filteredObjects = availableObjects.filter(object => 
+            object.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    updateObjectList();
+}
+
+// Update object list in dropdown
+function updateObjectList() {
+    if (!objectList) return;
+    
+    objectList.innerHTML = '';
+    
+    if (filteredObjects.length === 0) {
+        objectList.innerHTML = `
+            <div class="no-objects-message">
+                Không tìm thấy object nào
+            </div>
+        `;
+        return;
+    }
+    
+    filteredObjects.forEach(object => {
+        const item = document.createElement('div');
+        item.className = 'object-list-item';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = object;
+        checkbox.checked = selectedObjects.includes(object);
+        checkbox.addEventListener('change', (e) => handleObjectSelection(e, object));
+        
+        const label = document.createElement('label');
+        label.textContent = object;
+        label.addEventListener('click', () => {
+            checkbox.checked = !checkbox.checked;
+            handleObjectSelection({ target: checkbox }, object);
+        });
+        
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        
+        if (selectedObjects.includes(object)) {
+            item.classList.add('selected');
+        }
+        
+        objectList.appendChild(item);
+    });
+}
+
+// Handle individual object selection
+function handleObjectSelection(e, object) {
+    if (e.target.checked) {
+        if (!selectedObjects.includes(object)) {
+            selectedObjects.push(object);
+        }
+    } else {
+        selectedObjects = selectedObjects.filter(obj => obj !== object);
+    }
+    
+    // Update visual state
+    const item = e.target.closest('.object-list-item');
+    if (item) {
+        if (e.target.checked) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
+        }
+    }
+}
+
+// Select/deselect all objects
+function selectAllObjects(selectAll) {
+    if (selectAll) {
+        selectedObjects = [...filteredObjects];
+    } else {
+        // Only remove objects that are currently in filtered list
+        selectedObjects = selectedObjects.filter(obj => !filteredObjects.includes(obj));
+    }
+    
+    updateObjectList();
+}
+
+// Clear all selected objects
+function clearObjectSelection() {
+    selectedObjects = [];
+    updateSelectedObjectsDisplay();
+    updateObjectList();
+}
+
+// Confirm selection and close dropdown
+function confirmObjectSelection() {
+    updateSelectedObjectsDisplay();
+    closeObjectDropdown();
+}
+
+// Update the display of selected objects
+function updateSelectedObjectsDisplay() {
+    if (!selectedObjectsList || !selectedObjectsDisplay) return;
+    
+    selectedObjectsList.innerHTML = '';
+    
+    if (selectedObjects.length === 0) {
+        selectedObjectsDisplay.style.display = 'none';
+        updateSelectorButtonText();
+        return;
+    }
+    
+    selectedObjectsDisplay.style.display = 'block';
+    
+    selectedObjects.forEach(object => {
+        const tag = document.createElement('div');
+        tag.className = 'selected-object-tag';
+        
+        const text = document.createElement('span');
+        text.textContent = object;
+        
+        const removeBtn = document.createElement('i');
+        removeBtn.className = 'fas fa-times remove-tag';
+        removeBtn.addEventListener('click', () => removeSelectedObject(object));
+        
+        tag.appendChild(text);
+        tag.appendChild(removeBtn);
+        selectedObjectsList.appendChild(tag);
+    });
+    
+    updateSelectorButtonText();
+}
+
+// Remove individual selected object
+function removeSelectedObject(object) {
+    selectedObjects = selectedObjects.filter(obj => obj !== object);
+    updateSelectedObjectsDisplay();
+    updateObjectList();
+}
+
+// Update selector button text
+function updateSelectorButtonText() {
+    const selectorText = document.querySelector('.selector-text');
+    if (!selectorText) return;
+    
+    if (selectedObjects.length === 0) {
+        selectorText.textContent = 'Chọn objects...';
+    } else if (selectedObjects.length === 1) {
+        selectorText.textContent = `Đã chọn: ${selectedObjects[0]}`;
+    } else {
+        selectorText.textContent = `Đã chọn ${selectedObjects.length} objects`;
+    }
+}
+
 // Lấy giá trị top-k từ ô nhập liệu
 const topKInput = document.getElementById('topK');
 
@@ -83,12 +389,13 @@ function handleSearch(e) {
     e.preventDefault();
     
     const query = searchInput.value.trim();
+    const ocrText = ocrInput ? ocrInput.value.trim() : '';
     const selectedModels = Array.from(document.querySelectorAll('input[name="models"]:checked')).map(checkbox => checkbox.value);
     const topK = topKInput ? parseInt(topKInput.value) : 100;
     
     // Validate input
-    if (!query) {
-        alert('Vui lòng nhập từ khóa tìm kiếm');
+    if (!query && !ocrText) {
+        alert('Vui lòng nhập ít nhất một trong hai: từ khóa tìm kiếm hoặc OCR text');
         return;
     }
     
@@ -110,17 +417,16 @@ function handleSearch(e) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // Timeout sau 30s
     
-    // Kiểm tra query hợp lệ
-    if (!query || typeof query !== 'string' || query.trim() === '') {
-        throw new Error('Vui lòng nhập từ khóa tìm kiếm hợp lệ');
-    }
-    
     // Tạo URL với tham số để tránh CORS preflight
     const url = new URL('http://localhost:5000/api/search');
     
     // Thêm tham số vào URL
-    url.searchParams.append('query', query);
+    if (query) url.searchParams.append('query', query);
+    if (ocrText) url.searchParams.append('ocr_text', ocrText);
     url.searchParams.append('models', JSON.stringify(selectedModels));
+    if (selectedObjects.length > 0) {
+        url.searchParams.append('objects', JSON.stringify(selectedObjects));
+    }
     url.searchParams.append('topK', topK.toString());
     
     // Gọi API tìm kiếm với GET
@@ -155,7 +461,7 @@ function handleSearch(e) {
         
         return data;
     })
-    .then(displayResults)
+    .then(data => displayResults(data, { query, ocrText, selectedObjects }))
     .catch(error => {
         console.error('Lỗi khi tìm kiếm:', error);
         
@@ -196,18 +502,42 @@ function handleSearch(e) {
 
 
 // Hiển thị kết quả tìm kiếm
-function displayResults(data) {
+function displayResults(data, searchParams = {}) {
     if (!data || !data.paths || data.paths.length === 0) {
+        const queryInfo = [];
+        if (searchParams.query) queryInfo.push(`"${searchParams.query}"`);
+        if (searchParams.ocrText) queryInfo.push(`OCR: "${searchParams.ocrText}"`);
+        if (searchParams.selectedObjects && searchParams.selectedObjects.length > 0) {
+            queryInfo.push(`Objects: ${searchParams.selectedObjects.join(', ')}`);
+        }
+        
         resultsDiv.innerHTML = `
             <div class="no-results" style="text-align: center; padding: 20px; color: #666;">
                 <i class="fas fa-search" style="font-size: 2em; margin-bottom: 10px; opacity: 0.5;"></i>
-                <p>Không tìm thấy kết quả phù hợp với "${data?.query || 'từ khóa'}"</p>
+                <p>Không tìm thấy kết quả phù hợp với ${queryInfo.join(' + ') || 'từ khóa tìm kiếm'}</p>
+                ${searchParams.selectedObjects && searchParams.selectedObjects.length > 0 ? 
+                    `<p style="font-size: 0.9em; color: #999;">Đã lọc theo objects: ${searchParams.selectedObjects.join(', ')}</p>` : ''
+                }
             </div>
         `;
         return;
     }
     
     let html = `
+        <div class="search-summary" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <i class="fas fa-info-circle" style="color: #3498db;"></i>
+                <strong>Kết quả tìm kiếm:</strong>
+            </div>
+            <div style="font-size: 0.9rem; color: #6c757d;">
+                ${searchParams.query ? `<div><strong>Query:</strong> "${searchParams.query}"</div>` : ''}
+                ${searchParams.ocrText ? `<div><strong>OCR Text:</strong> "${searchParams.ocrText}"</div>` : ''}
+                ${searchParams.selectedObjects && searchParams.selectedObjects.length > 0 ? 
+                    `<div><strong>Objects:</strong> ${searchParams.selectedObjects.join(', ')}</div>` : ''
+                }
+                <div><strong>Tổng kết quả:</strong> ${data.paths.length} ảnh</div>
+            </div>
+        </div>
         <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
     `;
     
