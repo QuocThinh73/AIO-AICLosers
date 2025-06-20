@@ -3,6 +3,7 @@ import json
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from app.config import *
+from app.translate import translate_text
 from app.database import Database
 from app.rerank import rrf
 
@@ -72,12 +73,11 @@ def search():
         }
     """
  
-    query = request.args.get('query', '')
+    query = translate_text(request.args.get('query', ''))
     ocr = request.args.get('ocr_text', '')
     models = request.args.get('models', '[]')
     objects = request.args.get('objects', '[]')
     topK = int(request.args.get('topK'))
-    print(query, ocr, models, objects, topK)
     
     models = json.loads(models) if models else []
     objects = json.loads(objects) if objects else []
