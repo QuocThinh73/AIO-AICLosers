@@ -3,10 +3,10 @@ import cv2
 import numpy as np
 
 # ==============================
-N_KEYFRAMES = 5 
-SHOT_TXT_FOLDER = "data/shots"
-VIDEO_FOLDER = "data/videos/video1705"
-OUTPUT_FOLDER = "data/keyframes"
+N_KEYFRAMES = 3
+SHOT_TXT_FOLDER = os.path.join("data", "shots")
+VIDEO_FOLDER = os.path.join("data", "videos", "L001")
+OUTPUT_FOLDER = os.path.join("data", "keyframes")
 # ==============================
 
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
