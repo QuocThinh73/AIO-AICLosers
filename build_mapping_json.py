@@ -1,8 +1,11 @@
 import os
 import json
+import glob
 from pathlib import Path
 
-def build_mapping_json(image_paths, output_json="database/id2path.json"):
+OUTPUT_DIR = "database"
+
+def build_mapping_json(image_paths, output_json=os.path.join(OUTPUT_DIR, "id2path.json")):
     os.makedirs(os.path.dirname(output_json), exist_ok=True)
 
     items = []
@@ -19,6 +22,5 @@ def build_mapping_json(image_paths, output_json="database/id2path.json"):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 if __name__ == "__main__":
-    import glob
-    image_paths = glob.glob("data/keyframes/*.jpg")
+    image_paths = glob.glob(os.path.join("data", "keyframes", "*.jpg"))
     build_mapping_json(image_paths)
