@@ -1,28 +1,41 @@
 import os
 import faiss
 import numpy as np
-import pickle
+import json
 from PIL import Image
 
-class FaissIndex:
+class Faiss:
     def __init__(self, model):   
         self.model = model
+        self.index = None
+        self.id2path = None
 
-    def load(self, index_path, id2path_path):
+    def load(self, index_path, mapping_json):
+        # Load index
         self.index = faiss.read_index(index_path)
 
-        with open(id2path_path, 'rb') as f:
-            self.id2path = pickle.load(f)
+         # Load mapping JSON
+        with open(mapping_json, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        items = data.get("items", [])
+        self.id2path = {item["id"]: item["path"] for item in items}
 
-    def build(self, image_paths, model_name, output_dir="database"):
+    def build(self, mapping_json, model_name, output_dir="database"):
         os.makedirs(output_dir, exist_ok=True)
-        id2path = {i: path for i, path in enumerate(image_paths)}
+
+        # Load mapping JSON
+        with open(mapping_json, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        total = data.get("total")
+        items = data.get("items", [])
+        id2path = {item["id"]: item["path"] for item in items}
+
+        image_paths = [id2path[i] for i in range(total)]
 
         embeddings = []
         for path in image_paths:
           with Image.open(path).convert('RGB') as img:
             emb = self.model.encode_image(img)
-
           embeddings.append(emb)
             
         all_emb = np.vstack(embeddings).astype(np.float32)
@@ -32,10 +45,8 @@ class FaissIndex:
 
         # Save
         index_path = os.path.join(output_dir, f"{model_name}_faiss.bin")
-        map_path = os.path.join(output_dir, f"{model_name}_id2path.pkl")
         faiss.write_index(idx, index_path)
-        with open(map_path, 'wb') as f:
-            pickle.dump(id2path, f)
+
     
     def text_search(self, query, top_k=5, return_scores=True):
         # Encode the query
@@ -76,10 +87,3 @@ class FaissIndex:
             return scores[0].tolist(), indices[0].tolist(), paths
         else:
             return paths
-        
-    def get_stats(self):
-        return {
-            "num_vectors": self.index.ntotal,
-            "dimension": self.index.d,
-            "num_images": len(self.id2path)
-        }
