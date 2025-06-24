@@ -1,7 +1,7 @@
 import os
 from models.clip import CLIP
 from models.openclip import OpenCLIP
-from faiss_index import FaissIndex
+from faiss_index import Faiss
 from app.config import *
 
 class Database:
@@ -16,8 +16,8 @@ class Database:
                 model = CLIP(clip_backbone=model_info["backbone"], device=DEVICE)
             elif (model_info["model_type"] == "openclip"):
                 model = OpenCLIP(backbone=model_info["backbone"], pretrained=model_info["pretrained"], device=DEVICE)
-            faiss = FaissIndex(model=model)
-            faiss.load(os.path.join(self.database_path, model_info["faiss_database_name"]), os.path.join(self.database_path, model_info["id2path_name"]))
+            faiss = Faiss(model=model)
+            faiss.load(os.path.join(self.database_path, model_info["faiss_database_name"]), MAPPING_JSON)
             embedding_models[model_name] = faiss
             
         return embedding_models

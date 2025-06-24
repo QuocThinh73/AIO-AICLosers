@@ -3,16 +3,17 @@ import faiss
 import numpy as np
 import json
 from PIL import Image
+from app.config import DATABASE_FOLDER
 
 class Faiss:
     def __init__(self, model):   
         self.model = model
-        self.index = None
+        self.embeddings = None
         self.id2path = None
 
     def load(self, index_path, mapping_json):
         # Load index
-        self.index = faiss.read_index(index_path)
+        self.embeddings = faiss.read_index(index_path)
 
          # Load mapping JSON
         with open(mapping_json, 'r', encoding='utf-8') as f:
@@ -20,7 +21,7 @@ class Faiss:
         items = data.get("items", [])
         self.id2path = {item["id"]: item["path"] for item in items}
 
-    def build(self, mapping_json, model_name, output_dir="database"):
+    def build(self, mapping_json, model_name, output_dir=DATABASE_FOLDER):
         os.makedirs(output_dir, exist_ok=True)
 
         # Load mapping JSON
@@ -44,8 +45,8 @@ class Faiss:
         idx.add(all_emb)
 
         # Save
-        index_path = os.path.join(output_dir, f"{model_name}_faiss.bin")
-        faiss.write_index(idx, index_path)
+        embeddings_path = os.path.join(output_dir, f"{model_name}_faiss.bin")
+        faiss.write_index(idx, embeddings_path)
 
     
     def text_search(self, query, top_k=5, return_scores=True):
@@ -56,7 +57,7 @@ class Faiss:
         query_embedding = query_embedding.reshape(1, -1).astype(np.float32)
         
         # Search the index
-        scores, indices = self.index.search(query_embedding, top_k)
+        scores, indices = self.embeddings.search(query_embedding, top_k)
         
         # Get the image paths for the results
         paths = [self.id2path[int(idx)] for idx in indices[0]]
@@ -78,7 +79,7 @@ class Faiss:
         query_embedding = query_embedding.reshape(1, -1).astype(np.float32)
         
         # Search the index
-        scores, indices = self.index.search(query_embedding, top_k)
+        scores, indices = self.embeddings.search(query_embedding, top_k)
         
         # Get the image paths for the results
         paths = [self.id2path[int(idx)] for idx in indices[0]]
