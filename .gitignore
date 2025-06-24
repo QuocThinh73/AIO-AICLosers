@@ -53,15 +53,9 @@ coverage.xml
 venv/
 ENV/
 
-# Data files
-data/*
-!data/.gitkeep
-!data/README.md
-
 # Database files
 database/*
 !database/.gitkeep
-!database/README.md
 
 # Jupyter Notebook
 .ipynb_checkpoints
