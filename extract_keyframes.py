@@ -16,6 +16,7 @@ def extract_keyframes_from_shot(video_path, shot_ranges, video_name, n_keyframes
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     for start, end in shot_ranges:
+        print(f"Processing shot {start} to {end}")
         frame_indexes = []
         if end < start:
             continue
