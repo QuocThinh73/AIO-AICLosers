@@ -2,7 +2,6 @@ import os
 import json
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
-from app.config import *
 from app.translate import translate_text
 from app.database import Database
 from app.rerank import rrf
@@ -45,7 +44,7 @@ def get_keyframe(keyframe_name):
         - Success: Keyframe image file
         - Error: "File not found" (404)
     """
-    keyframes_path = os.path.abspath(os.path.join(DATA_FOLDER, 'keyframes'))
+    keyframes_path = database.keyframes_path
     keyframe_name = os.path.basename(keyframe_name)
     
     file_path = os.path.join(keyframes_path, keyframe_name)
@@ -94,7 +93,7 @@ def search():
     paths, scores = rrf(list_paths, k_rrf=60)
     
     response_data = {
-        'paths': [r.replace('data/', '', 1) for r in paths],
+        'paths': [r.replace(database.database_path, '', 1) for r in paths],
         'scores': [r for r in scores],
         'filenames': [os.path.basename(r) for r in paths]
     }
@@ -114,7 +113,7 @@ def list_models():
         }
     """
     return jsonify({
-        'models': list(EMBEDDING_MODELS.keys())
+        'models': list(database.embedding_models.keys())
     })
     
 @app.route('/api/objects', methods=['GET'])
@@ -128,5 +127,5 @@ def list_objects():
         }
     """
     return jsonify({
-        'objects': OBJECTS
+        'objects': database.objects
     })

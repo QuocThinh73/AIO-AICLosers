@@ -7,7 +7,12 @@ from app.config import *
 class Database:
     def __init__(self):
         self.database_path = os.path.abspath(DATABASE_FOLDER)
+        self.keyframes_path = os.path.abspath(KEYFRAMES_FOLDER)
+        self.shots_path = os.path.abspath(SHOTS_FOLDER)
+        self.videos_path = os.path.abspath(VIDEOS_FOLDER)
+        self.mapping_json = os.path.join(self.database_path, MAPPING_JSON)
         self.embedding_models = self.load_embedding_models()
+        self.objects = OBJECTS
         
     def load_embedding_models(self):
         embedding_models = {}

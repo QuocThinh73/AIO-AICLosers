@@ -4,6 +4,9 @@ import os
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 UPLOAD_FOLDER = 'app/static/images'
 DATABASE_FOLDER = 'database'
+KEYFRAMES_FOLDER = os.path.join(DATABASE_FOLDER, "keyframes")
+SHOTS_FOLDER = os.path.join(DATABASE_FOLDER, "shots")
+VIDEOS_FOLDER = os.path.join(DATABASE_FOLDER, "videos")
 MAPPING_JSON = os.path.join(DATABASE_FOLDER, "id2path.json")
 EMBEDDING_MODELS = {
     "CLIP ViT-B/32": {
