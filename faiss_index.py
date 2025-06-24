@@ -11,9 +11,9 @@ class Faiss:
         self.embeddings = None
         self.id2path = None
 
-    def load(self, index_path, mapping_json):
+    def load(self, embeddings_path, mapping_json):
         # Load index
-        self.embeddings = faiss.read_index(index_path)
+        self.embeddings = faiss.read_index(embeddings_path)
 
          # Load mapping JSON
         with open(mapping_json, 'r', encoding='utf-8') as f:
