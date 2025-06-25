@@ -1,4 +1,3 @@
-import asyncio
 from googletrans import Translator
 
 def translate_text(text, src='vi', dest='en'):
