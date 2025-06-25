@@ -46,7 +46,7 @@ class Faiss:
         idx.add(all_emb)
 
         # Save
-        embeddings_path = os.path.join(output_dir, f"{model_name}_faiss.bin")
+        embeddings_path = os.path.join(output_dir, f"{model_name}_embeddings.bin")
         faiss.write_index(idx, embeddings_path)
 
     
