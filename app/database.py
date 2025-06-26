@@ -10,7 +10,8 @@ class Database:
         self.keyframes_path = os.path.abspath(KEYFRAMES_FOLDER)
         self.shots_path = os.path.abspath(SHOTS_FOLDER)
         self.videos_path = os.path.abspath(VIDEOS_FOLDER)
-        self.mapping_json = os.path.join(self.database_path, MAPPING_JSON)
+        self.embeddings_path = os.path.abspath(EMBEDDING_FOLDER)
+        self.mapping_json = os.path.abspath(MAPPING_JSON)
         self.embedding_models = self.load_embedding_models()
         self.objects = OBJECTS
         
@@ -22,7 +23,7 @@ class Database:
             elif (model_info["model_type"] == "openclip"):
                 model = OpenCLIP(backbone=model_info["backbone"], pretrained=model_info["pretrained"], device=DEVICE)
             faiss = Faiss(model=model)
-            faiss.load(os.path.join(self.database_path, model_info["faiss_database_name"]), MAPPING_JSON)
+            faiss.load(os.path.join(self.embeddings_path, model_info["embeddings_file"]), self.mapping_json)
             embedding_models[model_name] = faiss
             
         return embedding_models
