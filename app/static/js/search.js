@@ -188,7 +188,7 @@ window.SearchModule = (function() {
     
     function buildResultsHTML(data, searchParams) {
         let html = `
-            <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+            <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;">
         `;
         
         data.paths.forEach((path, index) => {
@@ -202,10 +202,9 @@ window.SearchModule = (function() {
                 
             let imagePath;
             try {
-                const filename = path.split('/').pop();
                 imagePath = `/data/keyframes/${filename}`;
             } catch (e) {
-                imagePath = '/static/images/no-image.jpg';
+                imagePath = '/static/images/no-image.png';
             }
             
             html += `
@@ -214,19 +213,15 @@ window.SearchModule = (function() {
                         <img 
                             src="${imagePath}" 
                             alt="Kết quả ${index + 1}"
-                            onerror="this.onerror=null; this.src='/static/images/no-image.jpg'"
+                            onerror="this.onerror=null; this.src='/static/images/no-image.png'"
                             loading="lazy"
                             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
                             onclick="window.ModalModule.openImageModal('${imagePath}', '${filename}', '${path}', '${score}')"
                         >
-                        ${score ? `<div class="score" style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; border-radius: 3px; font-size: 12px;">${score}</div>` : ''}
                     </div>
-                    <div class="image-info" style="padding: 8px; font-size: 12px; background: #f8f9fa; border-top: 1px solid #eee; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                        <div class="image-filename" style="font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${filename}">
-                            ${filename}
-                        </div>
-                        <div class="image-path" style="color: #666; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${path}">
-                            ${path}
+                    <div class="image-info" style="padding: 8px; font-size: 12px; background: #f8f9fa; border-top: 1px solid #eee; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                        <div class="image-filename" style="font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${filename.replace(/\.jpg$/i, '')}">
+                            ${filename.replace(/\.jpg$/i, '')}
                         </div>
                     </div>
                 </div>

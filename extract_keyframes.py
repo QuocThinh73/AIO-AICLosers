@@ -5,7 +5,7 @@ import numpy as np
 # ==============================
 N_KEYFRAMES = 3
 SHOT_TXT_FOLDER = os.path.join("data", "shots")
-VIDEO_FOLDER = os.path.join("data", "videos", "L001")
+VIDEO_FOLDER = os.path.join("data", "videos", "L01")
 OUTPUT_FOLDER = os.path.join("data", "keyframes")
 # ==============================
 

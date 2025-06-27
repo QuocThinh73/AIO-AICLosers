@@ -1,5 +1,6 @@
 import os
 import json
+import cv2
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from app.translate import translate_text
@@ -38,20 +39,103 @@ def index():
 def get_keyframe(keyframe_name):
     """
     Input:
-        - keyframe_name (string): Keyframe filename (e.g., "image_001.jpg")
+        - keyframe_name (string): Keyframe filename (e.g., "L01_V003_015190.jpg")
     
     Output:
         - Success: Keyframe image file
         - Error: "File not found" (404)
     """
-    keyframes_path = database.keyframes_path
-    keyframe_name = os.path.basename(keyframe_name)
     
-    file_path = os.path.join(keyframes_path, keyframe_name)
+    parts = keyframe_name.split('_')
+    lesson_folder = parts[0]
+    video_folder = parts[1]
+    folder_path = os.path.join(database.keyframes_path, lesson_folder, video_folder)
+    file_path = os.path.join(folder_path, keyframe_name)
+    
     if os.path.isfile(file_path):
-        return send_from_directory(keyframes_path, keyframe_name)
+        return send_from_directory(folder_path, keyframe_name)
     
     return "File not found", 404
+
+
+@app.route('/data/videos/<path:video_name>')
+def get_video(video_name):
+    """
+    Input:
+        - video_name (string): Video filename (e.g., "L01_V003.mp4")
+    
+    Output:
+        - Success: Video file
+        - Error: "File not found" (404)
+    """
+    
+    parts = video_name.split('_')
+    lesson_folder = parts[0]
+    folder_path = os.path.join(database.videos_path, lesson_folder)
+    file_path = os.path.join(folder_path, video_name)
+    
+    if os.path.isfile(file_path):
+        return send_from_directory(folder_path, video_name)
+    
+    return "File not found", 404
+
+
+@app.route('/api/video-info/<path:keyframe_name>')
+def get_video_info(keyframe_name):
+    """
+    Input:
+        - keyframe_name (string): Keyframe filename (e.g., "L01_V003_015190.jpg")
+    
+    Output (JSON):
+        {
+            "video_path": "/data/videos/L01_V003.mp4",
+            "timestamp": 607.6,
+            "frame_number": 15190,
+            "fps": 25.0
+        }
+    """
+
+    
+    # Parse filename: L01_V003_015190.jpg
+    parts = keyframe_name.split('_')
+    if len(parts) >= 3:
+        lesson = parts[0]  # L01
+        video = parts[1]   # V003
+        frame_str = parts[2].replace('.jpg', '')  # 015190
+        
+        try:
+            frame_number = int(frame_str)
+            
+            # Tạo đường dẫn video thực tế để đọc FPS
+            video_name = f"{lesson}_{video}.mp4"
+            actual_video_path = os.path.join(database.videos_path, lesson, video_name)
+            
+            # Đọc FPS thực tế từ video
+            fps = 25.0  # Default fallback
+            if os.path.isfile(actual_video_path):
+                cap = cv2.VideoCapture(actual_video_path)
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                cap.release()
+                if fps <= 0:  # Nếu không đọc được FPS, dùng default
+                    fps = 25.0
+            
+            # Tính timestamp từ frame number và FPS thực tế
+            timestamp = frame_number / fps
+            
+            video_path = f"/data/videos/{video_name}"
+            
+            return jsonify({
+                'video_path': video_path,
+                'timestamp': timestamp,
+                'frame_number': frame_number,
+                'fps': fps
+            })
+        except ValueError:
+            return jsonify({'error': 'Invalid frame number'}), 400
+        except Exception as e:
+            return jsonify({'error': f'Error processing video: {str(e)}'}), 500
+    
+    return jsonify({'error': 'Invalid keyframe filename'}), 400
 
 
 @app.route('/api/search', methods=['GET'])
@@ -66,9 +150,9 @@ def search():
     
     Output (JSON):
         {
-            "paths": ["keyframes/image_001.jpg", "keyframes/image_002.jpg"],
+            "paths": ["keyframes/L01_V003_015190.jpg", "keyframes/L01_V003_015191.jpg"],
             "scores": [0.95, 0.87],
-            "filenames": ["image_001.jpg", "image_002.jpg"]
+            "filenames": ["L01_V003_015190.jpg", "L01_V003_015191.jpg"]
         }
     """
  
@@ -91,7 +175,7 @@ def search():
     # TODO: Implement object filtering logic here
 
     paths, scores = rrf(list_paths, k_rrf=60)
-    
+
     response_data = {
         'paths': [r.replace(database.database_path, '', 1) for r in paths],
         'scores': [r for r in scores],
@@ -109,7 +193,7 @@ def list_models():
     
     Output (JSON):
         {
-            "models": ["clip", "openclip", ...]
+            "models": ["OpenCLIP ViT-B-16-SigLIP-512 webli", "OpenCLIP ViT-L-16-SigLIP-256 webli", ...]
         }
     """
     return jsonify({
