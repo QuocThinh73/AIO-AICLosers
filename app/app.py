@@ -95,47 +95,41 @@ def get_video_info(keyframe_name):
         }
     """
 
-    
     # Parse filename: L01_V003_015190.jpg
     parts = keyframe_name.split('_')
-    if len(parts) >= 3:
-        lesson = parts[0]  # L01
-        video = parts[1]   # V003
-        frame_str = parts[2].replace('.jpg', '')  # 015190
+    lesson = parts[0]  # L01
+    video = parts[1]   # V003
+    frame_str = parts[2].replace('.jpg', '')  # 015190
         
-        try:
-            frame_number = int(frame_str)
-            
-            # Tạo đường dẫn video thực tế để đọc FPS
-            video_name = f"{lesson}_{video}.mp4"
-            actual_video_path = os.path.join(database.videos_path, lesson, video_name)
-            
-            # Đọc FPS thực tế từ video
-            fps = 25.0  # Default fallback
-            if os.path.isfile(actual_video_path):
-                cap = cv2.VideoCapture(actual_video_path)
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                cap.release()
-                if fps <= 0:  # Nếu không đọc được FPS, dùng default
-                    fps = 25.0
-            
-            # Tính timestamp từ frame number và FPS thực tế
-            timestamp = frame_number / fps
-            
-            video_path = f"/data/videos/{video_name}"
-            
-            return jsonify({
-                'video_path': video_path,
-                'timestamp': timestamp,
-                'frame_number': frame_number,
-                'fps': fps
-            })
-        except ValueError:
-            return jsonify({'error': 'Invalid frame number'}), 400
-        except Exception as e:
-            return jsonify({'error': f'Error processing video: {str(e)}'}), 500
+    frame_number = int(frame_str)
     
-    return jsonify({'error': 'Invalid keyframe filename'}), 400
+    # Tạo đường dẫn video thực tế để đọc FPS
+    video_name = f"{lesson}_{video}.mp4"
+    actual_video_path = os.path.join(database.videos_path, lesson, video_name)
+    
+    if os.path.isfile(actual_video_path):
+        # Đọc FPS thực tế từ video
+        fps = 25.0  # Default fallback
+        if os.path.isfile(actual_video_path):
+            cap = cv2.VideoCapture(actual_video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            cap.release()
+            if fps <= 0:  # Nếu không đọc được FPS, dùng default
+                fps = 25.0
+        
+        # Tính timestamp từ frame number và FPS thực tế
+        timestamp = frame_number / fps
+        
+        video_path = f"/data/videos/{video_name}"
+        
+        return jsonify({
+            'video_path': video_path,
+            'timestamp': timestamp,
+            'frame_number': frame_number,
+            'fps': fps
+        })
+    
+    return "File not found", 404
 
 
 @app.route('/api/search', methods=['GET'])
