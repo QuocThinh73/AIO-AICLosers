@@ -15,45 +15,44 @@
     <main class="container">
         <section class="search-section">
             <form id="searchForm" class="search-form">
-                <div class="main-search-row">
-                    <div class="search-input-container">
+                <div class="search-row-compact">
+                    <!-- Main search inputs -->
+                    <div class="search-inputs">
                         <input 
                             type="text" 
                             id="searchInput" 
                             class="search-input" 
-                            placeholder="Nhập mô tả ảnh bạn muốn tìm..."
+                            placeholder="🔍 Mô tả ảnh bạn muốn tìm..."
                             autocomplete="off">
-                        <div class="search-divider">HOẶC</div>
-                        <div class="image-upload-container">
-                            <input type="file" id="imageUpload" class="image-upload-input" accept="image/*" hidden>
-                            <button type="button" class="image-upload-btn" id="imageUploadBtn">
-                                <i class="fas fa-image"></i> Tải ảnh lên
-                            </button>
-                            <div class="uploaded-image-preview" id="uploadedImagePreview" style="display: none;">
-                                <img id="previewImage" src="" alt="Preview">
-                                <button type="button" class="remove-image-btn" id="removeImageBtn">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <input type="number" class="topk-input" id="topK" name="topK" placeholder="TopK" value="100">
-                    <button type="submit" class="btn" id="searchBtn">
-                        <i class="fas fa-search"></i> Tìm kiếm
-                    </button>
-                </div>
-                
-                <div class="additional-search-row">
-                    <div class="ocr-input-group">
-                        <label for="ocrInput" class="input-label">
-                            <i class="fas fa-text-width"></i> OCR:
-                        </label>
+                        
                         <input 
                             type="text" 
                             id="ocrInput" 
-                            class="ocr-input" 
-                            placeholder="Nhập text cần tìm trong ảnh..."
+                            class="search-input" 
+                            placeholder="📝 Text cần tìm trong ảnh (OCR)..."
                             autocomplete="off">
+                    </div>
+                    
+                    <!-- Image upload -->
+                    <div class="image-upload-compact">
+                        <input type="file" id="imageUpload" class="image-upload-input" accept="image/*" hidden>
+                        <button type="button" class="image-upload-btn-compact" id="imageUploadBtn" title="Tải ảnh lên">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <div class="uploaded-image-preview-compact" id="uploadedImagePreview" style="display: none;">
+                            <img id="previewImage" src="" alt="Preview">
+                            <button type="button" class="remove-image-btn-compact" id="removeImageBtn" title="Xóa ảnh">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div class="search-controls">
+                        <input type="number" class="topk-input-compact" id="topK" name="topK" placeholder="100" value="100" title="Số kết quả tối đa">
+                        <button type="submit" class="search-btn-compact" id="searchBtn" title="Tìm kiếm">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
             </form>

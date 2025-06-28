@@ -15,194 +15,203 @@
     margin-bottom: 2rem;
 }
 
-.main-search-row {
+/* Compact Search Layout */
+.search-row-compact {
     display: flex;
-    gap: 10px;
-    align-items: flex-start;
+    gap: 12px;
+    align-items: center;
     margin-bottom: 15px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
 }
 
-.additional-search-row {
-    display: flex;
-    gap: 15px;
-    align-items: flex-end;
-}
-
-/* Search Input Container */
-.search-input-container {
+.search-inputs {
     flex: 1;
     display: flex;
-    flex-direction: column;
     gap: 8px;
 }
 
 .search-input {
-    width: 100%;
-    padding: 12px 15px;
+    flex: 1;
+    padding: 10px 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
     box-sizing: border-box;
+    transition: all 0.2s ease;
 }
 
 .search-input:focus {
     outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
-/* Search Divider */
-.search-divider {
-    text-align: center;
-    font-size: 12px;
-    color: #666;
-    font-weight: 500;
-    margin: 4px 0;
+.search-input::placeholder {
+    color: #6c757d;
+    font-size: 0.9rem;
 }
 
-/* Image Upload */
-.image-upload-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.image-upload-btn {
-    padding: 10px 16px;
-    background: #f8f9fa;
-    border: 2px dashed #ddd;
-    border-radius: 4px;
-    color: #666;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
+/* Image Upload Compact */
+.image-upload-compact {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.image-upload-btn:hover {
-    background: #e9ecef;
-    border-color: #007bff;
-    color: #007bff;
+.image-upload-btn-compact {
+    width: 40px;
+    height: 40px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
-.uploaded-image-preview {
+.image-upload-btn-compact:hover {
+    background: #0056b3;
+    transform: scale(1.05);
+}
+
+.uploaded-image-preview-compact {
     position: relative;
     display: inline-block;
 }
 
-.uploaded-image-preview img {
-    width: 60px;
-    height: 60px;
+.uploaded-image-preview-compact img {
+    width: 40px;
+    height: 40px;
     object-fit: cover;
     border-radius: 6px;
     border: 2px solid #007bff;
 }
 
-.remove-image-btn {
+.remove-image-btn-compact {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
     background: #dc3545;
     color: white;
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s;
 }
 
-.remove-image-btn:hover {
+.remove-image-btn-compact:hover {
     background: #c82333;
 }
 
-/* Top K Input */
-.topk-input {
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    text-align: center;
-    width: 100px;
-    margin: 0;
-}
-
-.topk-input:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
-}
-
-/* OCR Input */
-.ocr-input-group {
+/* Search Controls */
+.search-controls {
     display: flex;
-    flex-direction: column;
     gap: 8px;
-    flex: 1;
-    max-width: 400px;
+    align-items: center;
 }
 
-.input-label {
+.topk-input-compact {
+    width: 60px;
+    padding: 10px 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     font-size: 0.9rem;
-    font-weight: 600;
-    color: #495057;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.topk-input-compact:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.search-btn-compact {
+    width: 40px;
+    height: 40px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
-.input-label i {
-    color: #6c757d;
+.search-btn-compact:hover {
+    background: #218838;
+    transform: scale(1.05);
 }
 
-.ocr-input {
-    padding: 10px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.95rem;
-    transition: border-color 0.2s ease;
-}
 
-.ocr-input:focus {
-    outline: none;
-    border-color: #28a745;
-    box-shadow: 0 0 5px rgba(40, 167, 69, 0.3);
-}
 
 /* Responsive Search */
 @media (max-width: 768px) {
-    .main-search-row {
+    .search-row-compact {
         flex-direction: column;
         gap: 10px;
+        align-items: stretch;
     }
     
-    .additional-search-row {
+    .search-inputs {
         flex-direction: column;
-        gap: 10px;
-    }
-    
-    .ocr-input-group {
-        max-width: none;
-    }
-    
-    .topk-input {
-        width: 100%;
-    }
-    
-    .image-upload-container {
-        flex-direction: column;
-        align-items: flex-start;
         gap: 8px;
     }
     
-    .image-upload-btn {
-        width: 100%;
-        justify-content: center;
+    .search-controls {
+        justify-content: space-between;
+    }
+    
+    .topk-input-compact {
+        width: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-row-compact {
+        padding: 10px;
+        gap: 8px;
+    }
+    
+    .search-inputs {
+        gap: 6px;
+    }
+    
+    .search-input {
+        padding: 8px 10px;
+        font-size: 0.9rem;
+    }
+    
+    .image-upload-btn-compact,
+    .search-btn-compact {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    
+    .uploaded-image-preview-compact img {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .topk-input-compact {
+        width: 70px;
+        padding: 8px 6px;
     }
 } 
