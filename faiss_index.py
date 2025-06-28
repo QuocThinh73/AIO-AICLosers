@@ -10,31 +10,28 @@ class Faiss:
         self.model = model
         self.embeddings = None
         self.id2path = None
-
-    def load(self, embeddings_path, mapping_json):
-        # Load index
+        
+    def load_embeddings(self, embeddings_path):
         self.embeddings = faiss.read_index(embeddings_path)
 
-         # Load mapping JSON
+    def load_mapping(self, mapping_json):
         with open(mapping_json, 'r', encoding='utf-8') as f:
             data = json.load(f)
         items = data.get("items", [])
         self.id2path = {item["id"]: item["path"] for item in items}
 
-    def build(self, mapping_json, model_name, output_dir=DATABASE_FOLDER):
-        os.makedirs(output_dir, exist_ok=True)
+    def load(self, embeddings_path, mapping_json):
+        # Load index
+        self.load_embeddings(embeddings_path)
 
         # Load mapping JSON
-        with open(mapping_json, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        total = data.get("total")
-        items = data.get("items", [])
-        id2path = {item["id"]: item["path"] for item in items}
+        self.load_mapping(mapping_json)
 
-        image_paths = [id2path[i] for i in range(total)]
+    def build(self, model_name, output_dir=DATABASE_FOLDER):
+        os.makedirs(output_dir, exist_ok=True)
 
         embeddings = []
-        for path in image_paths:
+        for path in self.id2path.values():
             print(f"Encoding image {path}")
             with Image.open(path).convert('RGB') as img:
                 emb = self.model.encode_image(img)
