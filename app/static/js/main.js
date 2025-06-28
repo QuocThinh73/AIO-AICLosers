@@ -1,21 +1,21 @@
 // ===================================================================
-// MAIN.JS - Entry point và khởi tạo ứng dụng
+// MAIN.JS - Entry point and application initialization
 // ===================================================================
 
-// Import các modules (sẽ được tải qua script tags)
-// - search.js: Xử lý tìm kiếm và hiển thị kết quả
-// - models.js: Xử lý chọn models
-// - objects.js: Xử lý chọn objects  
-// - modal.js: Xử lý modal hiển thị ảnh chi tiết
+// Import modules (loaded via script tags)
+// - search.js: Handle search and display results
+// - models.js: Handle model selection
+// - objects.js: Handle object selection  
+// - modal.js: Handle modal display of image details
 
-// Biến toàn cục cho ứng dụng
+// Global variables for the application
 window.AppData = {
     availableModels: [],
     availableObjects: [],
     selectedObjects: []
 };
 
-// Các phần tử DOM chính
+// Main DOM elements
 window.AppElements = {
     searchForm: document.getElementById('searchForm'),
     searchInput: document.getElementById('searchInput'),
@@ -25,15 +25,15 @@ window.AppElements = {
     modelSelect: document.getElementById('modelSelect')
 };
 
-// Hàm khởi tạo ứng dụng
+// Application initialization function
 function initApp() {
-    // Kiểm tra các phần tử cần thiết
+    // Check required elements
     if (!window.AppElements.searchForm || !window.AppElements.searchInput || 
         !window.AppElements.resultsDiv || !window.AppElements.modelSelect) {
         return;
     }
     
-    // Khởi tạo các modules
+    // Initialize modules
     if (window.SearchModule) {
         window.SearchModule.init();
     }
@@ -51,7 +51,7 @@ function initApp() {
     }
 }
 
-// Khởi động ứng dụng khi DOM đã tải xong
+// Start application when DOM is loaded
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {

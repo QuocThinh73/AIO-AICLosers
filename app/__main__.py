@@ -2,6 +2,7 @@
 Flask application for image search API
 """
 import os
+# Fix for OpenMP duplicate library issue on some systems
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 from .app import app

@@ -7,12 +7,12 @@ from app.translate import translate_text
 from app.database import Database
 from app.rerank import rrf
 
-# Khởi tạo Flask app
+# Initialize Flask application with static and template folders
 app = Flask(__name__, 
             static_folder='static',
             template_folder='templates')
 
-# Cấu hình CORS
+# Configure CORS for cross-origin requests
 cors = CORS()
 cors.init_app(app, resources={
     r"/*": {
@@ -25,30 +25,39 @@ cors.init_app(app, resources={
     }
 })
 
-# Khởi tạo database
+# Initialize database connection and models
 database = Database()
     
 
 # Routes
 @app.route('/')
 def index():
+    """
+    Serve the main application page.
+    
+    Returns:
+        HTML template for the search interface
+    """
     return render_template('index.html')
 
 
 @app.route('/data/keyframes/<path:keyframe_name>')
 def get_keyframe(keyframe_name):
     """
-    Input:
-        - keyframe_name (string): Keyframe filename (e.g., "L01_V003_015190.jpg")
+    Serve keyframe images from the database.
     
-    Output:
-        - Success: Keyframe image file
-        - Error: "File not found" (404)
+    Args:
+        keyframe_name (str): Keyframe filename in format "L01_V003_015190.jpg"
+    
+    Returns:
+        File: Keyframe image file if found
+        str: "File not found" with 404 status if not found
     """
     
+    # Parse keyframe filename to extract folder structure
     parts = keyframe_name.split('_')
-    lesson_folder = parts[0]
-    video_folder = parts[1]
+    lesson_folder = parts[0]  # L01
+    video_folder = parts[1]   # V003
     folder_path = os.path.join(database.keyframes_path, lesson_folder, video_folder)
     file_path = os.path.join(folder_path, keyframe_name)
     
@@ -61,16 +70,19 @@ def get_keyframe(keyframe_name):
 @app.route('/data/videos/<path:video_name>')
 def get_video(video_name):
     """
-    Input:
-        - video_name (string): Video filename (e.g., "L01_V003.mp4")
+    Serve video files from the database.
     
-    Output:
-        - Success: Video file
-        - Error: "File not found" (404)
+    Args:
+        video_name (str): Video filename in format "L01_V003.mp4"
+    
+    Returns:
+        File: Video file if found
+        str: "File not found" with 404 status if not found
     """
     
+    # Parse video filename to extract lesson folder
     parts = video_name.split('_')
-    lesson_folder = parts[0]
+    lesson_folder = parts[0]  # L01
     folder_path = os.path.join(database.videos_path, lesson_folder)
     file_path = os.path.join(folder_path, video_name)
     
@@ -83,19 +95,17 @@ def get_video(video_name):
 @app.route('/api/video-info/<path:keyframe_name>')
 def get_video_info(keyframe_name):
     """
-    Input:
-        - keyframe_name (string): Keyframe filename (e.g., "L01_V003_015190.jpg")
+    Get video information and timestamp for a given keyframe.
     
-    Output (JSON):
-        {
-            "video_path": "/data/videos/L01_V003.mp4",
-            "timestamp": 607.6,
-            "frame_number": 15190,
-            "fps": 25.0
-        }
+    Args:
+        keyframe_name (str): Keyframe filename in format "L01_V003_015190.jpg"
+    
+    Returns:
+        JSON: Video information including path, timestamp, frame number, and FPS
+        str: "File not found" with 404 status if video not found
     """
 
-    # Parse filename: L01_V003_015190.jpg
+    # Parse keyframe filename: L01_V003_015190.jpg
     parts = keyframe_name.split('_')
     lesson = parts[0]  # L01
     video = parts[1]   # V003
@@ -103,21 +113,17 @@ def get_video_info(keyframe_name):
         
     frame_number = int(frame_str)
     
-    # Tạo đường dẫn video thực tế để đọc FPS
+    # Build actual video path to read FPS
     video_name = f"{lesson}_{video}.mp4"
     actual_video_path = os.path.join(database.videos_path, lesson, video_name)
     
     if os.path.isfile(actual_video_path):
-        # Đọc FPS thực tế từ video
-        fps = 25.0  # Default fallback
-        if os.path.isfile(actual_video_path):
-            cap = cv2.VideoCapture(actual_video_path)
-            fps = cap.get(cv2.CAP_PROP_FPS)
-            cap.release()
-            if fps <= 0:  # Nếu không đọc được FPS, dùng default
-                fps = 25.0
+        # Read actual FPS from video file
+        cap = cv2.VideoCapture(actual_video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        cap.release()
         
-        # Tính timestamp từ frame number và FPS thực tế
+        # Calculate timestamp from frame number and actual FPS
         timestamp = frame_number / fps
         
         video_path = f"/data/videos/{video_name}"
@@ -132,33 +138,80 @@ def get_video_info(keyframe_name):
     return "File not found", 404
 
 
+@app.route('/api/video-keyframes/<path:keyframe_name>')
+def get_video_keyframes(keyframe_name):
+    """
+    Get all keyframes for the same video as the given keyframe.
+    
+    Args:
+        keyframe_name (str): Keyframe filename in format "L01_V003_015190.jpg"
+    
+    Returns:
+        JSON: List of all keyframes for the same video, sorted by frame number
+        str: "Directory not found" with 404 status if keyframes directory not found
+    """
+    
+    # Parse keyframe filename: L01_V003_015190.jpg
+    parts = keyframe_name.split('_')
+    lesson = parts[0]  # L01
+    video = parts[1]   # V003
+    
+    # Build keyframes directory path
+    keyframes_dir = os.path.join(database.keyframes_path, lesson, video)
+    
+    if not os.path.isdir(keyframes_dir):
+        return "Directory not found", 404
+    
+    # Get all keyframe files for this video
+    keyframes = []
+    for filename in os.listdir(keyframes_dir):
+        if filename.endswith('.jpg') and filename.startswith(f"{lesson}_{video}_"):
+            # Extract frame number for sorting
+            frame_str = filename.split('_')[2].replace('.jpg', '')
+            frame_number = int(frame_str)
+            keyframes.append({
+                'filename': filename,
+                'frame_number': frame_number,
+                'path': f"/data/keyframes/{filename}"
+            })
+    
+    # Sort by frame number
+    keyframes.sort(key=lambda x: x['frame_number'])
+    
+    return jsonify({
+        'keyframes': keyframes,
+        'current_keyframe': keyframe_name
+    })
+
+
 @app.route('/api/search', methods=['GET'])
 def search():
     """
-    Input (URL Parameters):
-        - query (string, optional): Text description of image to search (e.g., "a person riding a bicycle")
-        - ocr_text (string, optional): OCR text to search in images (e.g., "STOP")
-        - models (JSON array string, optional): List of models to use for search (e.g., '["CLIP ViT-B/32", "OpenCLIP ViT-B-32 laion2b_s34b_b79k"]')
-        - objects (JSON array string, optional): List of objects to filter by (e.g., '["car", "person"]')
-        - topK (int): Maximum number of results to return (e.g., 100)
+    Search for keyframes using text descriptions, OCR, and object filters.
     
-    Output (JSON):
-        {
-            "paths": ["keyframes/L01_V003_015190.jpg", "keyframes/L01_V003_015191.jpg"],
-            "scores": [0.95, 0.87],
-            "filenames": ["L01_V003_015190.jpg", "L01_V003_015191.jpg"]
-        }
+    Args (URL Parameters):
+        query (str, optional): Text description of image to search
+        ocr_text (str, optional): OCR text to search in images
+        models (str, optional): JSON array of models to use for search
+        objects (str, optional): JSON array of objects to filter by
+        topK (int): Maximum number of results to return
+    
+    Returns:
+        JSON: Search results with paths, scores, and filenames
     """
  
+    # Get and translate search parameters
     query = translate_text(request.args.get('query', ''))
     ocr = request.args.get('ocr_text', '')
     models = request.args.get('models', '[]')
     objects = request.args.get('objects', '[]')
     topK = int(request.args.get('topK'))
     
+    # Parse JSON parameters
     models = json.loads(models) if models else []
     objects = json.loads(objects) if objects else []
 
+    # Search using each specified model
     list_paths = {}
     for model in models:    
         faiss_handler = database.embedding_models[f'{model}']
@@ -168,8 +221,10 @@ def search():
     # TODO: Implement OCR text search logic here
     # TODO: Implement object filtering logic here
 
+    # Fuse results using Reciprocal Rank Fusion
     paths, scores = rrf(list_paths, k_rrf=60)
 
+    # Format response with relative paths
     response_data = {
         'paths': [r.replace(database.database_path, '', 1) for r in paths],
         'scores': [r for r in scores],
@@ -183,12 +238,10 @@ def search():
 @app.route('/api/models', methods=['GET'])
 def list_models():
     """
-    Input: None
+    Get list of available embedding models.
     
-    Output (JSON):
-        {
-            "models": ["OpenCLIP ViT-B-16-SigLIP-512 webli", "OpenCLIP ViT-L-16-SigLIP-256 webli", ...]
-        }
+    Returns:
+        JSON: Dictionary containing list of available model names
     """
     return jsonify({
         'models': list(database.embedding_models.keys())
@@ -197,12 +250,10 @@ def list_models():
 @app.route('/api/objects', methods=['GET'])
 def list_objects():
     """
-    Input: None
+    Get list of available object classes for filtering.
     
-    Output (JSON):
-        {
-            "objects": ["person", "car", "bicycle", ...]
-        }
+    Returns:
+        JSON: Dictionary containing list of available object classes
     """
     return jsonify({
         'objects': database.objects

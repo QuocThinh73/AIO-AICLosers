@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm ảnh bằng văn bản - HCMAI 2025</title>
-    <!-- Import CSS modules theo thứ tự -->
+    <!-- Import CSS modules in order -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/search.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/selection.css') }}">
@@ -100,13 +100,19 @@
         </section>
     </main>
 
-    <!-- Modal để hiển thị keyframe chi tiết -->
+    <!-- Modal to display keyframe details -->
     <div id="imageModal" class="modal">
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <button class="modal-close">&times;</button>
             <div class="modal-image-container">
+                <button class="modal-nav-btn modal-prev-btn" id="modalPrevBtn" title="Keyframe trước">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
                 <img id="modalImage" src="" alt="Keyframe chi tiết">
+                <button class="modal-nav-btn modal-next-btn" id="modalNextBtn" title="Keyframe tiếp theo">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
             <div class="modal-info">
                 <h3>Chi tiết keyframe</h3>
@@ -122,6 +128,10 @@
                     <span class="info-label">Điểm số:</span>
                     <span id="modalScore">-</span>
                 </div>
+                <div class="info-row keyframe-navigation">
+                    <span class="info-label">Điều hướng:</span>
+                    <span id="modalKeyframeInfo">-</span>
+                </div>
             </div>
         </div>
     </div>
@@ -132,7 +142,7 @@
         </div>
     </footer>
 
-    <!-- Import các modules theo thứ tự -->
+    <!-- Import modules in order -->
     <script src="{{ url_for('static', filename='js/models.js') }}"></script>
     <script src="{{ url_for('static', filename='js/objects.js') }}"></script>
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>

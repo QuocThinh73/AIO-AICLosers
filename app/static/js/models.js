@@ -1,5 +1,5 @@
 // ===================================================================
-// MODELS.JS - Module xử lý chọn models
+// MODELS.JS - Module for handling model selection
 // ===================================================================
 
 window.ModelsModule = (function() {
@@ -51,7 +51,7 @@ window.ModelsModule = (function() {
     function showModelError(errorMessage) {
         window.AppElements.modelSelect.innerHTML = `
             <div class="error-message" style="color: #721c24; padding: 10px; background: #f8d7da; border-radius: 4px; font-size: 0.9rem;">
-                <i class="fas fa-exclamation-triangle"></i> Không thể tải danh sách models: ${errorMessage}
+                <i class="fas fa-exclamation-triangle"></i> Unable to load models list: ${errorMessage}
             </div>
         `;
     }

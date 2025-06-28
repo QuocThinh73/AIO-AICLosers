@@ -1,5 +1,5 @@
 // ===================================================================
-// MODAL.JS - Module xử lý modal hiển thị ảnh chi tiết
+// MODAL.JS - Module for handling modal display of image details
 // ===================================================================
 
 window.ModalModule = (function() {
@@ -12,9 +12,17 @@ window.ModalModule = (function() {
         modalFilename: document.getElementById('modalFilename'),
         modalPath: document.getElementById('modalPath'),
         modalScore: document.getElementById('modalScore'),
+        modalKeyframeInfo: document.getElementById('modalKeyframeInfo'),
         modalClose: document.querySelector('.modal-close'),
-        modalOverlay: document.querySelector('.modal-overlay')
+        modalOverlay: document.querySelector('.modal-overlay'),
+        modalPrevBtn: document.getElementById('modalPrevBtn'),
+        modalNextBtn: document.getElementById('modalNextBtn')
     };
+    
+    // State variables
+    let currentKeyframes = [];
+    let currentKeyframeIndex = -1;
+    let currentScore = null;
     
     // Private methods
     function setupEventListeners() {
@@ -26,9 +34,29 @@ window.ModalModule = (function() {
             elements.modalOverlay.addEventListener('click', closeImageModal);
         }
         
+        if (elements.modalPrevBtn) {
+            elements.modalPrevBtn.addEventListener('click', navigateToPrevKeyframe);
+        }
+        
+        if (elements.modalNextBtn) {
+            elements.modalNextBtn.addEventListener('click', navigateToNextKeyframe);
+        }
+        
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && elements.modal && elements.modal.style.display === 'block') {
-                closeImageModal();
+            if (elements.modal && elements.modal.style.display === 'block') {
+                switch(e.key) {
+                    case 'Escape':
+                        closeImageModal();
+                        break;
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        navigateToPrevKeyframe();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        navigateToNextKeyframe();
+                        break;
+                }
             }
         });
     }
@@ -38,7 +66,7 @@ window.ModalModule = (function() {
             return;
         }
         
-        // Lấy thông tin video từ API
+        // Get video information from API
         fetch(`/api/video-info/${filename}`)
             .then(response => response.json())
             .then(videoInfo => {
@@ -46,10 +74,10 @@ window.ModalModule = (function() {
                     throw new Error(videoInfo.error);
                 }
                 
-                // Thay ảnh bằng video player
+                // Replace image with video player
                 elements.modalImage.style.display = 'none';
                 
-                // Tạo video element nếu chưa có
+                // Create video element if not exists
                 let videoElement = document.getElementById('modalVideo');
                 if (!videoElement) {
                     videoElement = document.createElement('video');
@@ -82,29 +110,32 @@ window.ModalModule = (function() {
                 elements.modalImage.src = imagePath;
             });
         
-        // Hiển thị thông tin chi tiết
+        // Display detailed information
         if (elements.modalFilename) {
-            elements.modalFilename.textContent = filename || 'Không có tên file';
+            elements.modalFilename.textContent = filename || 'No filename';
         }
         
         if (elements.modalPath && elements.modalPath.parentElement) {
             elements.modalPath.parentElement.style.display = 'block';
-            // Path sẽ được cập nhật trong API call hoặc dùng default
-            if (!elements.modalPath.textContent || elements.modalPath.textContent === 'Không có đường dẫn') {
-                elements.modalPath.textContent = path || 'Không có đường dẫn';
+            // Path will be updated in API call or use default
+            if (!elements.modalPath.textContent || elements.modalPath.textContent === 'No path') {
+                elements.modalPath.textContent = path || 'No path';
             }
         }
         
         if (elements.modalScore && elements.modalScore.parentElement) {
             elements.modalScore.parentElement.style.display = 'block';
-            elements.modalScore.textContent = score || 'Không có điểm số';
+            elements.modalScore.textContent = score || 'No score';
         }
         
         elements.modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
         
+        // Set onerror handler only if modal is visible and image is displayed
         elements.modalImage.onerror = function() {
-            this.src = '/static/images/no-image.png';
+            if (elements.modal && elements.modal.style.display === 'block') {
+                this.src = '/static/images/no-image.png';
+            }
         };
     }
     
@@ -115,11 +146,13 @@ window.ModalModule = (function() {
         document.body.style.overflow = 'auto';
         
         if (elements.modalImage) {
+            // Remove onerror handler before clearing src to prevent infinite requests
+            elements.modalImage.onerror = null;
             elements.modalImage.src = '';
             elements.modalImage.style.display = 'block';
         }
         
-        // Dọn dẹp video player
+        // Clean up video player
         const videoElement = document.getElementById('modalVideo');
         if (videoElement) {
             videoElement.pause();

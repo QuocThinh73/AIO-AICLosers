@@ -1,5 +1,5 @@
 // ===================================================================
-// OBJECTS.JS - Module xử lý chọn objects
+// OBJECTS.JS - Module for handling object selection
 // ===================================================================
 
 window.ObjectsModule = (function() {
@@ -135,7 +135,7 @@ window.ObjectsModule = (function() {
         if (filteredObjects.length === 0) {
             elements.objectList.innerHTML = `
                 <div class="no-objects-message">
-                    Không tìm thấy object nào
+                    No objects found
                 </div>
             `;
             return;
@@ -258,11 +258,11 @@ window.ObjectsModule = (function() {
         if (!selectorText) return;
         
         if (window.AppData.selectedObjects.length === 0) {
-            selectorText.textContent = 'Chọn objects...';
+            selectorText.textContent = 'Select objects...';
         } else if (window.AppData.selectedObjects.length === 1) {
-            selectorText.textContent = `Đã chọn: ${window.AppData.selectedObjects[0]}`;
+            selectorText.textContent = `Selected: ${window.AppData.selectedObjects[0]}`;
         } else {
-            selectorText.textContent = `Đã chọn ${window.AppData.selectedObjects.length} objects`;
+            selectorText.textContent = `Selected ${window.AppData.selectedObjects.length} objects`;
         }
     }
     
@@ -270,7 +270,7 @@ window.ObjectsModule = (function() {
         if (elements.objectList) {
             elements.objectList.innerHTML = `
                 <div class="no-objects-message">
-                    Không có objects nào khả dụng
+                    No objects available
                 </div>
             `;
         }
@@ -280,7 +280,7 @@ window.ObjectsModule = (function() {
         if (elements.objectList) {
             elements.objectList.innerHTML = `
                 <div class="error-message" style="color: #721c24; padding: 10px; background: #f8d7da; border-radius: 4px; font-size: 0.9rem;">
-                    <i class="fas fa-exclamation-triangle"></i> Không thể tải danh sách objects: ${errorMessage}
+                    <i class="fas fa-exclamation-triangle"></i> Unable to load objects list: ${errorMessage}
                 </div>
             `;
         }

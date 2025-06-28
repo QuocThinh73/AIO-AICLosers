@@ -1,5 +1,5 @@
 // ===================================================================
-// SEARCH.JS - Module xử lý tìm kiếm và hiển thị kết quả
+// SEARCH.JS - Module for handling search and displaying results
 // ===================================================================
 
 window.SearchModule = (function() {
@@ -11,21 +11,21 @@ window.SearchModule = (function() {
     
     // Private methods
     function validateSearchInput(query, ocrText, selectedModels, topK) {
-        // Kiểm tra có ít nhất query hoặc OCR text
+        // Check if at least query or OCR text is provided
         if (!query && !ocrText) {
-            alert('Vui lòng nhập ít nhất một trong hai: từ khóa tìm kiếm hoặc OCR text');
+            alert('Please enter at least one of: search keyword or OCR text');
             return false;
         }
         
-        // Kiểm tra TopK hợp lệ
+        // Check if TopK is valid
         if (isNaN(topK) || topK < 1) {
-            alert('Giá trị Top K không hợp lệ');
+            alert('Invalid Top K value');
             return false;
         }
         
-        // Kiểm tra có model được chọn
+        // Check if at least one model is selected
         if (selectedModels.length === 0) {
-            alert('Vui lòng chọn ít nhất một model');
+            alert('Please select at least one model');
             return false;
         }
         
@@ -60,25 +60,25 @@ window.SearchModule = (function() {
     }
     
     function handleSearchError(error) {
-        let errorMessage = error.message || 'Có lỗi xảy ra khi tìm kiếm';
+        let errorMessage = error.message || 'An error occurred during search';
         
         if (error.name === 'AbortError') {
-            errorMessage = 'Yêu cầu tìm kiếm đã hết thời gian chờ (30s). Vui lòng thử lại.';
+            errorMessage = 'Search request timed out (30s). Please try again.';
         } else if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.';
+            errorMessage = 'Unable to connect to server. Please check your network connection and try again.';
         }
         
         window.AppElements.resultsDiv.innerHTML = `
             <div class="error" style="color: #721c24; padding: 15px; margin: 15px 0; border: 1px solid #f5c6cb; background-color: #f8d7da; border-radius: 4px;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 1.2em;"></i>
-                    <h3 style="margin: 0; font-size: 1.1em;">Lỗi khi tìm kiếm</h3>
+                    <h3 style="margin: 0; font-size: 1.1em;">Search Error</h3>
                 </div>
                 <div style="background: white; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-word;">
                     ${errorMessage}
                 </div>
                 <p style="margin-top: 10px; margin-bottom: 0; font-size: 0.9em;">
-                    Vui lòng thử lại hoặc liên hệ quản trị viên nếu lỗi vẫn còn.
+                    Please try again or contact the administrator if the error persists.
                 </p>
             </div>
         `;
@@ -90,7 +90,7 @@ window.SearchModule = (function() {
         
         if (isSearching) return;
         
-        // Lấy dữ liệu từ form
+        // Get data from form
         const query = window.AppElements.searchInput.value.trim();
         const ocrText = window.AppElements.ocrInput ? window.AppElements.ocrInput.value.trim() : '';
         const selectedModels = getSelectedModels();
@@ -105,19 +105,19 @@ window.SearchModule = (function() {
         // Set searching state
         setSearchingState(true);
         
-        // Hủy request trước đó nếu có
+        // Cancel previous request if exists
         if (currentController) {
             currentController.abort();
         }
         
-        // Tạo controller mới
+        // Create new controller
         currentController = new AbortController();
         const timeoutId = setTimeout(() => currentController.abort(), 30000);
         
         // Build URL
         const searchURL = buildSearchURL(query, ocrText, selectedModels, selectedObjects, topK);
         
-        // Gửi API request
+        // Send API request
         fetch(searchURL, {
             method: 'GET',
             headers: {
@@ -131,13 +131,13 @@ window.SearchModule = (function() {
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
-                throw new Error(`Server trả về lỗi không xác định (${response.status}): ${text.substring(0, 200)}`);
+                throw new Error(`Server returned unknown error (${response.status}): ${text.substring(0, 200)}`);
             }
             
             const data = await response.json();
             
             if (!response.ok) {
-                const errorMessage = data.error || data.detail || data.message || `Lỗi HTTP: ${response.status}`;
+                const errorMessage = data.error || data.detail || data.message || `HTTP Error: ${response.status}`;
                 throw new Error(errorMessage);
             }
             
@@ -178,9 +178,9 @@ window.SearchModule = (function() {
         window.AppElements.resultsDiv.innerHTML = `
             <div class="no-results" style="text-align: center; padding: 20px; color: #666;">
                 <i class="fas fa-search" style="font-size: 2em; margin-bottom: 10px; opacity: 0.5;"></i>
-                <p>Không tìm thấy kết quả phù hợp với ${queryInfo.join(' + ') || 'từ khóa tìm kiếm'}</p>
+                <p>No results found matching ${queryInfo.join(' + ') || 'search keywords'}</p>
                 ${searchParams.selectedObjects && searchParams.selectedObjects.length > 0 ? 
-                    `<p style="font-size: 0.9em; color: #999;">Đã lọc theo objects: ${searchParams.selectedObjects.join(', ')}</p>` : ''
+                    `<p style="font-size: 0.9em; color: #999;">Filtered by objects: ${searchParams.selectedObjects.join(', ')}</p>` : ''
                 }
             </div>
         `;
@@ -212,7 +212,7 @@ window.SearchModule = (function() {
                     <div class="image-container" style="position: relative; padding-top: 100%;">
                         <img 
                             src="${imagePath}" 
-                            alt="Kết quả ${index + 1}"
+                            alt="Result ${index + 1}"
                             onerror="this.onerror=null; this.src='/static/images/no-image.png'"
                             loading="lazy"
                             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
