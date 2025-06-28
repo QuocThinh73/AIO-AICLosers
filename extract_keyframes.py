@@ -1,11 +1,10 @@
 import os
 import cv2
 import numpy as np
-from pathlib import Path
 
 # Configuration
 N_KEYFRAMES = 3
-SHOT_TXT_FOLDER = os.path.join("database", "shots")
+SHOT_FOLDER = os.path.join("database", "shots")
 VIDEO_BASE_FOLDER = os.path.join("database", "videos")
 OUTPUT_FOLDER = os.path.join("database", "keyframes")
 
@@ -40,8 +39,12 @@ def extract_keyframes_from_shot(video_path, shot_ranges, l_batch, v_number, n_ke
             # If shot is too short, take all frames
             frame_indexes = list(range(start, end + 1))
         else:
-            # Evenly distribute n_keyframes across the shot
-            frame_indexes = np.linspace(start, end, n_keyframes, dtype=int).tolist()
+            # Use custom ratios: 0.15, 0.5, 0.85 instead of even distribution
+            ratios = [0.15, 0.5, 0.85][:n_keyframes]  # Take only needed ratios
+            frame_indexes = []
+            for ratio in ratios:
+                frame_idx = int(start + ratio * (end - start))
+                frame_indexes.append(frame_idx)
 
         # Extract and save frames
         for idx in frame_indexes:
@@ -154,7 +157,7 @@ def main():
             continue
         
         # Process all shot files
-        for filename in os.listdir(SHOT_TXT_FOLDER):
+        for filename in os.listdir(SHOT_FOLDER):
             if not filename.endswith('.txt'):
                 continue
                 
@@ -166,7 +169,7 @@ def main():
                 continue
             
             # Load shot ranges
-            shot_file_path = os.path.join(SHOT_TXT_FOLDER, filename)
+            shot_file_path = os.path.join(SHOT_FOLDER, filename)
             shots = load_shot_ranges(shot_file_path)
             
             # Find corresponding video file
