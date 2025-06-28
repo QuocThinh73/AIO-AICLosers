@@ -31,7 +31,9 @@ window.ModelsModule = (function() {
         modelSelect.innerHTML = ''; 
         
         window.AppData.availableModels.forEach(model => {
-            const label = document.createElement('label');
+            const chip = document.createElement('div');
+            chip.className = 'model-chip selected'; // All selected by default
+            chip.dataset.model = model;
             
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -42,9 +44,20 @@ window.ModelsModule = (function() {
             const span = document.createElement('span');
             span.textContent = model;
 
-            label.appendChild(checkbox);
-            label.appendChild(span);
-            modelSelect.appendChild(label);
+            chip.appendChild(checkbox);
+            chip.appendChild(span);
+            
+            // Click handler for chip
+            chip.addEventListener('click', function() {
+                checkbox.checked = !checkbox.checked;
+                if (checkbox.checked) {
+                    chip.classList.add('selected');
+                } else {
+                    chip.classList.remove('selected');
+                }
+            });
+            
+            modelSelect.appendChild(chip);
         });
     }
     

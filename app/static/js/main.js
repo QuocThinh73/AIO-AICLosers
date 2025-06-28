@@ -22,7 +22,10 @@ window.AppElements = {
     ocrInput: document.getElementById('ocrInput'),
     topKInput: document.getElementById('topK'),
     resultsDiv: document.getElementById('results'),
-    modelSelect: document.getElementById('modelSelect')
+    modelSelect: document.getElementById('modelSelect'),
+    objectInput: document.getElementById('objectInput'),
+    objectDropdown: document.getElementById('objectDropdown'),
+    selectedObjectsTags: document.getElementById('selectedObjectsTags')
 };
 
 // Application initialization function

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm kiếm ảnh bằng văn bản - HCMAI 2025</title>
+    <title>AIO - AICLoser</title>
     <!-- Import CSS modules in order -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/search.css') }}">
@@ -57,50 +57,31 @@
                 </div>
             </form>
             
-            <div class="selection-section">
-                <div class="model-selection">
-                    <h3 class="selection-title">
-                        <i class="fas fa-brain"></i> Chọn Models:
-                    </h3>
-                    <div id="modelSelect"></div>
-                </div>
-                
-                <div class="object-selection">
-                    <h3 class="selection-title">
-                        <i class="fas fa-cube"></i> Chọn Objects:
-                    </h3>
-                    
-                    <!-- Object Selector Button and Display -->
-                    <div class="object-selector-container">
-                        <div class="object-selector-button" id="objectSelectorBtn">
-                            <span class="selector-text">Chọn objects...</span>
-                            <i class="fas fa-chevron-down selector-arrow"></i>
-                        </div>
-                        
-                        <!-- Selected Objects Display -->
-                        <div class="selected-objects-display" id="selectedObjectsDisplay" style="display: none;">
-                            <div class="selected-objects-list" id="selectedObjectsList"></div>
-                            <button type="button" class="clear-selection-btn" id="clearSelectionBtn">
-                                <i class="fas fa-times"></i> Xóa tất cả
-                            </button>
+            <div class="selection-section-compact">
+                <!-- Models & Objects in same row -->
+                <div class="selection-row">
+                    <div class="selection-group">
+                        <label class="selection-label">🧠 Models:</label>
+                        <div class="selection-content">
+                            <div id="modelSelect" class="model-chips"></div>
                         </div>
                     </div>
                     
-                    <!-- Object Selection Dropdown -->
-                    <div class="object-dropdown" id="objectDropdown" style="display: none;">
-                        <div class="object-search-container">
-                            <input type="text" class="object-search" id="objectSearch" placeholder="Tìm object...">
-                            <i class="fas fa-search search-icon"></i>
-                        </div>
-                        
-                        <div class="object-list-container">
-                            <div id="objectList"></div>
-                        </div>
-                        
-                        <div class="object-dropdown-actions">
-                            <button type="button" class="btn-secondary" id="selectAllObjectsBtn">Chọn tất cả</button>
-                            <button type="button" class="btn-secondary" id="clearAllObjectsBtn">Bỏ chọn tất cả</button>
-                            <button type="button" class="btn-primary" id="confirmSelectionBtn">Chọn</button>
+                    <div class="selection-group">
+                        <label class="selection-label">🧩 Objects:</label>
+                        <div class="selection-content">
+                            <div class="object-input-container">
+                                <input 
+                                    type="text" 
+                                    id="objectInput" 
+                                    class="object-input"
+                                    placeholder="Nhập hoặc chọn objects..."
+                                    autocomplete="off">
+                                <div class="object-dropdown" id="objectDropdown" style="display: none;">
+                                    <!-- Objects will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            <div class="selected-objects-tags" id="selectedObjectsTags"></div>
                         </div>
                     </div>
                 </div>

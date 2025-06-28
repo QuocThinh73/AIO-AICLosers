@@ -1,5 +1,5 @@
 // ===================================================================
-// OBJECTS.JS - Module for handling object selection
+// OBJECTS.JS - Module for handling object selection with autocomplete
 // ===================================================================
 
 window.ObjectsModule = (function() {
@@ -7,19 +7,14 @@ window.ObjectsModule = (function() {
     
     // Private variables
     let filteredObjects = [];
+    let currentHighlighted = -1;
+    let isDropdownVisible = false;
     
     // DOM elements
     const elements = {
-        objectSelectorBtn: document.getElementById('objectSelectorBtn'),
+        objectInput: document.getElementById('objectInput'),
         objectDropdown: document.getElementById('objectDropdown'),
-        objectSearch: document.getElementById('objectSearch'),
-        objectList: document.getElementById('objectList'),
-        selectedObjectsDisplay: document.getElementById('selectedObjectsDisplay'),
-        selectedObjectsList: document.getElementById('selectedObjectsList'),
-        clearSelectionBtn: document.getElementById('clearSelectionBtn'),
-        selectAllObjectsBtn: document.getElementById('selectAllObjectsBtn'),
-        clearAllObjectsBtn: document.getElementById('clearAllObjectsBtn'),
-        confirmSelectionBtn: document.getElementById('confirmSelectionBtn')
+        selectedObjectsTags: document.getElementById('selectedObjectsTags')
     };
     
     // Private methods
@@ -34,203 +29,221 @@ window.ObjectsModule = (function() {
             .then(data => {
                 window.AppData.availableObjects = data.objects || data || [];
                 filteredObjects = [...window.AppData.availableObjects];
-                
-                if (window.AppData.availableObjects.length === 0) {
-                    showNoObjectsMessage();
-                } else {
-                    updateObjectList();
-                }
             })
             .catch(error => {
-                showObjectError(error.message);
+                console.error('Error loading objects:', error);
             });
     }
     
     function setupEventListeners() {
-        if (elements.objectSelectorBtn) {
-            elements.objectSelectorBtn.addEventListener('click', toggleObjectDropdown);
+        if (elements.objectInput) {
+            elements.objectInput.addEventListener('input', handleInputChange);
+            elements.objectInput.addEventListener('keydown', handleKeyDown);
+            elements.objectInput.addEventListener('focus', handleFocus);
+            elements.objectInput.addEventListener('blur', hideDropdownDelayed);
         }
         
-        if (elements.objectSearch) {
-            elements.objectSearch.addEventListener('input', handleObjectSearch);
-        }
-        
-        if (elements.clearSelectionBtn) {
-            elements.clearSelectionBtn.addEventListener('click', clearObjectSelection);
-        }
-        
-        if (elements.selectAllObjectsBtn) {
-            elements.selectAllObjectsBtn.addEventListener('click', () => selectAllObjects(true));
-        }
-        
-        if (elements.clearAllObjectsBtn) {
-            elements.clearAllObjectsBtn.addEventListener('click', () => selectAllObjects(false));
-        }
-        
-        if (elements.confirmSelectionBtn) {
-            elements.confirmSelectionBtn.addEventListener('click', confirmObjectSelection);
-        }
-        
+        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (elements.objectDropdown && 
-                !elements.objectDropdown.contains(e.target) && 
-                !elements.objectSelectorBtn.contains(e.target)) {
-                closeObjectDropdown();
+                !elements.objectInput.contains(e.target) && 
+                !elements.objectDropdown.contains(e.target)) {
+                hideDropdown();
             }
         });
     }
     
-    function toggleObjectDropdown() {
-        if (elements.objectDropdown) {
-            const isVisible = elements.objectDropdown.style.display === 'flex';
-            if (isVisible) {
-                closeObjectDropdown();
-            } else {
-                openObjectDropdown();
-            }
-        }
-    }
-    
-    function openObjectDropdown() {
-        if (elements.objectDropdown && elements.objectSelectorBtn) {
-            elements.objectDropdown.style.display = 'flex';
-            elements.objectSelectorBtn.classList.add('active');
-            if (elements.objectSearch) {
-                elements.objectSearch.focus();
-            }
-        }
-    }
-    
-    function closeObjectDropdown() {
-        if (elements.objectDropdown && elements.objectSelectorBtn) {
-            elements.objectDropdown.style.display = 'none';
-            elements.objectSelectorBtn.classList.remove('active');
-            if (elements.objectSearch) {
-                elements.objectSearch.value = '';
-                filteredObjects = [...window.AppData.availableObjects];
-                updateObjectList();
-            }
-        }
-    }
-    
-    function handleObjectSearch(e) {
-        const searchTerm = e.target.value.toLowerCase().trim();
+    function handleInputChange(e) {
+        const value = e.target.value.toLowerCase().trim();
         
-        if (searchTerm === '') {
-            filteredObjects = [...window.AppData.availableObjects];
-        } else {
+        if (value === '') {
+            // Show all objects when input is empty
             filteredObjects = window.AppData.availableObjects.filter(object => 
-                object.toLowerCase().includes(searchTerm)
+                !window.AppData.selectedObjects.includes(object)
+            );
+        } else {
+            // Filter objects based on input
+            filteredObjects = window.AppData.availableObjects.filter(object => 
+                object.toLowerCase().includes(value) && 
+                !window.AppData.selectedObjects.includes(object)
             );
         }
         
-        updateObjectList();
+        currentHighlighted = -1;
+        updateDropdown();
+        showDropdown();
     }
     
-    function updateObjectList() {
-        if (!elements.objectList) return;
+    function handleKeyDown(e) {
+        if (!isDropdownVisible) {
+            return;
+        }
         
-        elements.objectList.innerHTML = '';
+        const items = elements.objectDropdown.querySelectorAll('.object-item:not(.no-select)');
+        
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                currentHighlighted = Math.min(currentHighlighted + 1, items.length - 1);
+                updateHighlight(items);
+                scrollToHighlighted();
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                currentHighlighted = Math.max(currentHighlighted - 1, -1);
+                updateHighlight(items);
+                scrollToHighlighted();
+                break;
+                
+            case 'Enter':
+                e.preventDefault();
+                if (currentHighlighted >= 0 && items[currentHighlighted]) {
+                    selectObject(items[currentHighlighted].textContent);
+                }
+                // Only allow selecting from the available list, no custom objects
+                break;
+                
+            case 'Escape':
+                hideDropdown();
+                elements.objectInput.blur();
+                break;
+                
+            case ',':
+            case 'Tab':
+                e.preventDefault();
+                // Only select if there's a highlighted item, no custom objects
+                if (currentHighlighted >= 0 && items[currentHighlighted]) {
+                    selectObject(items[currentHighlighted].textContent);
+                }
+                break;
+        }
+    }
+    
+    function updateHighlight(items) {
+        items.forEach((item, index) => {
+            if (index === currentHighlighted) {
+                item.classList.add('highlighted');
+            } else {
+                item.classList.remove('highlighted');
+            }
+        });
+    }
+    
+    function scrollToHighlighted() {
+        if (currentHighlighted >= 0) {
+            const items = elements.objectDropdown.querySelectorAll('.object-item:not(.no-select)');
+            if (items[currentHighlighted]) {
+                items[currentHighlighted].scrollIntoView({
+                    block: 'nearest',
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }
+    
+    function handleFocus() {
+        // Show all available objects when focusing (excluding selected ones)
+        filteredObjects = window.AppData.availableObjects.filter(object => 
+            !window.AppData.selectedObjects.includes(object)
+        );
+        currentHighlighted = -1;
+        updateDropdown();
+        showDropdown();
+    }
+    
+    function showDropdown() {
+        if (elements.objectDropdown) {
+            elements.objectDropdown.style.display = 'block';
+            isDropdownVisible = true;
+        }
+    }
+    
+    function hideDropdown() {
+        if (elements.objectDropdown) {
+            elements.objectDropdown.style.display = 'none';
+            isDropdownVisible = false;
+            currentHighlighted = -1;
+        }
+    }
+    
+    function hideDropdownDelayed() {
+        // Delay hiding to allow clicks on dropdown items
+        setTimeout(() => {
+            hideDropdown();
+        }, 150);
+    }
+    
+    function updateDropdown() {
+        if (!elements.objectDropdown) return;
+        
+        elements.objectDropdown.innerHTML = '';
         
         if (filteredObjects.length === 0) {
-            elements.objectList.innerHTML = `
-                <div class="no-objects-message">
-                    No objects found
-                </div>
-            `;
+            const noItems = document.createElement('div');
+            noItems.className = 'object-item no-select';
+            if (elements.objectInput.value.trim()) {
+                noItems.textContent = `Không tìm thấy object "${elements.objectInput.value.trim()}"`;
+            } else {
+                noItems.textContent = 'Không có object nào khả dụng';
+            }
+            noItems.style.fontStyle = 'italic';
+            noItems.style.color = '#6c757d';
+            noItems.style.cursor = 'default';
+            elements.objectDropdown.appendChild(noItems);
             return;
         }
         
         filteredObjects.forEach(object => {
             const item = document.createElement('div');
-            item.className = 'object-list-item';
-            
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = object;
-            checkbox.checked = window.AppData.selectedObjects.includes(object);
-            checkbox.addEventListener('change', (e) => handleObjectSelection(e, object));
-            
-            const label = document.createElement('label');
-            label.textContent = object;
-            label.addEventListener('click', () => {
-                checkbox.checked = !checkbox.checked;
-                handleObjectSelection({ target: checkbox }, object);
-            });
-            
-            item.appendChild(checkbox);
-            item.appendChild(label);
+            item.className = 'object-item';
+            item.textContent = object;
             
             if (window.AppData.selectedObjects.includes(object)) {
                 item.classList.add('selected');
             }
             
-            elements.objectList.appendChild(item);
+            item.addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevent blur event
+                selectObject(object);
+            });
+            
+            elements.objectDropdown.appendChild(item);
         });
     }
     
-    function handleObjectSelection(e, object) {
-        if (e.target.checked) {
-            if (!window.AppData.selectedObjects.includes(object)) {
-                window.AppData.selectedObjects.push(object);
-            }
-        } else {
-            window.AppData.selectedObjects = window.AppData.selectedObjects.filter(obj => obj !== object);
-        }
-        
-        const item = e.target.closest('.object-list-item');
-        if (item) {
-            if (e.target.checked) {
-                item.classList.add('selected');
-            } else {
-                item.classList.remove('selected');
-            }
-        }
-    }
-    
-    function selectAllObjects(selectAll) {
-        if (selectAll) {
-            filteredObjects.forEach(object => {
-                if (!window.AppData.selectedObjects.includes(object)) {
-                    window.AppData.selectedObjects.push(object);
-                }
-            });
-        } else {
-            window.AppData.selectedObjects = window.AppData.selectedObjects.filter(obj => 
-                !filteredObjects.includes(obj)
-            );
-        }
-        
-        updateObjectList();
-    }
-    
-    function clearObjectSelection() {
-        window.AppData.selectedObjects = [];
-        updateSelectedObjectsDisplay();
-        updateObjectList();
-    }
-    
-    function confirmObjectSelection() {
-        updateSelectedObjectsDisplay();
-        closeObjectDropdown();
-    }
-    
-    function updateSelectedObjectsDisplay() {
-        if (!elements.selectedObjectsList || !elements.selectedObjectsDisplay) return;
-        
-        elements.selectedObjectsList.innerHTML = '';
-        
-        if (window.AppData.selectedObjects.length === 0) {
-            elements.selectedObjectsDisplay.style.display = 'none';
-            updateSelectorButtonText();
+    function selectObject(objectName) {
+        if (!objectName || 
+            window.AppData.selectedObjects.includes(objectName) ||
+            !window.AppData.availableObjects.includes(objectName)) {
             return;
         }
         
-        elements.selectedObjectsDisplay.style.display = 'block';
+        window.AppData.selectedObjects.push(objectName);
+        elements.objectInput.value = '';
+        hideDropdown();
+        updateTagsDisplay();
+        elements.objectInput.focus();
+    }
+    
+    function removeSelectedObject(object) {
+        window.AppData.selectedObjects = window.AppData.selectedObjects.filter(obj => obj !== object);
+        updateTagsDisplay();
+        
+        // Update dropdown if it's visible
+        if (isDropdownVisible) {
+            handleFocus(); // Refresh the dropdown with updated selections
+        }
+    }
+    
+    function updateTagsDisplay() {
+        if (!elements.selectedObjectsTags) return;
+        
+        elements.selectedObjectsTags.innerHTML = '';
         
         window.AppData.selectedObjects.forEach(object => {
             const tag = document.createElement('div');
-            tag.className = 'selected-object-tag';
+            tag.className = 'object-tag';
             
             const text = document.createElement('span');
             text.textContent = object;
@@ -241,49 +254,8 @@ window.ObjectsModule = (function() {
             
             tag.appendChild(text);
             tag.appendChild(removeBtn);
-            elements.selectedObjectsList.appendChild(tag);
+            elements.selectedObjectsTags.appendChild(tag);
         });
-        
-        updateSelectorButtonText();
-    }
-    
-    function removeSelectedObject(object) {
-        window.AppData.selectedObjects = window.AppData.selectedObjects.filter(obj => obj !== object);
-        updateSelectedObjectsDisplay();
-        updateObjectList();
-    }
-    
-    function updateSelectorButtonText() {
-        const selectorText = document.querySelector('.selector-text');
-        if (!selectorText) return;
-        
-        if (window.AppData.selectedObjects.length === 0) {
-            selectorText.textContent = 'Select objects...';
-        } else if (window.AppData.selectedObjects.length === 1) {
-            selectorText.textContent = `Selected: ${window.AppData.selectedObjects[0]}`;
-        } else {
-            selectorText.textContent = `Selected ${window.AppData.selectedObjects.length} objects`;
-        }
-    }
-    
-    function showNoObjectsMessage() {
-        if (elements.objectList) {
-            elements.objectList.innerHTML = `
-                <div class="no-objects-message">
-                    No objects available
-                </div>
-            `;
-        }
-    }
-    
-    function showObjectError(errorMessage) {
-        if (elements.objectList) {
-            elements.objectList.innerHTML = `
-                <div class="error-message" style="color: #721c24; padding: 10px; background: #f8d7da; border-radius: 4px; font-size: 0.9rem;">
-                    <i class="fas fa-exclamation-triangle"></i> Unable to load objects list: ${errorMessage}
-                </div>
-            `;
-        }
     }
     
     // Public interface
@@ -297,8 +269,12 @@ window.ObjectsModule = (function() {
             return window.AppData.selectedObjects;
         },
         
-        clearSelection: clearObjectSelection,
+        clearSelection: function() {
+            window.AppData.selectedObjects = [];
+            updateTagsDisplay();
+        },
+        
         reloadObjects: loadObjects,
-        updateDisplay: updateSelectedObjectsDisplay
+        updateDisplay: updateTagsDisplay
     };
 })(); 

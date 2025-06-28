@@ -1,191 +1,98 @@
 /* ===================================================================
-   SELECTION.CSS - Styles for model and object selection
+   SELECTION.CSS - Compact styles for model and object selection
    ================================================================= */
 
-/* Selection Section Layout */
-.selection-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    margin-top: 20px;
-}
-
-/* Responsive Selection */
-@media (max-width: 768px) {
-    .selection-section {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-}
-
-.selection-title {
-    margin: 0 0 15px 0;
-    font-size: 1.1rem;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: 8px;
-}
-
-.selection-title i {
-    color: #6c757d;
-}
-
-/* Model Selection */
-.model-selection {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border-left: 4px solid #3498db;
-}
-
-#modelSelect {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-#modelSelect label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    cursor: pointer;
-    background: white;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-#modelSelect label:hover {
-    background: #e3f2fd;
-    border-color: #3498db;
-    transform: translateY(-1px);
-}
-
-#modelSelect input[type="checkbox"]:checked + span {
-    font-weight: 600;
-    color: #3498db;
-}
-
-#modelSelect input[type="checkbox"] {
-    margin: 0;
-    accent-color: #3498db;
-}
-
-/* Object Selection */
-.object-selection {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border-left: 4px solid #28a745;
-    position: relative;
-}
-
-
-
-/* Object Selector Button */
-.object-selector-container {
-    margin-top: 10px;
-}
-
-.object-selector-button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 15px;
-    border: 2px solid #28a745;
-    border-radius: 8px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-height: 48px;
-    user-select: none;
-}
-
-.object-selector-button:hover {
-    background: #f8fff8;
-    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
-}
-
-.object-selector-button.active {
-    border-color: #1e7e34;
-    background: #e8f5e8;
-}
-
-.selector-text {
-    font-size: 0.95rem;
-    color: #495057;
-    font-weight: 500;
-}
-
-.selector-arrow {
-    color: #28a745;
-    transition: transform 0.2s ease;
-}
-
-.object-selector-button.active .selector-arrow {
-    transform: rotate(180deg);
-}
-
-/* Selected Objects Display */
-.selected-objects-display {
+/* Compact Selection Layout */
+.selection-section-compact {
     margin-top: 15px;
-    padding: 15px;
-    background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
 }
 
-.selected-objects-list {
+.selection-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
 }
 
-.selected-object-tag {
+.selection-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.selection-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0;
+}
+
+.selection-content {
+    flex: 1;
+}
+
+/* Model Chips */
+.model-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.model-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
-    background: #28a745;
-    color: white;
-    border-radius: 16px;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.selected-object-tag .remove-tag {
-    cursor: pointer;
-    padding: 2px;
-    border-radius: 50%;
-    transition: background-color 0.2s ease;
-}
-
-.selected-object-tag .remove-tag:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.clear-selection-btn {
     padding: 6px 12px;
-    background: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
+    border: 2px solid #e9ecef;
+    border-radius: 20px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    background: white;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 500;
+    user-select: none;
 }
 
-.clear-selection-btn:hover {
-    background: #c82333;
+.model-chip:hover {
+    border-color: #007bff;
+    background: #f0f8ff;
+    transform: translateY(-1px);
 }
 
-/* Object Dropdown */
+.model-chip.selected {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.model-chip input[type="checkbox"] {
+    display: none;
+}
+
+/* Object Input & Selection */
+.object-input-container {
+    position: relative;
+}
+
+.object-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.object-input:focus {
+    outline: none;
+    border-color: #28a745;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.1);
+}
+
 .object-dropdown {
     position: absolute;
     top: 100%;
@@ -193,118 +100,184 @@
     right: 0;
     background: white;
     border: 2px solid #28a745;
-    border-radius: 8px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    margin-top: 5px;
-    max-height: 400px;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Object Search */
-.object-search-container {
-    position: relative;
-    padding: 15px;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.object-search {
-    width: 100%;
-    padding: 10px 15px 10px 40px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s ease;
-}
-
-.object-search:focus {
-    outline: none;
-    border-color: #28a745;
-    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
-}
-
-.search-icon {
-    position: absolute;
-    left: 25px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-/* Object List */
-.object-list-container {
-    flex: 1;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 160px;
     overflow-y: auto;
-    max-height: 250px;
-    padding: 10px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.object-list-item {
+.object-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f1f1f1;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    margin-bottom: 4px;
+    justify-content: space-between;
 }
 
-.object-list-item:hover {
-    background: #f8f9fa;
+.object-item:hover {
+    background: #f8fff8;
 }
 
-.object-list-item.selected {
+.object-item:last-child {
+    border-bottom: none;
+}
+
+.object-item.highlighted {
     background: #e8f5e8;
-    border: 1px solid #28a745;
 }
 
-.object-list-item input[type="checkbox"] {
-    margin: 0;
-    accent-color: #28a745;
+.object-item.selected {
+    background: #e8f5e8;
+    color: #28a745;
+    font-weight: 500;
 }
 
-.object-list-item label {
-    cursor: pointer;
-    font-size: 0.9rem;
-    margin: 0;
-    flex: 1;
+.object-item.selected::after {
+    content: "✓";
+    color: #28a745;
+    font-weight: bold;
 }
 
-/* Object List Scrollbar */
-.object-list-container::-webkit-scrollbar {
+.object-item.no-select:hover {
+    background: inherit !important;
+    transform: none !important;
+}
+
+/* Scrollbar for dropdown */
+.object-dropdown::-webkit-scrollbar {
     width: 6px;
 }
 
-.object-list-container::-webkit-scrollbar-track {
+.object-dropdown::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 3px;
 }
 
-.object-list-container::-webkit-scrollbar-thumb {
+.object-dropdown::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 3px;
 }
 
-.object-list-container::-webkit-scrollbar-thumb:hover {
+.object-dropdown::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
 
-/* Dropdown Actions */
-.object-dropdown-actions {
+/* Selected Object Tags */
+.selected-objects-tags {
     display: flex;
-    gap: 10px;
-    padding: 15px;
-    border-top: 1px solid #e9ecef;
-    background: #f8f9fa;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    min-height: 24px;
 }
 
-/* No Objects Message */
-.no-objects-message {
-    text-align: center;
-    padding: 20px;
-    color: #6c757d;
-    font-style: italic;
+.object-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #28a745;
+    color: white;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    animation: tagFadeIn 0.2s ease;
+}
+
+.object-tag .remove-tag {
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.object-tag .remove-tag:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes tagFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .selection-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .model-chips,
+    .selected-objects-tags {
+        gap: 6px;
+    }
+    
+    .model-chip {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+    
+    .object-tag {
+        font-size: 0.7rem;
+        padding: 3px 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .selection-section-compact {
+        margin-top: 10px;
+    }
+    
+    .selection-row {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .selection-label {
+        font-size: 0.85rem;
+    }
+    
+    .object-input {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .model-chip {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .object-tag {
+        padding: 2px 5px;
+        font-size: 0.65rem;
+    }
+    
+    .object-dropdown {
+        max-height: 120px;
+        font-size: 0.8rem;
+    }
+    
+    .object-item {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
 } 
