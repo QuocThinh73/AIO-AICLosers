@@ -12,9 +12,13 @@ def translate_text(text, src='vi', dest='en'):
     Returns:
         str: Translated text
     """
+    # Return empty string if input is empty
+    if not text or not text.strip():
+        return ''
+    
     translator = Translator()
     result = translator.translate(text, dest=dest, src=src)
-    return result.text
+    return result.text if result and result.text else ''
 
 
 
