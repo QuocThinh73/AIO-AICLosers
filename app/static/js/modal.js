@@ -61,11 +61,51 @@ window.ModalModule = (function() {
         });
     }
     
-    function openImageModal(imagePath, filename, path, score) {
-        if (!elements.modal || !elements.modalImage) {
-            return;
+    function navigateToPrevKeyframe() {
+        if (currentKeyframeIndex > 0) {
+            currentKeyframeIndex--;
+            loadKeyframeAtIndex(currentKeyframeIndex);
+        }
+    }
+    
+    function navigateToNextKeyframe() {
+        if (currentKeyframeIndex < currentKeyframes.length - 1) {
+            currentKeyframeIndex++;
+            loadKeyframeAtIndex(currentKeyframeIndex);
+        }
+    }
+    
+    function loadKeyframeAtIndex(index) {
+        if (index < 0 || index >= currentKeyframes.length) return;
+        
+        const keyframe = currentKeyframes[index];
+        const imagePath = keyframe.path;
+        const filename = keyframe.filename;
+        
+        // Update modal with new keyframe data
+        loadModalContent(imagePath, filename, 'Keyframe từ navigation', currentScore);
+        updateNavigationInfo();
+        updateNavigationButtons();
+    }
+    
+    function updateNavigationInfo() {
+        if (elements.modalKeyframeInfo && currentKeyframes.length > 0) {
+            elements.modalKeyframeInfo.textContent = 
+                `Keyframe ${currentKeyframeIndex + 1} / ${currentKeyframes.length}`;
+        }
+    }
+    
+    function updateNavigationButtons() {
+        if (elements.modalPrevBtn) {
+            elements.modalPrevBtn.disabled = currentKeyframeIndex <= 0;
         }
         
+        if (elements.modalNextBtn) {
+            elements.modalNextBtn.disabled = currentKeyframeIndex >= currentKeyframes.length - 1;
+        }
+    }
+    
+    function loadModalContent(imagePath, filename, path, score) {
         // Get video information from API
         fetch(`/api/video-info/${filename}`)
             .then(response => response.json())
@@ -127,7 +167,60 @@ window.ModalModule = (function() {
             elements.modalScore.parentElement.style.display = 'block';
             elements.modalScore.textContent = score || 'No score';
         }
+    }
+    
+    function openImageModal(imagePath, filename, path, score) {
+        if (!elements.modal || !elements.modalImage) {
+            return;
+        }
         
+        // Store current score for navigation
+        currentScore = score;
+        
+        // Load keyframes for the same video
+        fetch(`/api/video-keyframes/${filename}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Store keyframes and find current index
+                currentKeyframes = data.keyframes;
+                currentKeyframeIndex = currentKeyframes.findIndex(kf => kf.filename === filename);
+                
+                if (currentKeyframeIndex === -1) {
+                    // If not found, add current keyframe and set as index 0
+                    currentKeyframes.unshift({
+                        filename: filename,
+                        path: imagePath,
+                        frame_number: 0
+                    });
+                    currentKeyframeIndex = 0;
+                }
+                
+                // Update navigation info and buttons
+                updateNavigationInfo();
+                updateNavigationButtons();
+                
+            })
+            .catch(error => {
+                console.error('Error loading keyframes:', error);
+                // Fallback: single keyframe mode
+                currentKeyframes = [{
+                    filename: filename,
+                    path: imagePath,
+                    frame_number: 0
+                }];
+                currentKeyframeIndex = 0;
+                updateNavigationInfo();
+                updateNavigationButtons();
+            });
+        
+        // Load modal content for current keyframe
+        loadModalContent(imagePath, filename, path, score);
+        
+        // Show modal
         elements.modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
         
@@ -158,6 +251,24 @@ window.ModalModule = (function() {
             videoElement.pause();
             videoElement.src = '';
             videoElement.style.display = 'none';
+        }
+        
+        // Reset navigation state
+        currentKeyframes = [];
+        currentKeyframeIndex = -1;
+        currentScore = null;
+        
+        // Reset navigation info
+        if (elements.modalKeyframeInfo) {
+            elements.modalKeyframeInfo.textContent = '-';
+        }
+        
+        // Reset navigation buttons
+        if (elements.modalPrevBtn) {
+            elements.modalPrevBtn.disabled = true;
+        }
+        if (elements.modalNextBtn) {
+            elements.modalNextBtn.disabled = true;
         }
     }
     
