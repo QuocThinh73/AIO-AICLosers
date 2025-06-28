@@ -1,11 +1,10 @@
 import os
-import json
 import cv2
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, jsonify, render_template, send_from_directory
 from flask_cors import CORS
-from app.translate import translate_text
 from app.database import Database
-from app.rerank import rrf
+from app.handlers.request_handler import parse_search_request
+from app.handlers.search_handler import perform_unified_search, format_search_response
 
 # Initialize Flask application with static and template folders
 app = Flask(__name__, 
@@ -184,56 +183,34 @@ def get_video_keyframes(keyframe_name):
     })
 
 
-@app.route('/api/search', methods=['GET'])
+@app.route('/api/search', methods=['POST'])
 def search():
     """
-    Search for keyframes using text descriptions, OCR, and object filters.
+    Unified search endpoint for keyframes using text, images, OCR, and object filters.
     
-    Args (URL Parameters):
+    Args (POST FormData):
+        file (file, optional): Uploaded image file for image search
         query (str, optional): Text description of image to search
-        ocr_text (str, optional): OCR text to search in images
-        models (str, optional): JSON array of models to use for search
+        ocr_text (str, optional): OCR text to search in images  
+        models (str): JSON array of models to use for search
         objects (str, optional): JSON array of objects to filter by
         topK (int): Maximum number of results to return
     
     Returns:
         JSON: Search results with paths, scores, and filenames
     """
- 
-    # Get and translate search parameters
-    query = translate_text(request.args.get('query', ''))
-    ocr = request.args.get('ocr_text', '')
-    models = request.args.get('models', '[]')
-    objects = request.args.get('objects', '[]')
-    topK = int(request.args.get('topK'))
     
-    # Parse JSON parameters
-    models = json.loads(models) if models else []
-    objects = json.loads(objects) if objects else []
-
-    # Search using each specified model
-    list_paths = {}
-    for model in models:    
-        faiss_handler = database.embedding_models[f'{model}']
-        _, _, paths = faiss_handler.text_search(query=query, top_k=topK)
-        list_paths[model] = paths
+    # Parse request data
+    uploaded_image, search_params = parse_search_request()
     
-    # TODO: Implement OCR text search logic here
-    # TODO: Implement object filtering logic here
-
-    # Fuse results using Reciprocal Rank Fusion
-    paths, scores = rrf(list_paths, k_rrf=60)
-
-    # Format response with relative paths
-    response_data = {
-        'paths': [r.replace(database.database_path, '', 1) for r in paths],
-        'scores': [r for r in scores],
-        'filenames': [os.path.basename(r) for r in paths]
-    }
+    # Perform unified search
+    paths, scores = perform_unified_search(uploaded_image, search_params, database)
     
-    response = jsonify(response_data)
-    return response
-        
+    # Format and return response
+    response_data = format_search_response(paths, scores, uploaded_image, search_params, database)
+    return jsonify(response_data)
+
+
 
 @app.route('/api/models', methods=['GET'])
 def list_models():

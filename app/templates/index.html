@@ -16,15 +16,29 @@
         <section class="search-section">
             <form id="searchForm" class="search-form">
                 <div class="main-search-row">
-                    <input 
-                        type="text" 
-                        id="searchInput" 
-                        class="search-input" 
-                        placeholder="Nhập mô tả ảnh bạn muốn tìm..."
-                        autocomplete="off"
-                        required>
+                    <div class="search-input-container">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="search-input" 
+                            placeholder="Nhập mô tả ảnh bạn muốn tìm..."
+                            autocomplete="off">
+                        <div class="search-divider">HOẶC</div>
+                        <div class="image-upload-container">
+                            <input type="file" id="imageUpload" class="image-upload-input" accept="image/*" hidden>
+                            <button type="button" class="image-upload-btn" id="imageUploadBtn">
+                                <i class="fas fa-image"></i> Tải ảnh lên
+                            </button>
+                            <div class="uploaded-image-preview" id="uploadedImagePreview" style="display: none;">
+                                <img id="previewImage" src="" alt="Preview">
+                                <button type="button" class="remove-image-btn" id="removeImageBtn">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <input type="number" class="topk-input" id="topK" name="topK" placeholder="TopK" value="100">
-                    <button type="submit" class="btn">
+                    <button type="submit" class="btn" id="searchBtn">
                         <i class="fas fa-search"></i> Tìm kiếm
                     </button>
                 </div>
@@ -115,22 +129,26 @@
                 </button>
             </div>
             <div class="modal-info">
-                <h3>Chi tiết keyframe</h3>
-                <div class="info-row">
-                    <span class="info-label">Tên file:</span>
-                    <span id="modalFilename">-</span>
+                <div class="info-compact">
+                    <div class="info-item">
+                        <span class="info-label">File:</span>
+                        <span id="modalFilename">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Frame:</span>
+                        <span id="modalFrameNumber">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Vị trí:</span>
+                        <span id="modalFramePosition">-</span>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Đường dẫn:</span>
-                    <span id="modalPath">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Điểm số:</span>
-                    <span id="modalScore">-</span>
-                </div>
-                <div class="info-row keyframe-navigation">
-                    <span class="info-label">Điều hướng:</span>
-                    <span id="modalKeyframeInfo">-</span>
+                
+                <!-- Keyframe thumbnails navigation -->
+                <div class="keyframe-thumbnails-section">
+                    <div class="keyframe-thumbnails-container" id="keyframeThumbnails">
+                        <!-- Thumbnails will be populated by JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>

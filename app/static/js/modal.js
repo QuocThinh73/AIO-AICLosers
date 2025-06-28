@@ -10,13 +10,13 @@ window.ModalModule = (function() {
         modal: document.getElementById('imageModal'),
         modalImage: document.getElementById('modalImage'),
         modalFilename: document.getElementById('modalFilename'),
-        modalPath: document.getElementById('modalPath'),
-        modalScore: document.getElementById('modalScore'),
-        modalKeyframeInfo: document.getElementById('modalKeyframeInfo'),
+        modalFrameNumber: document.getElementById('modalFrameNumber'),
+        modalFramePosition: document.getElementById('modalFramePosition'),
         modalClose: document.querySelector('.modal-close'),
         modalOverlay: document.querySelector('.modal-overlay'),
         modalPrevBtn: document.getElementById('modalPrevBtn'),
-        modalNextBtn: document.getElementById('modalNextBtn')
+        modalNextBtn: document.getElementById('modalNextBtn'),
+        keyframeThumbnails: document.getElementById('keyframeThumbnails')
     };
     
     // State variables
@@ -86,12 +86,29 @@ window.ModalModule = (function() {
         loadModalContent(imagePath, filename, 'Keyframe từ navigation', currentScore);
         updateNavigationInfo();
         updateNavigationButtons();
+        renderKeyframeThumbnails();
+        
+        // Update filename display
+        if (elements.modalFilename) {
+            elements.modalFilename.textContent = filename || 'N/A';
+        }
     }
     
     function updateNavigationInfo() {
-        if (elements.modalKeyframeInfo && currentKeyframes.length > 0) {
-            elements.modalKeyframeInfo.textContent = 
-                `Keyframe ${currentKeyframeIndex + 1} / ${currentKeyframes.length}`;
+        if (elements.modalFramePosition && currentKeyframes.length > 0) {
+            elements.modalFramePosition.textContent = 
+                `${currentKeyframeIndex + 1} / ${currentKeyframes.length}`;
+        }
+    }
+    
+    function updateFrameNumber(filename) {
+        if (elements.modalFrameNumber) {
+            // Extract frame number from filename: L01_V003_015190.jpg -> 015190
+            const parts = filename.split('_');
+            if (parts.length >= 3) {
+                const frameStr = parts[2].replace('.jpg', '');
+                elements.modalFrameNumber.textContent = frameStr;
+            }
         }
     }
     
@@ -103,6 +120,105 @@ window.ModalModule = (function() {
         if (elements.modalNextBtn) {
             elements.modalNextBtn.disabled = currentKeyframeIndex >= currentKeyframes.length - 1;
         }
+    }
+    
+    function renderKeyframeThumbnails() {
+        if (!elements.keyframeThumbnails || currentKeyframes.length === 0) return;
+        
+        // Clear existing thumbnails
+        elements.keyframeThumbnails.innerHTML = '';
+        
+        // Calculate range: 2 before, current, 2 after
+        const startIndex = Math.max(0, currentKeyframeIndex - 2);
+        const endIndex = Math.min(currentKeyframes.length - 1, currentKeyframeIndex + 2);
+        
+        // Create thumbnails for the range
+        for (let i = startIndex; i <= endIndex; i++) {
+            const keyframe = currentKeyframes[i];
+            const thumbnailDiv = document.createElement('div');
+            thumbnailDiv.className = 'keyframe-thumbnail';
+            
+            // Mark current keyframe
+            if (i === currentKeyframeIndex) {
+                thumbnailDiv.classList.add('current');
+            }
+            
+            // Add click handler
+            thumbnailDiv.addEventListener('click', () => handleThumbnailClick(i));
+            
+            // Create image element
+            const img = document.createElement('img');
+            img.src = keyframe.path;
+            img.alt = `Keyframe ${keyframe.frame_number}`;
+            
+            // Handle image loading errors
+            img.onerror = function() {
+                this.src = '/static/images/no-image.png';
+            };
+            
+            // Create frame indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'frame-indicator';
+            indicator.textContent = `${i + 1}`;
+            
+            // Append elements
+            thumbnailDiv.appendChild(img);
+            thumbnailDiv.appendChild(indicator);
+            elements.keyframeThumbnails.appendChild(thumbnailDiv);
+        }
+        
+        // Add disabled placeholders if we have less than 5 frames
+        const totalThumbnails = endIndex - startIndex + 1;
+        if (totalThumbnails < 5) {
+            const missingCount = 5 - totalThumbnails;
+            
+            // Add placeholders at the beginning if needed
+            if (startIndex === 0 && currentKeyframeIndex < 2) {
+                for (let i = 0; i < Math.min(missingCount, 2 - currentKeyframeIndex); i++) {
+                    const placeholder = createPlaceholderThumbnail();
+                    elements.keyframeThumbnails.insertBefore(placeholder, elements.keyframeThumbnails.firstChild);
+                }
+            }
+            
+            // Add placeholders at the end if needed
+            if (endIndex === currentKeyframes.length - 1) {
+                const remainingPlaceholders = 5 - elements.keyframeThumbnails.children.length;
+                for (let i = 0; i < remainingPlaceholders; i++) {
+                    const placeholder = createPlaceholderThumbnail();
+                    elements.keyframeThumbnails.appendChild(placeholder);
+                }
+            }
+        }
+    }
+    
+    function createPlaceholderThumbnail() {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'keyframe-thumbnail disabled';
+        
+        const indicator = document.createElement('div');
+        indicator.className = 'frame-indicator';
+        indicator.textContent = '-';
+        
+        placeholder.appendChild(indicator);
+        return placeholder;
+    }
+    
+    function handleThumbnailClick(index) {
+        if (index >= 0 && index < currentKeyframes.length && index !== currentKeyframeIndex) {
+            currentKeyframeIndex = index;
+            loadKeyframeAtIndex(currentKeyframeIndex);
+        }
+    }
+    
+    function updateThumbnailHighlight() {
+        if (!elements.keyframeThumbnails) return;
+        
+        // Remove current class from all thumbnails
+        const thumbnails = elements.keyframeThumbnails.querySelectorAll('.keyframe-thumbnail');
+        thumbnails.forEach(thumb => thumb.classList.remove('current'));
+        
+        // Re-render thumbnails to update the selection
+        renderKeyframeThumbnails();
     }
     
     function loadModalContent(imagePath, filename, path, score) {
@@ -124,7 +240,7 @@ window.ModalModule = (function() {
                     videoElement.id = 'modalVideo';
                     videoElement.controls = true;
                     videoElement.style.maxWidth = '100%';
-                    videoElement.style.maxHeight = '70vh';
+                    videoElement.style.maxHeight = '50vh';
                     videoElement.style.objectFit = 'contain';
                     elements.modalImage.parentElement.appendChild(videoElement);
                 }
@@ -137,11 +253,6 @@ window.ModalModule = (function() {
                     this.currentTime = videoInfo.timestamp;
                 }, { once: true });
                 
-                // Update modal info with video details
-                if (elements.modalPath) {
-                    elements.modalPath.textContent = `Video: ${videoInfo.video_path} | Frame: ${videoInfo.frame_number} | Time: ${videoInfo.timestamp.toFixed(2)}s | FPS: ${videoInfo.fps.toFixed(1)}`;
-                }
-                
             })
             .catch(error => {
                 console.error('Error loading video info:', error);
@@ -150,23 +261,13 @@ window.ModalModule = (function() {
                 elements.modalImage.src = imagePath;
             });
         
-        // Display detailed information
+        // Display filename and frame info
         if (elements.modalFilename) {
-            elements.modalFilename.textContent = filename || 'No filename';
+            elements.modalFilename.textContent = filename || 'N/A';
         }
         
-        if (elements.modalPath && elements.modalPath.parentElement) {
-            elements.modalPath.parentElement.style.display = 'block';
-            // Path will be updated in API call or use default
-            if (!elements.modalPath.textContent || elements.modalPath.textContent === 'No path') {
-                elements.modalPath.textContent = path || 'No path';
-            }
-        }
-        
-        if (elements.modalScore && elements.modalScore.parentElement) {
-            elements.modalScore.parentElement.style.display = 'block';
-            elements.modalScore.textContent = score || 'No score';
-        }
+        // Update frame number
+        updateFrameNumber(filename);
     }
     
     function openImageModal(imagePath, filename, path, score) {
@@ -202,6 +303,7 @@ window.ModalModule = (function() {
                 // Update navigation info and buttons
                 updateNavigationInfo();
                 updateNavigationButtons();
+                renderKeyframeThumbnails();
                 
             })
             .catch(error => {
@@ -215,6 +317,7 @@ window.ModalModule = (function() {
                 currentKeyframeIndex = 0;
                 updateNavigationInfo();
                 updateNavigationButtons();
+                renderKeyframeThumbnails();
             });
         
         // Load modal content for current keyframe
@@ -258,9 +361,12 @@ window.ModalModule = (function() {
         currentKeyframeIndex = -1;
         currentScore = null;
         
-        // Reset navigation info
-        if (elements.modalKeyframeInfo) {
-            elements.modalKeyframeInfo.textContent = '-';
+        // Reset frame info
+        if (elements.modalFrameNumber) {
+            elements.modalFrameNumber.textContent = '-';
+        }
+        if (elements.modalFramePosition) {
+            elements.modalFramePosition.textContent = '-';
         }
         
         // Reset navigation buttons
@@ -269,6 +375,11 @@ window.ModalModule = (function() {
         }
         if (elements.modalNextBtn) {
             elements.modalNextBtn.disabled = true;
+        }
+        
+        // Clear thumbnails
+        if (elements.keyframeThumbnails) {
+            elements.keyframeThumbnails.innerHTML = '';
         }
     }
     
