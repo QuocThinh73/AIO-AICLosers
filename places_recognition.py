@@ -10,10 +10,10 @@ from tqdm import tqdm
 # User can modify these parameters
 BATCH_L = "L01"  # Batch to process (can change to L02, L03, ...)
 MODEL_NAME = "rope_vit_reg4_b14_capi-places365"
-OUTPUT_DIR = "database/places"  # Save results to database/places
+OUTPUT_DIR = os.path.join("database", "places")  # Save results to database/places
 
 # Path to keyframes directory
-KEYFRAMES_BASE_PATH = "database/keyframes"
+KEYFRAMES_BASE_PATH = os.path.join("database", "keyframes")
 
 # ===== PLACES365 CLASS NAMES =====
 PLACES365_CLASSES = [
