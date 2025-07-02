@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from utils import extract_keyframe_info
 
-# ===== CONFIG CONSTANTS =====
+# ===== CONFIG =====
 INPUT_DIR = os.path.join("database", "news_anchor")
 OUTPUT_DIR = os.path.join("database", "news_segment")
 FPS = 30
