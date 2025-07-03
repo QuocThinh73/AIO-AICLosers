@@ -89,10 +89,26 @@ def segment_all_videos(input_folder, output_folder):
             for json_path in batch_path.glob("*.json"):
                 segments = segment_news_from_file(str(json_path))
                 video_id = json_path.stem.replace('_news_anchor', '')
-                output_file = batch_output_path / f"{video_id}_news_segment.txt"
+                
+                # Create JSON structure
+                items = []
+                for i, (start_frame, end_frame) in enumerate(segments):
+                    items.append({
+                        "id": i,
+                        "start_frame": start_frame,
+                        "end_frame": end_frame,
+                        "duration_frames": end_frame - start_frame + 1
+                    })
+                
+                data = {
+                    "video_id": video_id,
+                    "total": len(items),
+                    "items": items
+                }
+                
+                output_file = batch_output_path / f"{video_id}_news_segment.json"
                 with open(output_file, 'w', encoding='utf-8') as f:
-                    for start_frame, end_frame in segments:
-                        f.write(f"{start_frame} {end_frame}\n")
+                    json.dump(data, f, indent=2, ensure_ascii=False)
 
 if __name__ == "__main__":
     segment_all_videos(INPUT_FOLDER, OUTPUT_FOLDER)
