@@ -97,11 +97,9 @@ def segment_all_videos(input_folder, output_folder):
                         "id": i,
                         "start_frame": start_frame,
                         "end_frame": end_frame,
-                        "duration_frames": end_frame - start_frame + 1
                     })
                 
                 data = {
-                    "video_id": video_id,
                     "total": len(items),
                     "items": items
                 }
