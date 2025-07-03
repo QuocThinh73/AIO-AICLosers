@@ -2,7 +2,6 @@ import torch
 import os
 import json
 import glob
-from pathlib import Path
 from tqdm import tqdm
 from transformers import AutoProcessor, AutoModelForImageTextToText, BitsAndBytesConfig
 
@@ -121,11 +120,10 @@ Answer with only YES or NO.
             output_dir (str): Directory to save results (e.g., "database/caption" or "database/news_anchor")
         """
         os.makedirs(output_dir, exist_ok=True)
-        batch_name = os.path.basename(lesson_dir)
+        lesson_name = os.path.basename(lesson_dir)
         
-        batch_output_dir = os.path.join(output_dir, batch_name)
-        output_path = Path(batch_output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
+        output_lesson_dir = os.path.join(output_dir, lesson_name)
+        os.makedirs(output_lesson_dir, exist_ok=True)
 
         videos = sorted(glob.glob(os.path.join(lesson_dir, "V*")))
         
@@ -135,7 +133,7 @@ Answer with only YES or NO.
             keyframes = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
             
             video_results = []
-            for keyframe_path in tqdm(keyframes, desc=f"Processing {batch_name}/{video_name} ({self.task})"):
+            for keyframe_path in tqdm(keyframes, desc=f"Processing {lesson_name}/{video_name} ({self.task})"):
                 keyframe_name = os.path.basename(keyframe_path)
                 result = self.process_keyframe(keyframe_path)
                 
@@ -150,6 +148,6 @@ Answer with only YES or NO.
                         "prediction": result
                     })
             
-            output_file = output_path / f"{video_name}_{self.task}.json"
+            output_file = os.path.join(output_lesson_dir, f"{video_name}_{self.task}.json")
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(video_results, f, indent=2, ensure_ascii=False)
