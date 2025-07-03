@@ -1,3 +1,16 @@
+def load_json(json_file):
+    """
+    Load data from a JSON file.
+    Args:
+        json_file (str): Path to the JSON file.
+    Returns:
+        dict: Data.
+    """
+    import json
+    with open(json_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return data
+
 def frame_to_seconds(frame_number, fps):
     """
     Convert frame number to seconds.
