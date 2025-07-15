@@ -1,6 +1,6 @@
 from googletrans import Translator
 
-def translate_text(text, src='vi', dest='en'):
+async def translate_text(text, src='vi', dest='en'):
     """
     Translate text from Vietnamese to English using Google Translate.
     
@@ -16,8 +16,9 @@ def translate_text(text, src='vi', dest='en'):
     if not text or not text.strip():
         return ''
     
-    translator = Translator()
-    result = translator.translate(text, dest=dest, src=src)
+    async with Translator() as translator:
+        result = await translator.translate(text, dest=dest, src=src)
+        
     return result.text if result and result.text else ''
 
 

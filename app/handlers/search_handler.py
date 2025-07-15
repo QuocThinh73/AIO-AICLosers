@@ -1,6 +1,6 @@
 import os
 from app.rerank import rrf
-
+from app.config import CAPTIONS_COLLECTION
 
 def perform_text_search(query, models, database, topK):
     """Perform text-based search using specified models."""
@@ -29,6 +29,20 @@ def perform_image_search(uploaded_image, models, database, topK):
     
     return image_results
 
+def perform_caption_search(query, database, topK):
+    """Perform caption-based search using Qdrant."""
+    if not query:
+        return {}
+    
+    caption_results = {}
+    
+    # Perform search using Qdrant
+    _, _, paths = database.qdrant_captions.search(search_query=query, collection_name=CAPTIONS_COLLECTION, limit=topK, prefetch_limit=topK*3)
+    
+    # Return results in the same format as text/image search
+    caption_results['captions'] = paths
+    
+    return caption_results
 
 def perform_ocr_search(ocr_text, models, database, topK):
     """Perform OCR-based search (TODO: implement when available)."""
@@ -57,15 +71,19 @@ def perform_unified_search(uploaded_image, search_params, database):
     text_results = perform_text_search(query, models, database, topK)
     all_search_results.update(text_results)
     
-    # 2. Image-based search
+    # 2. Caption-based search
+    caption_results = perform_caption_search(query, database, topK)
+    all_search_results.update(caption_results)
+    
+    # 3. Image-based search
     image_results = perform_image_search(uploaded_image, models, database, topK)
     all_search_results.update(image_results)
     
-    # 3. OCR-based search
+    # 4. OCR-based search
     ocr_results = perform_ocr_search(ocr_text, models, database, topK)
     all_search_results.update(ocr_results)
     
-    # 4. Object filtering
+    # 5. Object filtering
     object_results = perform_object_filtering(objects, database)
     all_search_results.update(object_results)
     
@@ -83,6 +101,7 @@ def format_search_response(paths, scores, uploaded_image, search_params, databas
         'filenames': [os.path.basename(r) for r in paths],
         'search_info': {
             'text_query': bool(search_params['query']),
+            'caption_query': bool(search_params['query']),
             'image_query': bool(uploaded_image),
             'ocr_query': bool(search_params['ocr_text']),
             'object_filters': len(search_params['objects']),

@@ -36,6 +36,8 @@ EMBEDDING_MODELS = {
 # Available object classes for filtering
 OBJECTS = ["car", "person", "dog", "cat", "bird", "fish", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "lion", "tiger", "monkey", "snake", "rabbit", "squirrel", "fox", "wolf", "deer"]
 
+# Qdrant collection names
+CAPTIONS_COLLECTION = "captions"
 
 
 

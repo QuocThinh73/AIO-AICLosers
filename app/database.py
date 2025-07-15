@@ -1,8 +1,7 @@
 import os
-from models.clip import CLIP
-from models.openclip import OpenCLIP
 from faiss_index import Faiss
 from app.config import *
+from qdrant import Qdrant
 
 class Database:
     """
@@ -26,6 +25,7 @@ class Database:
         
         # Load embedding models and available object classes
         self.embedding_models = self.load_embedding_models()
+        self.qdrant_captions = Qdrant()
         self.objects = OBJECTS
         
     def load_embedding_models(self):
@@ -40,8 +40,10 @@ class Database:
         for model_name, model_info in EMBEDDING_MODELS.items():
             # Initialize appropriate model based on type
             if (model_info["model_type"] == "clip"):
+                from models.clip import CLIP
                 model = CLIP(clip_backbone=model_info["backbone"], device=DEVICE)
             elif (model_info["model_type"] == "openclip"):
+                from models.openclip import OpenCLIP
                 model = OpenCLIP(backbone=model_info["backbone"], pretrained=model_info["pretrained"], device=DEVICE)
             
             # Create FAISS handler and load pre-computed embeddings

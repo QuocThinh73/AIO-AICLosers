@@ -1,7 +1,6 @@
 import os
 import cv2
 from flask import Flask, jsonify, render_template, send_from_directory
-from flask_cors import CORS
 from app.database import Database
 from app.handlers.request_handler import parse_search_request
 from app.handlers.search_handler import perform_unified_search, format_search_response
@@ -10,19 +9,6 @@ from app.handlers.search_handler import perform_unified_search, format_search_re
 app = Flask(__name__, 
             static_folder='static',
             template_folder='templates')
-
-# Configure CORS for cross-origin requests
-cors = CORS()
-cors.init_app(app, resources={
-    r"/*": {
-        "origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
-        "methods": ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-        "allow_headers": ["*"],
-        "expose_headers": ["Content-Disposition"],
-        "supports_credentials": False,
-        "max_age": 600
-    }
-})
 
 # Initialize database connection and models
 database = Database()
