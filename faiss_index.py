@@ -3,7 +3,6 @@ import faiss
 import numpy as np
 import json
 from PIL import Image
-from app.config import DATABASE_FOLDER
 
 class Faiss:
     def __init__(self, model):   
@@ -27,7 +26,7 @@ class Faiss:
         # Load mapping JSON
         self.load_mapping(mapping_json)
 
-    def build(self, model_name, output_dir=DATABASE_FOLDER):
+    def build(self, model_name, output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
         embeddings = []
