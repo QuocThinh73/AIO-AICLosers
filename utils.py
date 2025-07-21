@@ -11,6 +11,27 @@ def load_json(json_file):
         data = json.load(f)
     return data
 
+def get_video_fps(video):
+    """
+    Get FPS of a video.
+
+    Args:
+        video (str): Video path.
+
+    Returns:
+        float: FPS if successful, None if error.
+    """
+    import cv2
+    
+    cap = cv2.VideoCapture(video)
+    if not cap.isOpened():
+        print(f"Cannot open video: {video}")
+        return None
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    return fps
+
 def frame_to_seconds(frame_number, fps):
     """
     Convert frame number to seconds.
