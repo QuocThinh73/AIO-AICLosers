@@ -3,7 +3,6 @@ from io import BytesIO
 from PIL import Image
 from flask import request
 from app.translate import translate_text
-import asyncio
 
 def parse_image_upload():
     """
@@ -30,7 +29,7 @@ def parse_search_params():
         dict: Parsed search parameters
     """
     # Get basic parameters
-    query = asyncio.run(translate_text(request.form.get('query', '')))
+    query = translate_text(request.form.get('query', ''))
     print(query)
     ocr = request.form.get('ocr_text', '')
     topK = int(request.form.get('topK', 100))

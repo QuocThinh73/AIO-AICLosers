@@ -124,6 +124,8 @@ window.SearchModule = (function() {
         return true;
     }
     
+
+
     // Public methods
     function handleSearch(e) {
         e.preventDefault();
@@ -237,62 +239,72 @@ window.SearchModule = (function() {
                 <p>No results found matching ${queryInfo.join(' + ') || searchType}</p>
                 ${searchParams.selectedObjects && searchParams.selectedObjects.length > 0 ? 
                     `<p style="font-size: 0.9em; color: #999;">Filtered by objects: ${searchParams.selectedObjects.join(', ')}</p>` : ''
-                }
-            </div>
-        `;
-    }
-    
-    function buildResultsHTML(data, searchParams) {
-        let html = `
-            <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px;">
-        `;
-        
-        data.paths.forEach((path, index) => {
-            const score = data.scores && data.scores[index] !== undefined 
-                ? (data.scores[index] * 100).toFixed(1) + '%' 
-                : '';
-                
-            const filename = data.filenames && data.filenames[index] 
-                ? data.filenames[index] 
-                : path.split('/').pop();
-            
-            // Sử dụng đường dẫn đúng định dạng từ backend
-            // Xây dựng đường dẫn đúng cho route Flask
-            let imagePath = `/data/keyframes/${path}`;
-            
-            // Giới hạn số lần thử lại khi tải ảnh lỗi
-            const maxRetry = 2;
-            
-            html += `
-                <div class="image-item" style="border: 1px solid #ddd; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; height: 100%;">
-                    <div class="image-container" style="position: relative; padding-top: 100%;">
-                        <img 
-                            src="${imagePath}" 
-                            alt="Result ${index + 1}"
-                            data-retry-count="0"
-                            onerror="if(parseInt(this.getAttribute('data-retry-count')) < ${maxRetry}) { this.setAttribute('data-retry-count', parseInt(this.getAttribute('data-retry-count'))+1); console.log('Retrying image: ' + this.src); } else { console.log('Failed after ${maxRetry} retries'); this.onerror=null; this.src='/static/images/no-image.png'; }"
-                            loading="lazy"
-                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
-                            onclick="window.ModalModule.openImageModal('${imagePath}', '${filename}', '${path}', '${score}')"
-                        >
-                    </div>
-                    <div class="image-info" style="padding: 8px; font-size: 12px; background: #f8f9fa; border-top: 1px solid #eee; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
-                        <div class="image-filename" style="font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${filename.replace(/\.jpg$/i, '')}">
-                            ${filename.replace(/\.jpg$/i, '')}
-                        </div>
-                    </div>
-                </div>
-            `;
         });
-        
-        html += '</div>';
-        return html;
     }
-    
-    // Public interface
-    return {
-        init: function() {
-            if (window.AppElements.searchForm) {
+}
+
+function validateSearchInputWithImage(query, ocrText, uploadedFile, selectedModels, topK) {
+    // Check if at least query, OCR text, or image is provided
+    if (!query && !ocrText && !uploadedFile) {
+        alert('Please enter search text or upload an image');
+        return false;
+    }
+
+    // Check if TopK is valid
+    if (isNaN(topK) || topK < 1) {
+        alert('Invalid Top K value');
+        return false;
+    }
+
+    // Check if at least one model is selected
+    if (selectedModels.length === 0) {
+        alert('Please select at least one model');
+        return false;
+    }
+
+    return true;
+}
+
+// Public methods
+function handleSearch(e) {
+    e.preventDefault();
+
+    if (isSearching) return;
+
+    // Get data from form
+    const query = window.AppElements.searchInput.value.trim();
+    const ocrText = window.AppElements.ocrInput ? window.AppElements.ocrInput.value.trim() : '';
+    const selectedModels = getSelectedModels();
+    const selectedObjects = window.AppData.selectedObjects;
+    const topK = window.AppElements.topKInput ? parseInt(window.AppElements.topKInput.value) : 100;
+
+    // Check for uploaded image
+    const fileInput = document.getElementById('imageUpload');
+    const uploadedFile = fileInput && fileInput.files[0];
+
+    // Validate input
+    if (!validateSearchInputWithImage(query, ocrText, uploadedFile, selectedModels, topK)) {
+        return;
+    }
+
+    // Set searching state
+    setSearchingState(true);
+
+    // Cancel previous request if exists
+    if (currentController) {
+        currentController.abort();
+    }
+
+    // Create new controller
+    currentController = new AbortController();
+    const timeoutId = setTimeout(() => currentController.abort(), 30000);
+
+    // Always POST with FormData - simple and consistent
+    const fetchUrl = '/api/search';
+    const fetchOptions = {
+        method: 'POST',
+        body: buildSearchFormData(query, ocrText, selectedModels, selectedObjects, topK, uploadedFile),
+        signal: currentController.signal
                 window.AppElements.searchForm.addEventListener('submit', handleSearch);
             }
             // Initialize image upload handling

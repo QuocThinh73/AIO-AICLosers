@@ -1,5 +1,6 @@
 // ===================================================================
-// OBJECTS.JS - Module for handling object selection with autocomplete
+// OBJECTS.JS - Module for handling object selection (DISABLED)
+// Object filtering functionality has been removed from the pipeline
 // ===================================================================
 
 window.ObjectsModule = (function() {

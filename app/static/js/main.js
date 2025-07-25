@@ -15,6 +15,24 @@ window.AppData = {
     selectedObjects: []
 };
 
+// Initialize objects section (DISABLED - feature removed)
+window.AppData.selectedObjects = [];
+window.AppData.availableObjects = [];
+
+// Add notification about removed object filtering feature
+if (document.getElementById('selectedObjectsTags')) {
+    document.getElementById('selectedObjectsTags').innerHTML = 
+        '<div class="notification" style="padding: 5px 10px; background-color: #f8d7da; color: #721c24; border-radius: 4px; font-size: 0.8rem;">' +
+        '<i class="fas fa-info-circle"></i> Object filtering has been removed from this version' +
+        '</div>';
+}
+
+// Disable object input
+if (document.getElementById('objectInput')) {
+    document.getElementById('objectInput').disabled = true;
+    document.getElementById('objectInput').placeholder = "Object filtering disabled";
+}
+
 // Main DOM elements
 window.AppElements = {
     searchForm: document.getElementById('searchForm'),

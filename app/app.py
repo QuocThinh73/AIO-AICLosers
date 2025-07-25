@@ -1,9 +1,20 @@
 import os
 import cv2
+import warnings
 from flask import Flask, jsonify, render_template, send_from_directory
-from app.database import Database
-from app.handlers.request_handler import parse_search_request
-from app.handlers.search_handler import perform_unified_search, format_search_response
+
+# Suppress common warnings for cleaner output
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*QuickGELU.*")
+warnings.filterwarnings("ignore", message=".*timm.models.layers.*")
+warnings.filterwarnings("ignore", message=".*torch.meshgrid.*")
+
+# Standard imports for Python package execution
+from .database import Database
+from .handlers.request_handler import parse_search_request
+from .handlers.search_handler import perform_unified_search, format_search_response
 
 # Initialize Flask application with static and template folders
 app = Flask(__name__, 
@@ -32,22 +43,40 @@ def get_keyframe(keyframe_name):
     Serve keyframe images from the database.
     
     Args:
-        keyframe_name (str): Keyframe filename in format "L01_V003_015190.jpg"
+        keyframe_name (str): Can be in format "L01_V003_015190.jpg" or "L01/V003/L01_V003_015190.jpg"
     
     Returns:
         File: Keyframe image file if found
         str: "File not found" with 404 status if not found
     """
     
-    # Parse keyframe filename to extract folder structure
-    parts = keyframe_name.split('_')
-    lesson_folder = parts[0]  # L01
-    video_folder = parts[1]   # V003
+    # Handle nested path format: L01/V003/L01_V003_015190.jpg
+    if '/' in keyframe_name:
+        path_parts = keyframe_name.split('/')
+        filename = path_parts[-1]  # Get the filename from the end
+        
+        # Attempt to determine folder path based on directory structure
+        lesson_folder = path_parts[0]  # L01
+        video_folder = path_parts[1] if len(path_parts) > 2 else path_parts[0]  # V003 or fallback
+    else:
+        # Traditional parsing: L01_V003_015190.jpg
+        filename = keyframe_name
+        parts = filename.split('_')
+        if len(parts) >= 2:
+            lesson_folder = parts[0]  # L01
+            video_folder = parts[1]   # V003
+        else:
+            # Fallback if can't parse
+            print(f"[WARNING] Invalid keyframe name format: {keyframe_name}")
+            return "Invalid keyframe format", 400
+    
     folder_path = os.path.join(database.keyframes_path, lesson_folder, video_folder)
-    file_path = os.path.join(folder_path, keyframe_name)
+    file_path = os.path.join(folder_path, filename)
     
     if os.path.isfile(file_path):
-        return send_from_directory(folder_path, keyframe_name)
+        return send_from_directory(folder_path, filename)
+    else:
+        print(f"[WARNING] Keyframe file not found: {file_path}")
     
     return "File not found", 404
 
@@ -83,44 +112,67 @@ def get_video_info(keyframe_name):
     Get video information and timestamp for a given keyframe.
     
     Args:
-        keyframe_name (str): Keyframe filename in format "L01_V003_015190.jpg"
+        keyframe_name (str): Keyframe filename in format "L01_V003_015190.jpg" 
+                            or nested path format
     
     Returns:
         JSON: Video information including path, timestamp, frame number, and FPS
-        str: "File not found" with 404 status if video not found
+              or error message if video not found
     """
 
-    # Parse keyframe filename: L01_V003_015190.jpg
-    parts = keyframe_name.split('_')
-    lesson = parts[0]  # L01
-    video = parts[1]   # V003
-    frame_str = parts[2].replace('.jpg', '')  # 015190
+    try:
+        # Handle different path formats and extract filename
+        if '/' in keyframe_name:
+            filename = keyframe_name.split('/')[-1]
+        else:
+            filename = keyframe_name
         
-    frame_number = int(frame_str)
-    
-    # Build actual video path to read FPS
-    video_name = f"{lesson}_{video}.mp4"
-    actual_video_path = os.path.join(database.videos_path, lesson, video_name)
-    
-    if os.path.isfile(actual_video_path):
-        # Read actual FPS from video file
-        cap = cv2.VideoCapture(actual_video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        cap.release()
+        # Parse keyframe filename: L01_V003_015190.jpg
+        parts = filename.split('_')
+        if len(parts) < 3:
+            return jsonify({
+                'error': f'Invalid keyframe filename format: {filename}'
+            }), 400
+            
+        lesson = parts[0]  # L01
+        video = parts[1]   # V003
+        frame_str = parts[2].replace('.jpg', '')  # 015190
+            
+        frame_number = int(frame_str)
         
-        # Calculate timestamp from frame number and actual FPS
-        timestamp = frame_number / fps
+        # Build actual video path to read FPS
+        video_name = f"{lesson}_{video}.mp4"
+        actual_video_path = os.path.join(database.videos_path, lesson, video_name)
         
-        video_path = f"/data/videos/{video_name}"
-        
+        if os.path.isfile(actual_video_path):
+            # Read actual FPS from video file
+            cap = cv2.VideoCapture(actual_video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            cap.release()
+            
+            # Calculate timestamp from frame number and actual FPS
+            timestamp = frame_number / fps
+            
+            video_path = f"/data/videos/{video_name}"
+            
+            return jsonify({
+                'video_path': video_path,
+                'timestamp': timestamp,
+                'frame_number': frame_number,
+                'fps': fps
+            })
+        else:
+            print(f"[WARNING] Video not found: {actual_video_path}")
+            return jsonify({
+                'error': 'Video not found',
+                'keyframe': filename
+            }), 404
+    except Exception as e:
+        print(f"[ERROR] Error processing video info: {str(e)}")
         return jsonify({
-            'video_path': video_path,
-            'timestamp': timestamp,
-            'frame_number': frame_number,
-            'fps': fps
-        })
-    
-    return "File not found", 404
+            'error': 'Error processing video information',
+            'message': str(e)
+        }), 500
 
 
 @app.route('/api/video-keyframes/<path:keyframe_name>')
@@ -185,16 +237,29 @@ def search():
     Returns:
         JSON: Search results with paths, scores, and filenames
     """
-    
-    # Parse request data
-    uploaded_image, search_params = parse_search_request()
-    
-    # Perform unified search
-    paths, scores = perform_unified_search(uploaded_image, search_params, database)
-    
-    # Format and return response
-    response_data = format_search_response(paths, scores, uploaded_image, search_params, database)
-    return jsonify(response_data)
+    try:
+        print("[DEBUG] Search request received")
+        
+        # Parse request data
+        uploaded_image, search_params = parse_search_request()
+        print(f"[DEBUG] Search params: {search_params}")
+        print(f"[DEBUG] Has uploaded image: {uploaded_image is not None}")
+        
+        # Perform unified search
+        paths, scores = perform_unified_search(uploaded_image, search_params, database)
+        print(f"[DEBUG] Search returned {len(paths)} results")
+        
+        # Format and return response
+        response_data = format_search_response(paths, scores, uploaded_image, search_params, database)
+        print(f"[DEBUG] Response data keys: {list(response_data.keys())}")
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"[ERROR] Search failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 
@@ -221,3 +286,29 @@ def list_objects():
     return jsonify({
         'objects': database.objects
     })
+
+
+if __name__ == '__main__':
+    print("[INFO] Starting AIO-AIClosers Flask App")
+    print("=" * 50)
+    print(f"Database initialized with {len(database.get_embedding_models())} embedding models")
+    print(f"GroundingDINO: {'OK' if database.grounding_dino and database.grounding_dino.model_loaded else 'FAIL'}")
+    print(f"Object classes: {len(database.objects)}")
+    print("\n[INFO] Starting Flask server...")
+    print("   URL: http://localhost:5000")
+    print("   Press Ctrl+C to stop")
+    print("=" * 50)
+    
+    try:
+        app.run(
+            host='0.0.0.0',
+            port=5000,
+            debug=True,
+            use_reloader=False  # Disable reloader to avoid double initialization
+        )
+    except KeyboardInterrupt:
+        print("\n[INFO] App stopped by user")
+    except Exception as e:
+        print(f"\n[ERROR] Error running app: {e}")
+        import traceback
+        traceback.print_exc()

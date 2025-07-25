@@ -224,8 +224,17 @@ window.ModalModule = (function() {
     function loadModalContent(imagePath, filename, path, score) {
         // Get video information from API
         fetch(`/api/video-info/${filename}`)
-            .then(response => response.json())
+            .then(response => {
+                // Check if response is OK (status in the range 200-299)
+                if (!response.ok) {
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.error || 'Error fetching video info');
+                    });
+                }
+                return response.json();
+            })
             .then(videoInfo => {
+                // Double check for error in response data
                 if (videoInfo.error) {
                     throw new Error(videoInfo.error);
                 }
@@ -255,8 +264,15 @@ window.ModalModule = (function() {
                 
             })
             .catch(error => {
-                console.error('Error loading video info:', error);
-                // Fallback to image if API fails
+                console.info('Video info not available, showing keyframe image instead:', error.message);
+                
+                // Hide video element if it exists
+                let videoElement = document.getElementById('modalVideo');
+                if (videoElement) {
+                    videoElement.style.display = 'none';
+                }
+                
+                // Show image instead
                 elements.modalImage.style.display = 'block';
                 elements.modalImage.src = imagePath;
             });
