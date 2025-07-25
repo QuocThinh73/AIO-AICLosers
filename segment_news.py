@@ -6,7 +6,6 @@ from utils import parse_lesson_video_name
 # ===== CONFIG =====
 INPUT_FOLDER = os.path.join("database", "news_anchor")
 OUTPUT_FOLDER = os.path.join("database", "news_segment")
-FPS = 30
 
 
 def load_classification_results(json_file):
