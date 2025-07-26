@@ -108,9 +108,26 @@ if __name__ == "__main__":
         
     elif args.task == "news_segmentation":
         # Check error
+        if not os.path.exists(args.input_keyframe_dir):
+            raise ValueError("Input keyframe directory does not exist")
+        
+        if not os.path.exists(args.input_news_anchor_dir):
+            raise ValueError("Input news anchor directory does not exist")
+        
+        if args.mode == "lesson":
+            if not args.lesson_name:
+                raise ValueError("Lesson name is required when mode is lesson")
+            if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+                raise ValueError("Lesson keyframe's directory does not exist")
+            if not os.path.exists(os.path.join(args.input_news_anchor_dir, args.lesson_name)):
+                raise ValueError("Lesson news anchor's directory does not exist")
         
         # Main process
         from preprocess.news_segmentation import segment_news
+        if args.mode == "all":
+            segment_news(args.input_keyframe_dir, args.input_news_anchor_dir, args.output_news_segment_dir, args.mode)
+        elif args.mode == "lesson":
+            segment_news(args.input_keyframe_dir, args.input_news_anchor_dir, args.output_news_segment_dir, args.mode, args.lesson_name)
         
     elif args.task == "extract_subvideo":
         # Check error
