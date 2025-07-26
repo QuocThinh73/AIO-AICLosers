@@ -28,10 +28,8 @@ if __name__ == "__main__":
     
     # Build mapping json
     parser_build_mapping_json = subparsers.add_parser("build_mapping_json", parents=[parent_parser])
-    parser_build_mapping_json.add_argument("mode", choices=["all", "lesson"])
     parser_build_mapping_json.add_argument("input_keyframe_dir", type=str)
     parser_build_mapping_json.add_argument("output_mapping_json", type=str)
-    parser_build_mapping_json.add_argument("--lesson_name", type=str)
     
     # News anchor detection
     parser_news_anchor_detection = subparsers.add_parser("news_anchor_detection", parents=[parent_parser])
@@ -95,9 +93,12 @@ if __name__ == "__main__":
             
     elif args.task == "build_mapping_json":
         # Check error
+        if not os.path.exists(args.input_keyframe_dir):
+            raise ValueError("Input keyframe directory does not exist")
         
         # Main process
         from preprocess.build_mapping_json import build_mapping_json
+        build_mapping_json(args.input_keyframe_dir, args.output_mapping_json)
         
     elif args.task == "news_anchor_detection":
         # Check error
