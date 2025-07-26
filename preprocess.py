@@ -55,6 +55,31 @@ if __name__ == "__main__":
     parser_extract_subvideo.add_argument("ffmpeg_bin", type=str)
     parser_extract_subvideo.add_argument("--lesson_name", type=str)
     
+    # Remove noise keyframe
+    parser_remove_noise_keyframe = subparsers.add_parser("remove_noise_keyframe", parents=[parent_parser])
+    parser_remove_noise_keyframe.add_argument("mode", type=str, choices=["all", "lesson"])
+    parser_remove_noise_keyframe.add_argument("--lesson_name", type=str)
+    
+    # Object detection
+    parser_object_detection = subparsers.add_parser("object_detection", parents=[parent_parser])
+    parser_object_detection.add_argument("mode", type=str, choices=["all", "lesson"])
+    parser_object_detection.add_argument("--lesson_name", type=str)
+    
+    # Image captioning
+    parser_image_captioning = subparsers.add_parser("image_captioning", parents=[parent_parser])
+    parser_image_captioning.add_argument("mode", type=str, choices=["all", "lesson"])
+    parser_image_captioning.add_argument("--lesson_name", type=str)
+    
+    # ASR
+    parser_asr = subparsers.add_parser("asr", parents=[parent_parser])
+    parser_asr.add_argument("mode", type=str, choices=["all", "lesson"])
+    parser_asr.add_argument("--lesson_name", type=str)
+    
+    # OCR
+    parser_ocr = subparsers.add_parser("ocr", parents=[parent_parser])
+    parser_ocr.add_argument("mode", type=str, choices=["all", "lesson"])
+    parser_ocr.add_argument("--lesson_name", type=str)
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -179,4 +204,34 @@ if __name__ == "__main__":
         elif args.mode == "lesson":
             extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.ffmpeg_bin, args.lesson_name)
 
+    elif args.task == "remove_noise_keyframe":
+        # Check error TODO
+        
+        # Main process TODO
+        from preprocess.remove_noise_keyframe import remove_noise_keyframe
+        
+    elif args.task == "object_detection":
+        # Check error TODO
+        
+        # Main process TODO
+        from preprocess.object_detection import detect_object
+        
+    elif args.task == "image_captioning":
+        # Check error TODO
+        
+        # Main process TODO
+        from preprocess.image_captioning import caption_image
+        
+    elif args.task == "asr":
+        # Check error TODO
+        
+        # Main process TODO
+        from preprocess.asr import transcribe_audio
+        
+    elif args.task == "ocr":
+        # Check error TODO
+        
+        # Main process TODO
+        from preprocess.ocr import extract_text
+        
         
