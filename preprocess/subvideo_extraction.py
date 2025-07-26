@@ -4,7 +4,7 @@ import ffmpeg
 from utils import frame_to_seconds, get_video_fps
 
 
-def extract_subvideo_clip(input_video, output_video, start_time, end_time, ffmpeg_bin=None):
+def extract_subvideo_clip(input_video, output_video, start_time, end_time, ffmpeg_bin):
     duration = end_time - start_time
     
     command = (
@@ -14,13 +14,10 @@ def extract_subvideo_clip(input_video, output_video, start_time, end_time, ffmpe
         .overwrite_output()
     )
     
-    if ffmpeg_bin:
-        command.run(cmd=ffmpeg_bin)
-    else:
-        command.run()
+    command.run(cmd=ffmpeg_bin)
 
 
-def process_video_segments(video_path, segment_file_path, output_folder, ffmpeg_bin=None):
+def process_video_segments(video_path, segment_file_path, output_folder, ffmpeg_bin):
     os.makedirs(output_folder, exist_ok=True)
     
     with open(segment_file_path, 'r', encoding='utf-8') as f:
@@ -44,7 +41,7 @@ def process_video_segments(video_path, segment_file_path, output_folder, ffmpeg_
         extract_subvideo_clip(video_path, output_path, start_time, end_time, ffmpeg_bin)
 
 
-def extract_subvideo(input_video_dir, input_segment_dir, output_subvideo_dir, mode, lesson_name=None, ffmpeg_bin=None):
+def extract_subvideo(input_video_dir, input_segment_dir, output_subvideo_dir, mode, ffmpeg_bin, lesson_name=None):
     os.makedirs(output_subvideo_dir, exist_ok=True)
     
     if mode == "lesson":
