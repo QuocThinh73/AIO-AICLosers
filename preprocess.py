@@ -46,6 +46,15 @@ if __name__ == "__main__":
     parser_news_segmentation.add_argument("output_news_segment_dir", type=str)
     parser_news_segmentation.add_argument("--lesson_name", type=str)
     
+    # Subvideo extraction
+    parser_extract_subvideo = subparsers.add_parser("extract_subvideo")
+    parser_extract_subvideo.add_argument("mode", type=str, choices=["all", "lesson"])
+    parser_extract_subvideo.add_argument("input_video_dir", type=str)
+    parser_extract_subvideo.add_argument("input_segment_dir", type=str)
+    parser_extract_subvideo.add_argument("output_subvideo_dir", type=str)
+    parser_extract_subvideo.add_argument("--ffmpeg_bin", type=str)
+    parser_extract_subvideo.add_argument("--lesson_name", type=str)
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -131,8 +140,25 @@ if __name__ == "__main__":
         
     elif args.task == "extract_subvideo":
         # Check error
+        if not os.path.exists(args.input_video_dir):
+            raise ValueError("Input video directory does not exist")
+        
+        if not os.path.exists(args.input_segment_dir):
+            raise ValueError("Input segment directory does not exist")
+        
+        if args.mode == "lesson":
+            if not args.lesson_name:
+                raise ValueError("Lesson name is required when mode is lesson")
+            if not os.path.exists(os.path.join(args.input_video_dir, args.lesson_name)):
+                raise ValueError("Lesson video's directory does not exist")
+            if not os.path.exists(os.path.join(args.input_segment_dir, args.lesson_name)):
+                raise ValueError("Lesson segment's directory does not exist")
         
         # Main process
         from preprocess.subvideo_extraction import extract_subvideo
+        if args.mode == "all":
+            extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, ffmpeg_bin=args.ffmpeg_bin)
+        elif args.mode == "lesson":
+            extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.lesson_name, args.ffmpeg_bin)
 
         
