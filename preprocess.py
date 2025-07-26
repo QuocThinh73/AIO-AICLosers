@@ -111,9 +111,21 @@ if __name__ == "__main__":
         
     elif args.task == "news_anchor_detection":
         # Check error
+        if not os.path.exists(args.input_keyframe_dir):
+            raise ValueError("Input keyframe directory does not exist")
+        
+        if args.mode == "lesson":
+            if not args.lesson_name:
+                raise ValueError("Lesson name is required when mode is lesson")
+            if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+                raise ValueError("Lesson keyframe's directory does not exist")
         
         # Main process
         from preprocess.news_anchor_detection import detect_news_anchor
+        if args.mode == "all":
+            detect_news_anchor(args.input_keyframe_dir, args.output_news_anchor_dir, args.mode)
+        elif args.mode == "lesson":
+            detect_news_anchor(args.input_keyframe_dir, args.output_news_anchor_dir, args.mode, args.lesson_name)
         
     elif args.task == "news_segmentation":
         # Check error
