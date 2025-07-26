@@ -71,35 +71,35 @@ if __name__ == "__main__":
             detect_shot_boundary(args.input_video_dir, args.output_shot_dir, args.mode, args.lesson_name)
         
     elif args.task == "keyframe_extraction":
-        # Check error TODO
+        # Check error
+        if not os.path.exists(args.input_video_dir):
+            raise ValueError("Input video directory does not exist")
         
-        # Process TODO
-        from preprocess.keyframe_extraction import extract_keyframe
+        if not os.path.exists(args.input_shot_dir):
+            raise ValueError("Input shot directory does not exist")
         
-    elif args.task == "build_mapping_json":
-        # Check error TODO
-        
-        # Process TODO
-        from preprocess.build_mapping_json import build_mapping_json
+        if args.mode == "lesson":
+            if not args.lesson_name:
+                raise ValueError("Lesson name is required when mode is lesson")
             
+        # Process
+        from preprocess.keyframe_extraction import extract_keyframe
+        if args.mode == "all":
+            extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode)
+        elif args.mode == "lesson":
+            extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode, args.lesson_name)
+    elif args.task == "build_mapping_json":
+        from preprocess.build_mapping_json import build_mapping_json
+        build_mapping_json()
     elif args.task == "news_anchor_detection":
-        # Check error TODO
-        
-        # Process TODO
         from preprocess.news_anchor_detection import detect_news_anchor
-        
+        detect_news_anchor()
     elif args.task == "news_segmentation":
-        # Check error TODO
-        
-        # Process TODO
         from preprocess.news_segmentation import segment_news
-
+        segment_news()
     elif args.task == "extract_subvideo":
-        # Check error TODO
-        
-        # Process TODO
         from preprocess.subvideo_extraction import extract_subvideo
-        
-        
-        
+        extract_subvideo()
+    else:
+        raise ValueError(f"Invalid task: {args.task}")
         
