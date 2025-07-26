@@ -95,9 +95,25 @@ if __name__ == "__main__":
             
     elif args.task == "build_mapping_json":
         # Check error
+        if not os.path.exists(args.input_keyframe_dir):
+            raise ValueError("Input keyframe directory does not exist")
+        
+        if args.mode == "lesson":
+            if not args.lesson_name:
+                raise ValueError("Lesson name is required when mode is lesson")
+            if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+                raise ValueError("Lesson keyframe's directory does not exist")
         
         # Main process
         from preprocess.build_mapping_json import build_mapping_json
+        if args.mode == "all":
+            build_mapping_json(args.input_keyframe_dir, args.output_mapping_json)
+        elif args.mode == "lesson":
+            lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+            lesson_output_json = args.output_mapping_json
+            if not lesson_output_json.endswith(".json"):
+                lesson_output_json = os.path.join(lesson_output_json, f"{args.lesson_name}_mapping.json")
+            build_mapping_json(lesson_keyframe_dir, lesson_output_json)
         
     elif args.task == "news_anchor_detection":
         # Check error
