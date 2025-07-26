@@ -63,7 +63,7 @@ if __name__ == "__main__":
             if not os.path.exists(os.path.join(args.input_shot_dir, args.lesson_name)):
                 raise ValueError("Lesson directory does not exist")
             
-        # Process
+        # Main process
         from preprocess.shot_boundary_detection import detect_shot_boundary
         if args.mode == "all":
             detect_shot_boundary(args.input_video_dir, args.output_shot_dir, args.mode)
@@ -81,25 +81,40 @@ if __name__ == "__main__":
         if args.mode == "lesson":
             if not args.lesson_name:
                 raise ValueError("Lesson name is required when mode is lesson")
+            if not os.path.exists(os.path.join(args.input_video_dir, args.lesson_name)):
+                raise ValueError("Lesson video's directory does not exist")
+            if not os.path.exists(os.path.join(args.input_shot_dir, args.lesson_name)):
+                raise ValueError("Lesson shot's directory does not exist")
             
-        # Process
+        # Main process
         from preprocess.keyframe_extraction import extract_keyframe
         if args.mode == "all":
             extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode)
         elif args.mode == "lesson":
             extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode, args.lesson_name)
+            
     elif args.task == "build_mapping_json":
+        # Check error
+        
+        # Main process
         from preprocess.build_mapping_json import build_mapping_json
-        build_mapping_json()
+        
     elif args.task == "news_anchor_detection":
+        # Check error
+        
+        # Main process
         from preprocess.news_anchor_detection import detect_news_anchor
-        detect_news_anchor()
+        
     elif args.task == "news_segmentation":
+        # Check error
+        
+        # Main process
         from preprocess.news_segmentation import segment_news
-        segment_news()
+        
     elif args.task == "extract_subvideo":
+        # Check error
+        
+        # Main process
         from preprocess.subvideo_extraction import extract_subvideo
-        extract_subvideo()
-    else:
-        raise ValueError(f"Invalid task: {args.task}")
+
         
