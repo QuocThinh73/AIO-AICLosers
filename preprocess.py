@@ -28,10 +28,8 @@ if __name__ == "__main__":
     
     # Build mapping json
     parser_build_mapping_json = subparsers.add_parser("build_mapping_json", parents=[parent_parser])
-    parser_build_mapping_json.add_argument("mode", choices=["all", "lesson"])
     parser_build_mapping_json.add_argument("input_keyframe_dir", type=str)
     parser_build_mapping_json.add_argument("output_mapping_json", type=str)
-    parser_build_mapping_json.add_argument("--lesson_name", type=str)
     
     # News anchor detection
     parser_news_anchor_detection = subparsers.add_parser("news_anchor_detection", parents=[parent_parser])
@@ -98,22 +96,9 @@ if __name__ == "__main__":
         if not os.path.exists(args.input_keyframe_dir):
             raise ValueError("Input keyframe directory does not exist")
         
-        if args.mode == "lesson":
-            if not args.lesson_name:
-                raise ValueError("Lesson name is required when mode is lesson")
-            if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
-                raise ValueError("Lesson keyframe's directory does not exist")
-        
         # Main process
         from preprocess.build_mapping_json import build_mapping_json
-        if args.mode == "all":
-            build_mapping_json(args.input_keyframe_dir, args.output_mapping_json)
-        elif args.mode == "lesson":
-            lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
-            lesson_output_json = args.output_mapping_json
-            if not lesson_output_json.endswith(".json"):
-                lesson_output_json = os.path.join(lesson_output_json, f"{args.lesson_name}_mapping.json")
-            build_mapping_json(lesson_keyframe_dir, lesson_output_json)
+        build_mapping_json(args.input_keyframe_dir, args.output_mapping_json)
         
     elif args.task == "news_anchor_detection":
         # Check error
