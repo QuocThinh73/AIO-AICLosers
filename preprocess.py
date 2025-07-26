@@ -24,6 +24,29 @@ if __name__ == "__main__":
     parser_keyframe_extraction.add_argument("input_video_dir", type=str)
     parser_keyframe_extraction.add_argument("input_shot_dir", type=str)
     parser_keyframe_extraction.add_argument("output_keyframe_dir", type=str)
+    parser_keyframe_extraction.add_argument("--lesson_name", type=str)
+    
+    # Build mapping json
+    parser_build_mapping_json = subparsers.add_parser("build_mapping_json", parents=[parent_parser])
+    parser_build_mapping_json.add_argument("mode", choices=["all", "lesson"])
+    parser_build_mapping_json.add_argument("input_keyframe_dir", type=str)
+    parser_build_mapping_json.add_argument("output_mapping_json", type=str)
+    parser_build_mapping_json.add_argument("--lesson_name", type=str)
+    
+    # News anchor detection
+    parser_news_anchor_detection = subparsers.add_parser("news_anchor_detection", parents=[parent_parser])
+    parser_news_anchor_detection.add_argument("mode", choices=["all", "lesson"])
+    parser_news_anchor_detection.add_argument("input_keyframe_dir", type=str)
+    parser_news_anchor_detection.add_argument("output_news_anchor_dir", type=str)
+    parser_news_anchor_detection.add_argument("--lesson_name", type=str)
+    
+    # News segmentation
+    parser_news_segmentation = subparsers.add_parser("news_segmentation", parents=[parent_parser])
+    parser_news_segmentation.add_argument("mode", choices=["all", "lesson"])
+    parser_news_segmentation.add_argument("input_keyframe_dir", type=str)
+    parser_news_segmentation.add_argument("input_news_anchor_dir", type=str)
+    parser_news_segmentation.add_argument("output_news_segment_dir", type=str)
+    parser_news_segmentation.add_argument("--lesson_name", type=str)
     
     # Parse arguments
     args = parser.parse_args()
@@ -47,9 +70,36 @@ if __name__ == "__main__":
         elif args.mode == "lesson":
             detect_shot_boundary(args.input_video_dir, args.output_shot_dir, args.mode, args.lesson_name)
         
-    # elif args.task == "keyframe_extraction":
-    #     from preprocess.keyframe_extraction import extract_keyframe
-    #     extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode)
-    # else:
-    #     raise ValueError(f"Invalid task: {args.task}")
+    elif args.task == "keyframe_extraction":
+        # Check error TODO
+        
+        # Process TODO
+        from preprocess.keyframe_extraction import extract_keyframe
+        
+    elif args.task == "build_mapping_json":
+        # Check error TODO
+        
+        # Process TODO
+        from preprocess.build_mapping_json import build_mapping_json
+            
+    elif args.task == "news_anchor_detection":
+        # Check error TODO
+        
+        # Process TODO
+        from preprocess.news_anchor_detection import detect_news_anchor
+        
+    elif args.task == "news_segmentation":
+        # Check error TODO
+        
+        # Process TODO
+        from preprocess.news_segmentation import segment_news
+
+    elif args.task == "extract_subvideo":
+        # Check error TODO
+        
+        # Process TODO
+        from preprocess.subvideo_extraction import extract_subvideo
+        
+        
+        
         
