@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser_extract_subvideo.add_argument("input_video_dir", type=str)
     parser_extract_subvideo.add_argument("input_segment_dir", type=str)
     parser_extract_subvideo.add_argument("output_subvideo_dir", type=str)
-    parser_extract_subvideo.add_argument("--ffmpeg_bin", type=str)
+    parser_extract_subvideo.add_argument("ffmpeg_bin", type=str)
     parser_extract_subvideo.add_argument("--lesson_name", type=str)
     
     # Parse arguments
@@ -138,13 +138,19 @@ if __name__ == "__main__":
         elif args.mode == "lesson":
             segment_news(args.input_keyframe_dir, args.input_news_anchor_dir, args.output_news_segment_dir, args.mode, args.lesson_name)
         
-    elif args.task == "extract_subvideo":
+    elif args.task == "subvideo_extraction":
         # Check error
         if not os.path.exists(args.input_video_dir):
             raise ValueError("Input video directory does not exist")
         
         if not os.path.exists(args.input_segment_dir):
             raise ValueError("Input segment directory does not exist")
+        
+        if not args.ffmpeg_bin:
+            raise ValueError("FFmpeg binary path is required")
+        
+        if not os.path.exists(args.ffmpeg_bin):
+            raise ValueError("FFmpeg binary does not exist at the specified path")
         
         if args.mode == "lesson":
             if not args.lesson_name:
@@ -157,8 +163,8 @@ if __name__ == "__main__":
         # Main process
         from preprocess.subvideo_extraction import extract_subvideo
         if args.mode == "all":
-            extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, ffmpeg_bin=args.ffmpeg_bin)
+            extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.ffmpeg_bin)
         elif args.mode == "lesson":
-            extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.lesson_name, args.ffmpeg_bin)
+            extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.ffmpeg_bin, args.lesson_name)
 
         
