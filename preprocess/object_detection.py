@@ -83,7 +83,7 @@ def calculate_iou(box1, box2):
     
     return iou
 
-def filter_objects(objects, iou_threshold=0.7, confidence_threshold=0.5):
+def filter_objects(objects, iou_threshold=0.6, confidence_threshold=0.5):
     # If there are no objects, return empty list
     if not objects:
         return []
