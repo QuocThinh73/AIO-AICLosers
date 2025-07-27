@@ -178,11 +178,23 @@ def process_video_keyframes(
             # Add results to the list
             for i, (box, score) in enumerate(zip(results["boxes"], results["scores"])):
                 label = results["labels"][i] if i < len(results["labels"]) else prompt
+                
+                # Ensure box is JSON serializable (convert numpy array if needed)
+                if hasattr(box, 'tolist'):
+                    box = box.tolist()
+                elif isinstance(box, tuple) or isinstance(box, list):
+                    # Convert nested numpy arrays if present
+                    box = [float(b) if hasattr(b, 'item') else b for b in box]
+                    
+                # Ensure score is JSON serializable
+                if hasattr(score, 'item'):
+                    score = score.item()
+                
                 keyframe_results["objects"].append({
                     "prompt": prompt,
                     "object": label,
                     "box": box,
-                    "score": score
+                    "score": float(score) if isinstance(score, (int, float)) else score
                 })
         
         # Apply filter_objects to remove duplicate objects and filter by score

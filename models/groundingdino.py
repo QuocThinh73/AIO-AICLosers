@@ -211,7 +211,8 @@ class GroundingDINO:
             # Process boxes
             if isinstance(boxes, torch.Tensor):
                 try:
-                    boxes = boxes.detach().cpu().numpy()
+                    # Convert tensor to numpy then to list for JSON serialization
+                    boxes = boxes.detach().cpu().numpy().tolist()
                 except:
                     boxes = []
             
