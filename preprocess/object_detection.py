@@ -8,9 +8,6 @@ from PIL import Image
 from models.groundingdino import GroundingDINO
 
 def extract_objects_from_caption(caption: str) -> List[str]:
-    """
-    Extract meaningful segments from captions to use as prompts for object detection
-    """
     # Remove unnecessary meta text
     caption = caption.replace("The image appears to be", "")
     caption = caption.replace("The image shows", "")
@@ -60,7 +57,6 @@ def extract_objects_from_caption(caption: str) -> List[str]:
     return prompts[:3]
 
 def calculate_iou(box1, box2):
-    """Calculate IoU between two bounding boxes"""
     # Box coordinates
     x1_1, y1_1, x2_1, y2_1 = box1
     x1_2, y1_2, x2_2, y2_2 = box2
@@ -88,7 +84,6 @@ def calculate_iou(box1, box2):
     return iou
 
 def filter_objects(objects, iou_threshold=0.7, confidence_threshold=0.5):
-    """Filter duplicated objects, keep only the highest scoring object for each group of overlapping boxes"""
     # If there are no objects, return empty list
     if not objects:
         return []
@@ -119,13 +114,37 @@ def filter_objects(objects, iou_threshold=0.7, confidence_threshold=0.5):
     
     return filtered_objects
 
+# Function to visualize detection results on an image
+def visualize_detection(image_path, detection_results):
+    import cv2
+    import matplotlib.pyplot as plt
+    
+    image = cv2.imread(image_path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    for box, score, label in zip(detection_results["boxes"], detection_results["scores"], detection_results["labels"]):
+        x1, y1, x2, y2 = map(int, box)
+        
+        # Draw bounding box
+        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        
+        # Draw label and score
+        text = f"{label}: {score:.2f}"
+        cv2.putText(image, text, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    
+    plt.figure(figsize=(12, 8))
+    plt.imshow(image)
+    plt.axis('off')
+    plt.show()
+    
+    return image
+
 def process_video_keyframes(
     video_dir: str,
     caption_file: str,
     grounding_dino: GroundingDINO,
     output_file: str = None
 ) -> Dict[str, Any]:
-    """Process all keyframes for a single video"""
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     # Load captions
@@ -220,7 +239,6 @@ def process_lesson(
     lesson_output_dir: str,
     grounding_dino: GroundingDINO
 ) -> Dict[str, Any]:
-    """Process all videos in a lesson"""
     # Create output directory
     os.makedirs(lesson_output_dir, exist_ok=True)
     
@@ -259,7 +277,6 @@ def detect_object(
     lesson_name: str = None,
     video_name: str = None
 ) -> Dict[str, Any]:
-    """Detect objects in keyframes using Grounding DINO"""
     # Create output directory
     os.makedirs(output_detection_dir, exist_ok=True)
     
@@ -326,15 +343,6 @@ def detect_object(
     return summary
 
 def zip_detection_results(output_detection_dir: str) -> str:
-    """
-    Create a zip file of the detection results for easy download
-    
-    Args:
-        output_detection_dir: Directory containing the detection results
-        
-    Returns:
-        Path to the created zip file
-    """
     # Get base directory and name
     base_dir = os.path.dirname(output_detection_dir)
     dir_name = os.path.basename(output_detection_dir)
