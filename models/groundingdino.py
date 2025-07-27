@@ -133,8 +133,10 @@ class GroundingDINO:
         """
         # Ensure model is loaded (will download and set up if needed)
         if self.model is None:
+            print("Loading model first...")
             self.load_model()
         
+        print(f"Detecting objects in image with prompt: '{text_prompt}'")
         try:
             # Import modules inside function to avoid circular imports
             import torch
@@ -143,11 +145,13 @@ class GroundingDINO:
                 
             # Convert path to PIL Image if needed
             if isinstance(image, str):
+                print(f"Loading image from path: {image}")
                 image_source, image_tensor = load_image(image)
             else:
                 image_source = np.array(image)
                 image_tensor = image
                 
+            print(f"Running inference with box_threshold={box_threshold}, text_threshold={text_threshold}")
             # Run inference
             boxes, logits, phrases = predict(
                 model=self.model,
@@ -157,6 +161,8 @@ class GroundingDINO:
                 text_threshold=text_threshold,
                 device=self.device
             )
+            
+            print(f"Raw prediction results: {len(boxes)} boxes, {len(logits) if logits is not None else 0} scores, {len(phrases) if phrases is not None else 0} phrases")
             
             # Convert to numpy for consistency
             if isinstance(boxes, torch.Tensor) and len(boxes) > 0:
@@ -181,7 +187,8 @@ class GroundingDINO:
         results = {
             "boxes": boxes,
             "scores": scores,
-            "labels": phrases
+            "labels": phrases if phrases is not None else []
         }
         
+        print(f"Final detection results: {len(results['boxes'])} boxes, {len(results['scores'])} scores, {len(results['labels'])} labels")
         return results

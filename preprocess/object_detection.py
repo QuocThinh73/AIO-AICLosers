@@ -154,6 +154,7 @@ def process_video_keyframes(
         
         # Extract prompt segments from caption
         prompts = extract_objects_from_caption(caption)
+        print(f"Generated prompts for {keyframe_name}: {prompts}")
         
         # Initialize results for current keyframe
         keyframe_results = {
@@ -165,12 +166,14 @@ def process_video_keyframes(
         # Detect objects using each prompt
         for prompt in prompts:
             # Detect objects
+            print(f"Detecting objects with prompt: 'Find {prompt}'")
             results = grounding_dino.detect_objects(
                 keyframe_path, 
                 f"Find {prompt}",
                 box_threshold=0.35,
                 text_threshold=0.25
             )
+            print(f"Detection results: {len(results['boxes'])} boxes, {len(results['scores'])} scores, {len(results.get('labels', []))} labels")
             
             # Add results to the list
             for i, (box, score) in enumerate(zip(results["boxes"], results["scores"])):
