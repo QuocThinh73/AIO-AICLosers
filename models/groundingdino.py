@@ -5,7 +5,7 @@ from typing import Dict, List, Union, Tuple
 from PIL import Image
 import subprocess
 import sys
-import gdown
+import urllib.request
 
 class GroundingDINO:
     def __init__(self, device=None):
@@ -28,9 +28,8 @@ class GroundingDINO:
         Check and install required packages if they are not already installed
         """
         required_packages = [
-            "torch", "torchvision", "opencv-python", "matplotlib", "transformers>=4.25.1", 
-            "timm>=0.6.13", "supervision", "pycocotools", "gdown", "addict", "yapf", 
-            "terminaltables", "tqdm"
+            "torch", "torchvision", "transformers", "timm", "opencv-python-headless", 
+            "matplotlib", "Pillow", "groundingdino-py"
         ]
         
         try:
@@ -42,14 +41,14 @@ class GroundingDINO:
                 # Extract package name without version specifier
                 package_name = package.split('>=')[0].split('==')[0].strip()
                 try:
-                    importlib.import_module(package_name)
+                    importlib.import_module(package_name.replace("-", "_"))
                     print(f"✓ {package_name} is already installed")
                 except ImportError:
                     packages_to_install.append(package)
             
             if packages_to_install:
                 print(f"Installing missing packages: {', '.join(packages_to_install)}")
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-input", "--quiet"] + packages_to_install)
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet"] + packages_to_install)
                 print("All required packages installed successfully")
         except Exception as e:
             print(f"Warning: Could not check or install packages automatically: {e}")
@@ -58,25 +57,27 @@ class GroundingDINO:
     def _setup_model_paths(self):
         """Set up paths for model configuration and checkpoint files"""
         # Create directories if they don't exist
-        os.makedirs("GroundingDINO", exist_ok=True)
+        os.makedirs("GroundingDINO/groundingdino/config", exist_ok=True)
         os.makedirs("weights", exist_ok=True)
         
         # Set file paths
         self.config_path = "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
         self.checkpoint_path = "weights/groundingdino_swint_ogc.pth"
     
-    def _clone_groundingdino(self):
-        """Clone the GroundingDINO repository if not already cloned"""
-        if os.path.exists("GroundingDINO"):
-            print("GroundingDINO repository already exists")
+    def _download_config(self):
+        """Download the model configuration file if not already present"""
+        if os.path.exists(self.config_path):
+            print(f"Config file already exists at {self.config_path}")
             return
         
-        print("Cloning GroundingDINO repository...")
+        print(f"Downloading config file to {self.config_path}...")
+        config_url = "https://github.com/IDEA-Research/GroundingDINO/raw/main/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+        
         try:
-            subprocess.run(["git", "clone", "https://github.com/IDEA-Research/GroundingDINO.git"], check=True)
-            print("Repository cloned successfully")
+            urllib.request.urlretrieve(config_url, self.config_path)
+            print("Config file downloaded successfully")
         except Exception as e:
-            raise RuntimeError(f"Failed to clone repository: {e}")
+            raise RuntimeError(f"Failed to download config file: {e}")
     
     def _download_checkpoint(self):
         """Download the model checkpoint file if not already present"""
@@ -85,72 +86,15 @@ class GroundingDINO:
             return
         
         print(f"Downloading checkpoint file to {self.checkpoint_path}...")
+        checkpoint_url = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
         
-        # Download from Google Drive using ID
-        checkpoint_id = "1jjkRSa7aLsLMx0rUx-fT1g6Q9H1XN_1T"
         try:
-            gdown.download(id=checkpoint_id, output=self.checkpoint_path, quiet=False)
+            urllib.request.urlretrieve(checkpoint_url, self.checkpoint_path)
             print("Checkpoint downloaded successfully")
         except Exception as e:
-            print(f"Google Drive download failed: {e}, trying direct URL...")
-            
-            # Fallback to direct URL if Google Drive fails
-            direct_url = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
-            try:
-                import urllib.request
-                urllib.request.urlretrieve(direct_url, self.checkpoint_path)
-                print("Checkpoint downloaded successfully from direct URL")
-            except Exception as e:
-                raise RuntimeError(f"Failed to download checkpoint file: {e}")
+            raise RuntimeError(f"Failed to download checkpoint file: {e}")
     
-    def _install_dependencies(self):
-        """Add GroundingDINO to Python path and verify module structure"""
-        try:
-            # Add GroundingDINO to Python path instead of installing it
-            cwd = os.getcwd()
-            print(f"Current working directory: {cwd}")
-            
-            # Try multiple possible paths for Kaggle and local environments
-            possible_paths = [
-                os.path.abspath("GroundingDINO"),
-                os.path.join(cwd, "GroundingDINO"),
-                os.path.join(os.path.dirname(cwd), "GroundingDINO"),
-            ]
-            
-            groundingdino_path = None
-            for path in possible_paths:
-                if os.path.exists(path) and os.path.isdir(path):
-                    groundingdino_path = path
-                    if path not in sys.path:
-                        sys.path.insert(0, path)
-                    print(f"Added {path} to Python path")
-                    break
-            
-            if groundingdino_path is None:
-                print("Warning: Could not find GroundingDINO directory")
-                return
-            
-            # Check if the module structure exists
-            module_path = os.path.join(groundingdino_path, "groundingdino")
-            if not os.path.exists(module_path):
-                print(f"Warning: groundingdino module not found at {module_path}")
-                # List directory contents for debugging
-                print(f"GroundingDINO directory contents: {os.listdir(groundingdino_path)}")
-            else:
-                print(f"Found groundingdino module at {module_path}")
-                
-                # Explicitly add the 'groundingdino' module path
-                if module_path not in sys.path:
-                    sys.path.insert(0, module_path)
-                    print(f"Added {module_path} to Python path")
-            
-            # Print sys.path for debugging
-            print(f"Python path (first 3 entries): {sys.path[:3]}")
-        except Exception as e:
-            print(f"Warning: Error configuring GroundingDINO paths: {e}")
-            print("Attempting to continue anyway...")
-            import traceback
-            traceback.print_exc()
+
     
     def load_model(self):
         """
@@ -160,14 +104,12 @@ class GroundingDINO:
         if self.model is not None:
             return
         
-        # Clone repository, download checkpoint, and add to Python path
-        self._clone_groundingdino()
+        # Download model config and checkpoint files
+        self._download_config()
         self._download_checkpoint()
-        self._install_dependencies()
         
         # Now import and load the model
         try:
-            
             from groundingdino.util.inference import load_model
             
             # Load the model
@@ -211,7 +153,7 @@ class GroundingDINO:
         # Run inference
         boxes, logits, phrases = predict(
             model=self.model,
-            image=image_source, 
+            image=image,
             caption=text_prompt,
             box_threshold=box_threshold,
             text_threshold=text_threshold,
