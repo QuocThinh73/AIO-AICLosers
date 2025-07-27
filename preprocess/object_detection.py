@@ -319,11 +319,6 @@ def detect_object(
         "items": all_results
     }
     
-    # Save summary if there are results
-    if all_results:
-        summary_file = os.path.join(output_detection_dir, "detection_summary.json")
-        with open(summary_file, 'w', encoding='utf-8') as f:
-            json.dump(summary, f, ensure_ascii=False, indent=4)
     
     # Zip detection results for easy download
     zip_detection_results(output_detection_dir)
