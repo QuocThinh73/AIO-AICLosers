@@ -2,8 +2,35 @@ import os
 import sys
 import subprocess
 import urllib.request
+import time
+import threading
 from typing import Dict, List, Union, Tuple
 from PIL import Image
+
+class TimeoutError(Exception):
+    """Custom exception for timeouts"""
+    pass
+
+class KillableThread(threading.Thread):
+    """Thread class with a kill() method"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._result = None
+        self._exc = None
+        
+    def run(self):
+        try:
+            if self._target is not None:
+                self._result = self._target(*self._args, **self._kwargs)
+        except Exception as e:
+            self._exc = e
+        finally:
+            del self._target, self._args, self._kwargs
+    
+    def get_result(self):
+        if self._exc:
+            raise self._exc
+        return self._result
 
 class GroundingDINO:
     def __init__(self, device=None):
@@ -18,12 +45,13 @@ class GroundingDINO:
         # Initialize model
         self.model = None
         
+        # Install dependencies first (just like in the notebook)
+        self._install_dependencies()
+        
         # Set device
-        try:
-            import torch
-            self.device = device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
-        except:
-            self.device = "cpu"
+        import torch
+        self.device = device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")
     
     def _install_dependencies(self):
         """
@@ -90,29 +118,22 @@ class GroundingDINO:
         if self.model is not None:
             return
         
-        # Install dependencies first
-        self._install_dependencies()
-        
         # Download model config and checkpoint files
         self._download_config()
         self._download_checkpoint()
         
         print("\nLoading Grounding DINO model...")
-        try:
-            # Follow exact import sequence from Kaggle notebook
-            import torch
-            from groundingdino.util.inference import load_model
+        
+        # IMPORTANT: Use exactly the same import and load sequence as the notebook
+        from groundingdino.util.inference import load_model
+        
+        # Load the model with exact same call as in notebook
+        self.model = load_model(self.config_path, self.checkpoint_path)
+        
+        import torch
+        self.model = self.model.to(self.device)
             
-            # Load the model with exact same call as in notebook
-            self.model = load_model(self.config_path, self.checkpoint_path)
-            self.model = self.model.to(self.device)
-            
-            print(f"Model loaded successfully on {self.device}")
-        except Exception as e:
-            print(f"Error loading model: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise RuntimeError(f"Failed to load Grounding DINO model: {e}")
+        print(f"Model loaded successfully on {self.device}")
     
     def detect_objects(self, 
                       image: Union[str, Image.Image], 
@@ -137,22 +158,26 @@ class GroundingDINO:
             self.load_model()
         
         print(f"Detecting objects in image with prompt: '{text_prompt}'")
+        
+        # SIMPLIFY: Use direct approach just like the notebook
+        # Import modules in the exact same order as the notebook
+        import torch
+        import numpy as np
+        from groundingdino.util.inference import load_image, predict
+            
+        # Convert path to PIL Image if needed
+        if isinstance(image, str):
+            print(f"Loading image from path: {image}")
+            image_source, image_tensor = load_image(image)
+        else:
+            image_source = np.array(image)
+            image_tensor = image
+            
+        print(f"Running inference with box_threshold={box_threshold}, text_threshold={text_threshold}")
+        
+        # Direct call without threading - exactly like the notebook
+        start_time = time.time()
         try:
-            # Import modules inside function to avoid circular imports
-            import torch
-            import numpy as np
-            from groundingdino.util.inference import load_image, predict
-                
-            # Convert path to PIL Image if needed
-            if isinstance(image, str):
-                print(f"Loading image from path: {image}")
-                image_source, image_tensor = load_image(image)
-            else:
-                image_source = np.array(image)
-                image_tensor = image
-                
-            print(f"Running inference with box_threshold={box_threshold}, text_threshold={text_threshold}")
-            # Run inference
             boxes, logits, phrases = predict(
                 model=self.model,
                 image=image_tensor,
@@ -161,6 +186,13 @@ class GroundingDINO:
                 text_threshold=text_threshold,
                 device=self.device
             )
+            end_time = time.time()
+            print(f"Inference completed in {end_time - start_time:.2f} seconds")
+        except Exception as e:
+            print(f"Error during prediction: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"boxes": [], "scores": [], "labels": []}
             
             print(f"Raw prediction results: {len(boxes)} boxes, {len(logits) if logits is not None else 0} scores, {len(phrases) if phrases is not None else 0} phrases")
             
@@ -181,6 +213,11 @@ class GroundingDINO:
             print(f"Error during object detection: {e}")
             import traceback
             traceback.print_exc()
+            return {"boxes": [], "scores": [], "labels": []}
+            
+        # Handle potentially None results
+        if boxes is None or len(boxes) == 0:
+            print("No objects detected, returning empty results")
             return {"boxes": [], "scores": [], "labels": []}
             
         # Format results
