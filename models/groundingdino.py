@@ -104,16 +104,53 @@ class GroundingDINO:
                 raise RuntimeError(f"Failed to download checkpoint file: {e}")
     
     def _install_dependencies(self):
-        """Add GroundingDINO to Python path"""
+        """Add GroundingDINO to Python path and verify module structure"""
         try:
             # Add GroundingDINO to Python path instead of installing it
-            groundingdino_path = os.path.abspath("GroundingDINO")
-            if groundingdino_path not in sys.path:
-                sys.path.insert(0, groundingdino_path)
-                print(f"Added {groundingdino_path} to Python path")
+            cwd = os.getcwd()
+            print(f"Current working directory: {cwd}")
+            
+            # Try multiple possible paths for Kaggle and local environments
+            possible_paths = [
+                os.path.abspath("GroundingDINO"),
+                os.path.join(cwd, "GroundingDINO"),
+                os.path.join(os.path.dirname(cwd), "GroundingDINO"),
+            ]
+            
+            groundingdino_path = None
+            for path in possible_paths:
+                if os.path.exists(path) and os.path.isdir(path):
+                    groundingdino_path = path
+                    if path not in sys.path:
+                        sys.path.insert(0, path)
+                    print(f"Added {path} to Python path")
+                    break
+            
+            if groundingdino_path is None:
+                print("Warning: Could not find GroundingDINO directory")
+                return
+            
+            # Check if the module structure exists
+            module_path = os.path.join(groundingdino_path, "groundingdino")
+            if not os.path.exists(module_path):
+                print(f"Warning: groundingdino module not found at {module_path}")
+                # List directory contents for debugging
+                print(f"GroundingDINO directory contents: {os.listdir(groundingdino_path)}")
+            else:
+                print(f"Found groundingdino module at {module_path}")
+                
+                # Explicitly add the 'groundingdino' module path
+                if module_path not in sys.path:
+                    sys.path.insert(0, module_path)
+                    print(f"Added {module_path} to Python path")
+            
+            # Print sys.path for debugging
+            print(f"Python path (first 3 entries): {sys.path[:3]}")
         except Exception as e:
-            print(f"Warning: Error adding GroundingDINO to path: {e}")
+            print(f"Warning: Error configuring GroundingDINO paths: {e}")
             print("Attempting to continue anyway...")
+            import traceback
+            traceback.print_exc()
     
     def load_model(self):
         """
