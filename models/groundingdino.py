@@ -175,6 +175,11 @@ class GroundingDINO:
             
         print(f"Running inference with box_threshold={box_threshold}, text_threshold={text_threshold}")
         
+        # Initialize variables with default values to avoid UnboundLocalError
+        boxes = []
+        logits = []
+        phrases = []
+        
         # Direct call without threading - exactly like the notebook
         start_time = time.time()
         try:
@@ -188,32 +193,28 @@ class GroundingDINO:
             )
             end_time = time.time()
             print(f"Inference completed in {end_time - start_time:.2f} seconds")
+            print(f"Raw prediction results: {len(boxes)} boxes, {len(logits) if logits is not None else 0} scores, {len(phrases) if phrases is not None else 0} phrases")
         except Exception as e:
             print(f"Error during prediction: {e}")
             import traceback
             traceback.print_exc()
             return {"boxes": [], "scores": [], "labels": []}
             
-            print(f"Raw prediction results: {len(boxes)} boxes, {len(logits) if logits is not None else 0} scores, {len(phrases) if phrases is not None else 0} phrases")
-            
-            # Convert to numpy for consistency
-            if isinstance(boxes, torch.Tensor) and len(boxes) > 0:
-                H, W, _ = image_source.shape
-                boxes_xyxy = boxes * torch.tensor([W, H, W, H], device=boxes.device)
-                boxes = boxes_xyxy.cpu().numpy().tolist()
-            else:
-                boxes = [] if not isinstance(boxes, list) else boxes
-                
+        # Convert to numpy for consistency
+        if isinstance(boxes, torch.Tensor) and len(boxes) > 0:
+            boxes = boxes.detach().cpu().numpy()
+        
+        # Convert logits to scores
+        scores = []
+        if logits is not None and len(logits) > 0:
             if isinstance(logits, torch.Tensor):
-                scores = logits.cpu().numpy().tolist()
+                scores = logits.detach().cpu().numpy().tolist()
             else:
-                scores = logits if logits is not None else []
-                
-        except Exception as e:
-            print(f"Error during object detection: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"boxes": [], "scores": [], "labels": []}
+                scores = logits.tolist() if hasattr(logits, 'tolist') else logits
+            
+        # Format labels for output
+        if phrases is None:
+            phrases = []
             
         # Handle potentially None results
         if boxes is None or len(boxes) == 0:
