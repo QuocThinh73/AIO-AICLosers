@@ -152,81 +152,92 @@ class GroundingDINO:
         Returns:
             Dict with detection results (boxes, labels, scores)
         """
-        # Ensure model is loaded (will download and set up if needed)
-        if self.model is None:
-            print("Loading model first...")
-            self.load_model()
+        # Initialize empty results dict that will be returned in case of any error
+        empty_result = {"boxes": [], "scores": [], "labels": []}
         
-        print(f"Detecting objects in image with prompt: '{text_prompt}'")
-        
-        # SIMPLIFY: Use direct approach just like the notebook
-        # Import modules in the exact same order as the notebook
-        import torch
-        import numpy as np
-        from groundingdino.util.inference import load_image, predict
-            
-        # Convert path to PIL Image if needed
-        if isinstance(image, str):
-            print(f"Loading image from path: {image}")
-            image_source, image_tensor = load_image(image)
-        else:
-            image_source = np.array(image)
-            image_tensor = image
-            
-        print(f"Running inference with box_threshold={box_threshold}, text_threshold={text_threshold}")
-        
-        # Initialize variables with default values to avoid UnboundLocalError
-        boxes = []
-        logits = []
-        phrases = []
-        
-        # Direct call without threading - exactly like the notebook
-        start_time = time.time()
         try:
-            boxes, logits, phrases = predict(
-                model=self.model,
-                image=image_tensor,
-                caption=text_prompt,
-                box_threshold=box_threshold,
-                text_threshold=text_threshold,
-                device=self.device
-            )
-            end_time = time.time()
-            print(f"Inference completed in {end_time - start_time:.2f} seconds")
-            print(f"Raw prediction results: {len(boxes)} boxes, {len(logits) if logits is not None else 0} scores, {len(phrases) if phrases is not None else 0} phrases")
+            # Ensure model is loaded (will download and set up if needed)
+            if self.model is None:
+                print("Loading model first...")
+                self.load_model()
+            
+            # Import required modules
+            import torch
+            import numpy as np
+            from groundingdino.util.inference import load_image, predict
+            
+            print(f"Detecting objects in image with prompt: '{text_prompt}'")
+                
+            # Convert path to PIL Image if needed
+            try:
+                if isinstance(image, str):
+                    print(f"Loading image from path: {image}")
+                    image_source, image_tensor = load_image(image)
+                else:
+                    image_source = np.array(image)
+                    image_tensor = image
+            except Exception as e:
+                print(f"Error loading image: {e}")
+                return empty_result
+                
+            print(f"Running inference with box_threshold={box_threshold}, text_threshold={text_threshold}")
+            
+            # Direct call - exactly like the notebook
+            start_time = time.time()
+            try:
+                boxes, logits, phrases = predict(
+                    model=self.model,
+                    image=image_tensor,
+                    caption=text_prompt,
+                    box_threshold=box_threshold,
+                    text_threshold=text_threshold,
+                    device=self.device
+                )
+                end_time = time.time()
+                print(f"Inference completed in {end_time - start_time:.2f} seconds")
+            except Exception as e:
+                print(f"Error during prediction: {e}")
+                import traceback
+                traceback.print_exc()
+                return empty_result
+            
+            # Default values in case any are None
+            boxes = [] if boxes is None else boxes
+            logits = [] if logits is None else logits
+            phrases = [] if phrases is None else phrases
+            
+            print(f"Raw prediction results: {len(boxes)} boxes, {len(logits)} scores, {len(phrases)} phrases")
+            
+            # Process boxes
+            if isinstance(boxes, torch.Tensor):
+                try:
+                    boxes = boxes.detach().cpu().numpy()
+                except:
+                    boxes = []
+            
+            # Process scores
+            scores = []
+            if len(logits) > 0:
+                try:
+                    if isinstance(logits, torch.Tensor):
+                        scores = logits.detach().cpu().numpy().tolist()
+                    else:
+                        scores = logits.tolist() if hasattr(logits, 'tolist') else list(logits)
+                except:
+                    scores = []
+            
+            # Return formatted results
+            results = {
+                "boxes": boxes,
+                "scores": scores,
+                "labels": phrases
+            }
+            
+            print(f"Final detection results: {len(results['boxes'])} boxes, {len(results['scores'])} scores, {len(results['labels'])} labels")
+            return results
+            
         except Exception as e:
-            print(f"Error during prediction: {e}")
+            print(f"Unexpected error in detect_objects: {e}")
             import traceback
             traceback.print_exc()
-            return {"boxes": [], "scores": [], "labels": []}
-            
-        # Convert to numpy for consistency
-        if isinstance(boxes, torch.Tensor) and len(boxes) > 0:
-            boxes = boxes.detach().cpu().numpy()
-        
-        # Convert logits to scores
-        scores = []
-        if logits is not None and len(logits) > 0:
-            if isinstance(logits, torch.Tensor):
-                scores = logits.detach().cpu().numpy().tolist()
-            else:
-                scores = logits.tolist() if hasattr(logits, 'tolist') else logits
-            
-        # Format labels for output
-        if phrases is None:
-            phrases = []
-            
-        # Handle potentially None results
-        if boxes is None or len(boxes) == 0:
-            print("No objects detected, returning empty results")
-            return {"boxes": [], "scores": [], "labels": []}
-            
-        # Format results
-        results = {
-            "boxes": boxes,
-            "scores": scores,
-            "labels": phrases if phrases is not None else []
-        }
-        
-        print(f"Final detection results: {len(results['boxes'])} boxes, {len(results['scores'])} scores, {len(results['labels'])} labels")
-        return results
+            return empty_result
