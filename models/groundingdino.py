@@ -14,11 +14,46 @@ class GroundingDINO:
         Args:
             device: Device to run inference on ('cpu' or 'cuda')
         """
+        # Install required packages first to ensure all imports work
+        self._check_and_install_packages()
+        
         self.device = device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = None
         
         # Initialize model paths
         self._setup_model_paths()
+    
+    def _check_and_install_packages(self):
+        """
+        Check and install required packages if they are not already installed
+        """
+        required_packages = [
+            "torch", "torchvision", "opencv-python", "matplotlib", "transformers>=4.25.1", 
+            "timm>=0.6.13", "supervision", "pycocotools", "gdown", "addict", "yapf", 
+            "terminaltables", "tqdm"
+        ]
+        
+        try:
+            import importlib
+            import pip
+            
+            packages_to_install = []
+            for package in required_packages:
+                # Extract package name without version specifier
+                package_name = package.split('>=')[0].split('==')[0].strip()
+                try:
+                    importlib.import_module(package_name)
+                    print(f"✓ {package_name} is already installed")
+                except ImportError:
+                    packages_to_install.append(package)
+            
+            if packages_to_install:
+                print(f"Installing missing packages: {', '.join(packages_to_install)}")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-input", "--quiet"] + packages_to_install)
+                print("All required packages installed successfully")
+        except Exception as e:
+            print(f"Warning: Could not check or install packages automatically: {e}")
+            print("Continuing with existing packages...")
     
     def _setup_model_paths(self):
         """Set up paths for model configuration and checkpoint files"""
@@ -69,17 +104,16 @@ class GroundingDINO:
                 raise RuntimeError(f"Failed to download checkpoint file: {e}")
     
     def _install_dependencies(self):
-        """Install required dependencies for GroundingDINO"""
+        """Add GroundingDINO to Python path"""
         try:
-            print("Installing GroundingDINO dependencies...")
-            subprocess.run([sys.executable, "-m", "pip", "install", "-e", "./GroundingDINO"], check=True)
-            
-            # Additional dependencies if needed
-            subprocess.run([sys.executable, "-m", "pip", "install", "supervision"], check=True)
-            
-            print("Dependencies installed successfully")
+            # Add GroundingDINO to Python path instead of installing it
+            groundingdino_path = os.path.abspath("GroundingDINO")
+            if groundingdino_path not in sys.path:
+                sys.path.insert(0, groundingdino_path)
+                print(f"Added {groundingdino_path} to Python path")
         except Exception as e:
-            raise RuntimeError(f"Failed to install dependencies: {e}")
+            print(f"Warning: Error adding GroundingDINO to path: {e}")
+            print("Attempting to continue anyway...")
     
     def load_model(self):
         """
@@ -89,15 +123,13 @@ class GroundingDINO:
         if self.model is not None:
             return
         
-        # Clone repository, download checkpoint, and install dependencies
+        # Clone repository, download checkpoint, and add to Python path
         self._clone_groundingdino()
         self._download_checkpoint()
         self._install_dependencies()
         
         # Now import and load the model
         try:
-            # Add the repository to Python path
-            sys.path.insert(0, os.path.abspath("GroundingDINO"))
             
             from groundingdino.util.inference import load_model
             

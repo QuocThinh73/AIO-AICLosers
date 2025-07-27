@@ -1,6 +1,7 @@
 import os
 import json
 import glob
+import shutil
 from typing import Dict, List, Any
 from PIL import Image
 
@@ -309,4 +310,37 @@ def detect_object(
         with open(summary_file, 'w', encoding='utf-8') as f:
             json.dump(summary, f, ensure_ascii=False, indent=4)
     
+    # Zip detection results for easy download
+    zip_detection_results(output_detection_dir)
+    
     return summary
+
+def zip_detection_results(output_detection_dir: str) -> str:
+    """
+    Create a zip file of the detection results for easy download
+    
+    Args:
+        output_detection_dir: Directory containing the detection results
+        
+    Returns:
+        Path to the created zip file
+    """
+    # Get base directory and name
+    base_dir = os.path.dirname(output_detection_dir)
+    dir_name = os.path.basename(output_detection_dir)
+    
+    # Create zip file path
+    zip_path = os.path.join(base_dir, f"{dir_name}.zip")
+    
+    # Print info about zip process
+    print(f"Creating zip file of detection results: {zip_path}")
+    
+    # Create zip file
+    shutil.make_archive(
+        os.path.join(base_dir, dir_name),  # Root name of the zip file
+        'zip',                            # Format
+        output_detection_dir               # Directory to zip
+    )
+    
+    print(f"Zip file created successfully at: {zip_path}")
+    return zip_path
