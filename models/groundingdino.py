@@ -27,17 +27,37 @@ class GroundingDINO:
         """
         Check and install required packages if they are not already installed
         """
+        print("\n=== Installing and verifying required packages ===")
         required_packages = [
             "torch", "torchvision", "transformers", "timm", "opencv-python-headless", 
             "matplotlib", "Pillow", "groundingdino-py"
         ]
         
+        # Force install groundingdino-py as it's critical for our functionality
+        critical_packages = ["groundingdino-py"]
+        
         try:
+            # First, force install critical packages
+            print(f"Force installing critical packages: {', '.join(critical_packages)}")
+            for package in critical_packages:
+                try:
+                    # Use --force-reinstall to ensure it's properly installed
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install", "--force-reinstall", package],
+                        stdout=subprocess.PIPE  # Suppress detailed output
+                    )
+                    print(f"✓ {package} installed successfully")
+                except Exception as e:
+                    print(f"! Error installing {package}: {e}")
+            
+            # Then check and install other required packages
             import importlib
-            import pip
             
             packages_to_install = []
             for package in required_packages:
+                if package in critical_packages:
+                    continue  # Skip as we already handled these
+                    
                 # Extract package name without version specifier
                 package_name = package.split('>=')[0].split('==')[0].strip()
                 try:
@@ -49,10 +69,34 @@ class GroundingDINO:
             if packages_to_install:
                 print(f"Installing missing packages: {', '.join(packages_to_install)}")
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet"] + packages_to_install)
-                print("All required packages installed successfully")
+                print("Other required packages installed successfully")
+                
+            # Final verification: Try to import groundingdino module
+            try:
+                import groundingdino
+                print(f"✓ Successfully imported groundingdino module from {groundingdino.__file__}")
+            except ImportError as e:
+                print(f"! Error importing groundingdino module: {e}")
+                print("! Attempting to debug PATH and installation issues...")
+                # Print Python path for debugging
+                print(f"Python path: {sys.path[:3]}...")
+                
+                # Try to find installed packages
+                try:
+                    import pkg_resources
+                    installed_packages = {pkg.key: pkg.version for pkg in pkg_resources.working_set}
+                    if 'groundingdino-py' in installed_packages:
+                        print(f"groundingdino-py is installed (version: {installed_packages['groundingdino-py']})")
+                    else:
+                        print("! groundingdino-py is NOT in the list of installed packages")
+                except Exception as e:
+                    print(f"! Error checking installed packages: {e}")
+                    
         except Exception as e:
-            print(f"Warning: Could not check or install packages automatically: {e}")
+            print(f"Warning: Issue with package installation: {e}")
             print("Continuing with existing packages...")
+            
+        print("=== Package installation check completed ===\n")
     
     def _setup_model_paths(self):
         """Set up paths for model configuration and checkpoint files"""
@@ -110,13 +154,46 @@ class GroundingDINO:
         
         # Now import and load the model
         try:
-            from groundingdino.util.inference import load_model
+            print("\n=== Attempting to import and load Grounding DINO model ===")
+            try:
+                from groundingdino.util.inference import load_model
+                print("✓ Successfully imported groundingdino.util.inference")
+            except ModuleNotFoundError:
+                print("! Could not import groundingdino module directly")
+                print("! Installing groundingdino-py via pip again and trying with alternative approach...")
+                
+                # Last resort: force reinstall and try with alternative import approach
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "--force-reinstall", "groundingdino-py"],
+                    stdout=subprocess.PIPE
+                )
+                
+                print("! Trying alternative import method...")
+                sys.path.append(os.getcwd())  # Add current directory to path
+                
+                # Search for the groundingdino module in site-packages
+                import site
+                for site_path in site.getsitepackages():
+                    print(f"Checking {site_path} for groundingdino module...")
+                    if os.path.exists(os.path.join(site_path, 'groundingdino')):
+                        print(f"Found groundingdino at {os.path.join(site_path, 'groundingdino')}")
+                        if site_path not in sys.path:
+                            sys.path.insert(0, site_path)
+                            print(f"Added {site_path} to Python path")
+                            
+                # Try import again
+                from groundingdino.util.inference import load_model
             
             # Load the model
+            print(f"Loading model from {self.config_path} and {self.checkpoint_path}...")
             self.model = load_model(self.config_path, self.checkpoint_path)
             self.model.to(self.device)
-            print(f"Grounding DINO model loaded successfully on {self.device}")
+            print(f"✓ Grounding DINO model loaded successfully on {self.device}")
+            print("=== Model loading completed successfully ===\n")
         except Exception as e:
+            print("! CRITICAL ERROR loading Grounding DINO model !")
+            import traceback
+            traceback.print_exc()
             raise RuntimeError(f"Error loading Grounding DINO model: {e}")
     
     def detect_objects(self, 
