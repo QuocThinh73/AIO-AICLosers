@@ -188,15 +188,58 @@ def remove_noise_keyframe(argv):
 
 def object_detection(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["all", "lesson"])
+    parser.add_argument("mode", choices=["all", "lesson", "single"])
+    parser.add_argument("input_keyframe_dir", type=str)
+    parser.add_argument("input_caption_dir", type=str)
+    parser.add_argument("output_detection_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--video_name", type=str)
     
     args = parser.parse_args(argv)
     
-    # Check error TODO
+    # Check error
+    if not os.path.exists(args.input_keyframe_dir):
+        raise ValueError("Input keyframe directory does not exist")
     
-    # Main process TODO
+    if not os.path.exists(args.input_caption_dir):
+        raise ValueError("Input caption directory does not exist")
+    
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+            raise ValueError(f"Lesson keyframe directory does not exist: {os.path.join(args.input_keyframe_dir, args.lesson_name)}")
+        if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
+            raise ValueError(f"Lesson caption directory does not exist: {os.path.join(args.input_caption_dir, args.lesson_name)}")
+    
+    elif args.mode == "single":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is single")
+        if not args.video_name:
+            raise ValueError("Video name is required when mode is single")
+        
+        lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+        if not os.path.exists(lesson_keyframe_dir):
+            raise ValueError(f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
+        
+        video_keyframe_dir = os.path.join(lesson_keyframe_dir, args.video_name)
+        if not os.path.exists(video_keyframe_dir):
+            raise ValueError(f"Video keyframe directory does not exist: {video_keyframe_dir}")
+        
+        caption_file = os.path.join(args.input_caption_dir, args.lesson_name, 
+                                  f"{args.lesson_name}_{args.video_name}_caption.json")
+        if not os.path.exists(caption_file):
+            raise ValueError(f"Caption file does not exist: {caption_file}")
+    
+    # Main process
     from preprocess.object_detection import detect_object
+    
+    if args.mode == "all":
+        detect_object(args.input_keyframe_dir, args.input_caption_dir, args.output_detection_dir, args.mode)
+    elif args.mode == "lesson":
+        detect_object(args.input_keyframe_dir, args.input_caption_dir, args.output_detection_dir, args.mode, args.lesson_name)
+    elif args.mode == "single":
+        detect_object(args.input_keyframe_dir, args.input_caption_dir, args.output_detection_dir, args.mode, args.lesson_name, args.video_name)
 
 def image_captioning(argv):
     parser = argparse.ArgumentParser()
