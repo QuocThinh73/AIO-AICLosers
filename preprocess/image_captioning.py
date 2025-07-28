@@ -12,10 +12,17 @@ logger = logging.getLogger(__name__)
 
 def _ensure_dependencies():
     """Ensure all required dependencies are installed"""
-    # List of required packages
+    # Always update bitsandbytes to latest version for 4-bit quantization support
+    logger.info("Installing/updating latest bitsandbytes for quantization support...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "bitsandbytes", "-q"])
+        logger.info("Successfully installed/updated bitsandbytes")
+    except Exception as e:
+        logger.error(f"Failed to install/update bitsandbytes: {e}")
+    
+    # List of other required packages
     required_packages = [
         "transformers",
-        "bitsandbytes",
         "accelerate"
     ]
     
@@ -114,9 +121,15 @@ def generate_captions(
     logger.info("Checking and installing required dependencies...")
     _ensure_dependencies()
     
-    # Initialize model
+    # Initialize model with fallback to non-quantized version if quantization fails
     logger.info("Initializing InternVL3 model for image captioning...")
-    captioner = InternVL3(task="image_captioning", use_quantization=True)
+    try:
+        logger.info("Attempting to use 4-bit quantization...")
+        captioner = InternVL3(task="image_captioning", use_quantization=True)
+    except Exception as e:
+        logger.warning(f"Failed to load model with quantization: {e}")
+        logger.info("Falling back to non-quantized model...")
+        captioner = InternVL3(task="image_captioning", use_quantization=False)
     
     # Handle different modes
     if mode == "all":
@@ -169,9 +182,15 @@ def caption_image(image_path="path_to_your_image.jpg"):
     logger.info("Checking and installing required dependencies...")
     _ensure_dependencies()
     
-    # Initialize model
+    # Initialize model with fallback to non-quantized version if quantization fails
     logger.info("Initializing InternVL3 model for image captioning...")
-    captioner = InternVL3(task="image_captioning", use_quantization=True)
+    try:
+        logger.info("Attempting to use 4-bit quantization...")
+        captioner = InternVL3(task="image_captioning", use_quantization=True)
+    except Exception as e:
+        logger.warning(f"Failed to load model with quantization: {e}")
+        logger.info("Falling back to non-quantized model...")
+        captioner = InternVL3(task="image_captioning", use_quantization=False)
 
     # Generate caption
     caption = captioner.process_keyframe(image_path)
