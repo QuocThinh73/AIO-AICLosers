@@ -56,15 +56,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.internvl3 import InternVL3
 
 
-def generate_captions(mode="all", input_dir="database/keyframes", output_dir="database/caption",
-                     lesson_name=None, video_name=None):
+def generate_captions(
+    input_dir: str,
+    output_dir: str,
+    mode: str,
+    lesson_name: str = None,
+    video_name: str = None
+) -> dict:
     """
     Generate captions for keyframes using the InternVL3 model.
     
     Args:
-        mode (str): Processing mode - "all", "lesson", or "single"
         input_dir (str): Base directory for keyframes
         output_dir (str): Output directory for captions
+        mode (str): Processing mode - "all", "lesson", or "single"
         lesson_name (str, optional): Name of the lesson to process (for "lesson" and "single" modes)
         video_name (str, optional): Name of the video to process (for "single" mode)
     
@@ -92,8 +97,9 @@ def generate_captions(mode="all", input_dir="database/keyframes", output_dir="da
             # Process a specific lesson
             lesson_dir = os.path.join(input_dir, lesson_name)
             if not os.path.exists(lesson_dir):
-                print(f"Error: Lesson directory not found: {lesson_dir}")
-                return False
+                error_msg = f"Lesson directory not found: {lesson_dir}"
+                print(f"Error: {error_msg}")
+                return {"status": "error", "message": error_msg}
                 
             print(f"Processing lesson: {lesson_name}")
             model.process_batch(lesson_dir, output_dir)
@@ -102,8 +108,9 @@ def generate_captions(mode="all", input_dir="database/keyframes", output_dir="da
             # Process a single video
             video_dir = os.path.join(input_dir, lesson_name, video_name)
             if not os.path.exists(video_dir):
-                print(f"Error: Video directory not found: {video_dir}")
-                return False
+                error_msg = f"Video directory not found: {video_dir}"
+                print(f"Error: {error_msg}")
+                return {"status": "error", "message": error_msg}
                 
             # Create output directory structure
             output_lesson_dir = os.path.join(output_dir, lesson_name)
@@ -112,8 +119,9 @@ def generate_captions(mode="all", input_dir="database/keyframes", output_dir="da
             # Process the video
             keyframes = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
             if not keyframes:
-                print(f"Warning: No keyframes found in {video_dir}")
-                return False
+                error_msg = f"No keyframes found in {video_dir}"
+                print(f"Warning: {error_msg}")
+                return {"status": "error", "message": error_msg}
                 
             video_results = []
             for keyframe_path in tqdm(keyframes, desc=f"Processing {lesson_name}/{video_name}"):
@@ -132,20 +140,22 @@ def generate_captions(mode="all", input_dir="database/keyframes", output_dir="da
             print(f"Results saved to: {output_file}")
             
         else:
-            print("Error: Invalid mode or missing required parameters")
-            print("Usage: generate_captions(mode, input_dir, output_dir, [lesson_name], [video_name])")
+            error_msg = "Invalid mode or missing required parameters"
+            print(f"Error: {error_msg}")
+            print("Usage: generate_captions(input_dir, output_dir, mode, [lesson_name], [video_name])")
             print("  - mode: 'all', 'lesson', or 'single'")
             print("  - For 'lesson' mode, provide lesson_name")
             print("  - For 'single' mode, provide both lesson_name and video_name")
-            return False
+            return {"status": "error", "message": error_msg}
             
-        return True
+        # Return results as dictionary (similar to object_detection.py)
+        return {"status": "success", "message": "Caption generation completed successfully"}
         
     except Exception as e:
         print(f"Error generating captions: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        return {"status": "error", "message": str(e)}
 
 
 # If the script is run directly
@@ -165,12 +175,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Call the main function
-    success = generate_captions(
-        mode=args.mode,
+    result = generate_captions(
         input_dir=args.input_dir,
         output_dir=args.output_dir,
+        mode=args.mode,
         lesson_name=args.lesson,
         video_name=args.video
     )
     
-    sys.exit(0 if success else 1)
+    if result.get("status") == "error":
+        print(f"Error: {result.get('message')}")
+        sys.exit(1)
+    else:
+        print(f"Success: {result.get('message')}")
+        sys.exit(0)
