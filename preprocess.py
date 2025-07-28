@@ -244,8 +244,8 @@ def object_detection(argv):
 def image_captioning(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson", "single"])
-    parser.add_argument("--input_keyframe_dir", type=str, required=True)
-    parser.add_argument("--output_caption_dir", type=str, required=True)
+    parser.add_argument("--input_keyframe_dir", type=str)
+    parser.add_argument("--output_caption_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
     parser.add_argument("--video_name", type=str)
     
