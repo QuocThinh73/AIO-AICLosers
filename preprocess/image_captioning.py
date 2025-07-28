@@ -12,21 +12,44 @@ logger = logging.getLogger(__name__)
 
 def _ensure_dependencies():
     """Ensure all required dependencies are installed"""
-    # Always update bitsandbytes to latest version for 4-bit quantization support
-    logger.info("Installing/updating latest bitsandbytes for quantization support...")
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "bitsandbytes", "-q"])
-        logger.info("Successfully installed/updated bitsandbytes")
-    except Exception as e:
-        logger.error(f"Failed to install/update bitsandbytes: {e}")
+    # On Kaggle, it's better to install transformers from git for latest features
+    is_kaggle = os.path.exists('/kaggle')
+    
+    if is_kaggle:
+        logger.info("Kaggle environment detected, installing dependencies for Kaggle...")
+        try:
+            logger.info("Installing latest transformers from source...")
+            # Install directly from GitHub for latest version on Kaggle
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "git+https://github.com/huggingface/transformers", "-q"])
+            logger.info("Successfully installed transformers from source")
+        except Exception as e:
+            logger.error(f"Failed to install transformers from source: {e}")
+        
+        try:
+            logger.info("Installing latest bitsandbytes on Kaggle...")
+            # Install bitsandbytes with more verbosity on Kaggle
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "bitsandbytes"])
+            logger.info("Successfully installed bitsandbytes on Kaggle")
+        except Exception as e:
+            logger.error(f"Failed to install bitsandbytes on Kaggle: {e}")
+    else:
+        # For non-Kaggle environments
+        logger.info("Installing/updating latest bitsandbytes for quantization support...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-U", "bitsandbytes", "-q"])
+            logger.info("Successfully installed/updated bitsandbytes")
+        except Exception as e:
+            logger.error(f"Failed to install/update bitsandbytes: {e}")
     
     # List of other required packages
     required_packages = [
-        "transformers",
+        "transformers" if not is_kaggle else None,  # Skip if already installed from source on Kaggle
         "accelerate"
     ]
     
     for package in required_packages:
+        if not package:  # Skip None entries
+            continue
         try:
             importlib.import_module(package)
             logger.info(f"Package {package} is already installed")
@@ -134,13 +157,35 @@ def generate_captions(
     
     # Initialize model for image captioning
     logger.info("Initializing InternVL3 model for image captioning...")
+    captioner = None
+    
+    # First try with quantization
     try:
+        logger.info("Attempting to load model with 4-bit quantization...")
         captioner = InternVL3(task="image_captioning", use_quantization=True)
         logger.info("Successfully loaded model with quantization")
+    except ImportError as e:
+        if "bitsandbytes" in str(e):
+            logger.warning(f"bitsandbytes issue detected: {e}")
+            logger.info("Trying to load model without quantization...")
+            try:
+                captioner = InternVL3(task="image_captioning", use_quantization=False)
+                logger.info("Successfully loaded model without quantization")
+            except Exception as e2:
+                logger.error(f"Failed to load model without quantization: {e2}")
+                raise RuntimeError("Failed to initialize InternVL3 model in any mode")
+        else:
+            logger.error(f"Import error when loading model: {e}")
+            raise RuntimeError("Failed to import required modules for InternVL3")
     except Exception as e:
-        logger.warning(f"Failed to load model with quantization: {e}")
-        logger.error("Exiting due to model initialization failure")
-        raise RuntimeError("Failed to initialize InternVL3 model")
+        logger.error(f"Unexpected error when initializing model: {e}")
+        logger.info("Trying to load model without quantization as fallback...")
+        try:
+            captioner = InternVL3(task="image_captioning", use_quantization=False)
+            logger.info("Successfully loaded model without quantization")
+        except Exception as e2:
+            logger.error(f"All attempts to load model failed. Last error: {e2}")
+            raise RuntimeError("Failed to initialize InternVL3 model in any mode")
     
     # Handle different modes
     if mode == "all":
