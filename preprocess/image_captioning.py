@@ -1,235 +1,176 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Image Captioning Pipeline using InternVL3 model
-
-This script provides a clean, minimal implementation for generating captions
-for images using the official InternVL3 model. It handles dependency installation
-and provides both batch processing and command-line interface.
-"""
-
-import os
+# Auto-install dependencies
 import sys
-import argparse
-import glob
-import json
-import gc
-from tqdm import tqdm
-
-# Path to the models directory
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models"))
-from internvl3 import InternVL3
+import os
+import subprocess
+import importlib.util
 
 
 def _ensure_dependencies():
-    """
-    Ensure all required dependencies are installed with their latest versions.
-    Special handling for Kaggle environments.
-    """
-    import importlib
-    import subprocess
-    import sys
-
-    def _install_package(package, upgrade=False, source=None):
-        cmd = [sys.executable, "-m", "pip", "install"]
-        if upgrade:
-            cmd.append("-U")
-        if source:
-            cmd.append(source)
-        else:
-            cmd.append(package)
-        subprocess.check_call(cmd)
-
-    # Detect Kaggle environment
-    is_kaggle = os.path.exists("/kaggle")
+    """Ensure all required dependencies are installed with latest versions."""
+    # Check if running in Kaggle environment
+    in_kaggle = 'google.colab' in sys.modules or 'KAGGLE_KERNEL_RUN_TYPE' in os.environ
     
-    # Install transformers from source on Kaggle to get latest version
-    try:
-        import transformers
-        print(f"transformers {transformers.__version__} already installed")
-        if is_kaggle:
-            print("Kaggle environment detected, upgrading transformers from source...")
-            _install_package("transformers", upgrade=True, source="git+https://github.com/huggingface/transformers")
-    except ImportError:
-        print("Installing transformers from source...")
-        _install_package("transformers", source="git+https://github.com/huggingface/transformers")
-
-    # Install or upgrade bitsandbytes for quantization
-    try:
-        import bitsandbytes
-        print(f"bitsandbytes {bitsandbytes.__version__} already installed")
-        # Always upgrade bitsandbytes on Kaggle
-        if is_kaggle:
-            print("Kaggle environment detected, upgrading bitsandbytes...")
-            _install_package("bitsandbytes", upgrade=True)
-    except ImportError:
-        print("Installing bitsandbytes...")
-        _install_package("bitsandbytes")
-
-    # Install or check accelerate
-    try:
-        import accelerate
-        print(f"accelerate {accelerate.__version__} already installed")
-    except ImportError:
-        print("Installing accelerate...")
-        _install_package("accelerate")
-
-    # Import torch to verify it's available
-    try:
-        import torch
-        print(f"torch {torch.__version__} already installed")
-        print(f"CUDA available: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            print(f"CUDA device: {torch.cuda.get_device_name()}")
-    except ImportError:
-        print("Warning: torch not found. This may cause issues with the model.")
-
-
-def generate_captions(image_paths, output_file=None):
-    """
-    Generate captions for images using the InternVL3 model.
-
-    Args:
-        image_paths (list): List of paths to images to caption
-        output_file (str, optional): Path to output JSON file
-
-    Returns:
-        list: List of dictionaries with image paths and captions
-    """
-    import torch
+    # Required packages
+    required_packages = [
+        "transformers",  # For model loading
+        "bitsandbytes",  # For quantization
+        "accelerate",   # For optimized inference
+        "torch"         # PyTorch
+    ]
     
-    # Clear CUDA cache and run garbage collection to free up memory
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    gc.collect()
-    
-    # Initialize InternVL3 model with quantization
-    try:
-        captioner = InternVL3(task="image_captioning", use_quantization=True)
-        print("Successfully loaded quantized InternVL3 model")
-    except Exception as e:
-        print(f"Failed to load quantized model: {e}")
-        print("Falling back to non-quantized model...")
-        captioner = InternVL3(task="image_captioning", use_quantization=False)
-        print("Successfully loaded non-quantized InternVL3 model")
-    
-    # Process each image
-    results = []
-    for image_path in tqdm(image_paths, desc="Generating captions"):
+    for package in required_packages:
+        # Skip torch installation as it's pre-installed in most environments with correct CUDA versions
+        if package == "torch":
+            continue
+            
         try:
-            caption = captioner.process_keyframe(image_path)
-            results.append({
-                "image": os.path.basename(image_path),
-                "caption": caption
-            })
+            if package == "transformers" and in_kaggle:
+                # On Kaggle, always install latest transformers from source
+                print(f"Installing {package} from source (required for latest InternVL3 support)...")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", 
+                                      "--upgrade", "git+https://github.com/huggingface/transformers"])
+            else:
+                # For other packages, install latest version
+                print(f"Installing/upgrading {package}...")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package])
+                
         except Exception as e:
-            print(f"Error processing image {image_path}: {e}")
-            results.append({
-                "image": os.path.basename(image_path),
-                "caption": f"Error: {str(e)}"
-            })
-    
-    # Save results to JSON file if specified
-    if output_file:
-        try:
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
-            print(f"Results saved to {output_file}")
-        except Exception as e:
-            print(f"Error saving results to {output_file}: {e}")
-    
-    return results
+            print(f"Warning: Failed to install/upgrade {package}. Error: {e}")
+            # Continue anyway, as the package might already be installed
 
 
-def process_video_directory(video_dir, output_file=None):
+# Install dependencies first
+_ensure_dependencies()
+
+# Now import required modules
+import os
+import json
+import glob
+from tqdm import tqdm
+
+# Import our model
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from models.internvl3 import InternVL3
+
+
+def generate_captions(mode="all", input_dir="database/keyframes", output_dir="database/caption",
+                     lesson_name=None, video_name=None):
     """
-    Process all images in a video directory.
-
+    Generate captions for keyframes using the InternVL3 model.
+    
     Args:
-        video_dir (str): Path to directory containing images
-        output_file (str, optional): Path to output JSON file
-
+        mode (str): Processing mode - "all", "lesson", or "single"
+        input_dir (str): Base directory for keyframes
+        output_dir (str): Output directory for captions
+        lesson_name (str, optional): Name of the lesson to process (for "lesson" and "single" modes)
+        video_name (str, optional): Name of the video to process (for "single" mode)
+    
     Returns:
-        list: List of dictionaries with image paths and captions
+        bool: True if successful, False otherwise
     """
-    image_paths = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
-    if not image_paths:
-        print(f"No images found in {video_dir}")
-        return []
-    
-    print(f"Found {len(image_paths)} images in {video_dir}")
-    return generate_captions(image_paths, output_file)
-
-
-def process_lesson_directory(lesson_dir, output_dir):
-    """
-    Process all videos in a lesson directory.
-
-    Args:
-        lesson_dir (str): Path to directory containing video directories
-        output_dir (str): Path to directory for output files
-    """
+    # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
-    lesson_name = os.path.basename(lesson_dir)
     
-    output_lesson_dir = os.path.join(output_dir, lesson_name)
-    os.makedirs(output_lesson_dir, exist_ok=True)
+    try:
+        # Initialize the model (use quantization if CUDA is available)
+        model = InternVL3(task="image_captioning", use_quantization=True)
+        print(f"Initialized InternVL3 model on {model.device} device")
+        
+        # Process based on the selected mode
+        if mode == "all":
+            # Process all lessons
+            lessons = sorted(glob.glob(os.path.join(input_dir, "L*")))
+            for lesson_dir in lessons:
+                lesson_id = os.path.basename(lesson_dir)
+                print(f"Processing lesson: {lesson_id}")
+                model.process_batch(lesson_dir, output_dir)
+                
+        elif mode == "lesson" and lesson_name:
+            # Process a specific lesson
+            lesson_dir = os.path.join(input_dir, lesson_name)
+            if not os.path.exists(lesson_dir):
+                print(f"Error: Lesson directory not found: {lesson_dir}")
+                return False
+                
+            print(f"Processing lesson: {lesson_name}")
+            model.process_batch(lesson_dir, output_dir)
+            
+        elif mode == "single" and lesson_name and video_name:
+            # Process a single video
+            video_dir = os.path.join(input_dir, lesson_name, video_name)
+            if not os.path.exists(video_dir):
+                print(f"Error: Video directory not found: {video_dir}")
+                return False
+                
+            # Create output directory structure
+            output_lesson_dir = os.path.join(output_dir, lesson_name)
+            os.makedirs(output_lesson_dir, exist_ok=True)
+            
+            # Process the video
+            keyframes = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
+            if not keyframes:
+                print(f"Warning: No keyframes found in {video_dir}")
+                return False
+                
+            video_results = []
+            for keyframe_path in tqdm(keyframes, desc=f"Processing {lesson_name}/{video_name}"):
+                keyframe_name = os.path.basename(keyframe_path)
+                caption = model.process_keyframe(keyframe_path)
+                video_results.append({
+                    "keyframe": keyframe_name,
+                    "caption": caption
+                })
+                
+            # Save results
+            output_file = os.path.join(output_lesson_dir, f"{video_name}_image_captioning.json")
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(video_results, f, indent=2, ensure_ascii=False)
+                
+            print(f"Results saved to: {output_file}")
+            
+        else:
+            print("Error: Invalid mode or missing required parameters")
+            print("Usage: generate_captions(mode, input_dir, output_dir, [lesson_name], [video_name])")
+            print("  - mode: 'all', 'lesson', or 'single'")
+            print("  - For 'lesson' mode, provide lesson_name")
+            print("  - For 'single' mode, provide both lesson_name and video_name")
+            return False
+            
+        return True
+        
+    except Exception as e:
+        print(f"Error generating captions: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-    videos = sorted(glob.glob(os.path.join(lesson_dir, "V*")))
-    if not videos:
-        print(f"No video directories found in {lesson_dir}")
-        return
+
+# If the script is run directly
+if __name__ == "__main__":
+    import argparse
     
-    print(f"Found {len(videos)} video directories in {lesson_dir}")
-    
-    for video_dir in videos:
-        video_name = os.path.basename(video_dir)
-        output_file = os.path.join(output_lesson_dir, f"{video_name}_caption.json")
-        print(f"\nProcessing video {video_name}...")
-        process_video_directory(video_dir, output_file)
-
-
-def main():
-    """Main function for command line interface."""
-    parser = argparse.ArgumentParser(description="Generate captions for images using InternVL3 model")
-    parser.add_argument("input", help="Path to image file, directory of images, video directory, or lesson directory")
-    parser.add_argument("-o", "--output", help="Path to output JSON file or directory")
-    parser.add_argument("--batch", action="store_true", help="Process input as a lesson directory containing multiple video directories")
+    parser = argparse.ArgumentParser(description="Generate captions for keyframes using InternVL3")
+    parser.add_argument("--mode", type=str, default="all", choices=["all", "lesson", "single"],
+                        help="Processing mode: all lessons, single lesson, or single video")
+    parser.add_argument("--input_dir", type=str, default="database/keyframes",
+                        help="Base directory containing keyframes")
+    parser.add_argument("--output_dir", type=str, default="database/caption",
+                        help="Output directory for saving captions")
+    parser.add_argument("--lesson", type=str, help="Lesson name (required for 'lesson' and 'single' modes)")
+    parser.add_argument("--video", type=str, help="Video name (required for 'single' mode)")
     
     args = parser.parse_args()
     
-    # Ensure dependencies are installed
-    _ensure_dependencies()
+    # Call the main function
+    success = generate_captions(
+        mode=args.mode,
+        input_dir=args.input_dir,
+        output_dir=args.output_dir,
+        lesson_name=args.lesson,
+        video_name=args.video
+    )
     
-    if not os.path.exists(args.input):
-        print(f"Error: Input path '{args.input}' does not exist")
-        return 1
-    
-    if args.batch:
-        # Process as a lesson directory
-        if args.output:
-            output_dir = args.output
-        else:
-            output_dir = "captions"
-        process_lesson_directory(args.input, output_dir)
-    elif os.path.isdir(args.input):
-        # Process as a video directory or directory of images
-        if args.output:
-            output_file = args.output
-        else:
-            output_file = f"{os.path.basename(args.input)}_captions.json"
-        process_video_directory(args.input, output_file)
-    else:
-        # Process as a single image
-        if args.output:
-            output_file = args.output
-        else:
-            output_file = f"{os.path.splitext(os.path.basename(args.input))[0]}_caption.json"
-        generate_captions([args.input], output_file)
-    
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(0 if success else 1)
