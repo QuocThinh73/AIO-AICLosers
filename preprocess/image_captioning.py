@@ -2,13 +2,37 @@ import os
 import json
 import glob
 import logging
+import subprocess
+import importlib
+import sys
 from tqdm import tqdm
 from typing import Dict, List, Any, Optional
 
-# Import InternVL3 from models
-from models.internvl3 import InternVL3
-
 logger = logging.getLogger(__name__)
+
+def _ensure_dependencies():
+    """Ensure all required dependencies are installed"""
+    # List of required packages
+    required_packages = [
+        "transformers",
+        "bitsandbytes",
+        "accelerate"
+    ]
+    
+    for package in required_packages:
+        try:
+            importlib.import_module(package)
+            logger.info(f"Package {package} is already installed")
+        except ImportError:
+            logger.warning(f"Installing {package}...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package, "-q"])
+                logger.info(f"Successfully installed {package}")
+            except Exception as e:
+                logger.error(f"Failed to install {package}: {e}")
+
+# Import InternVL3 from models (after ensuring dependencies)
+from models.internvl3 import InternVL3
 
 
 def process_video_keyframes(
@@ -86,6 +110,10 @@ def generate_captions(
     """Generate captions for keyframes in specified mode"""
     os.makedirs(output_caption_dir, exist_ok=True)
     
+    # Ensure dependencies are installed
+    logger.info("Checking and installing required dependencies...")
+    _ensure_dependencies()
+    
     # Initialize model
     logger.info("Initializing InternVL3 model for image captioning...")
     captioner = InternVL3(task="image_captioning", use_quantization=True)
@@ -137,6 +165,10 @@ def generate_captions(
 
 def caption_image(image_path="path_to_your_image.jpg"):
     """Generate caption for a single image file"""
+    # Ensure dependencies are installed
+    logger.info("Checking and installing required dependencies...")
+    _ensure_dependencies()
+    
     # Initialize model
     logger.info("Initializing InternVL3 model for image captioning...")
     captioner = InternVL3(task="image_captioning", use_quantization=True)
