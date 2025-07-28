@@ -79,6 +79,9 @@ class KaggleFallbackCaptioner:
     
     def __init__(self, task="image_captioning", use_quantization=False):
         """Initialize a simplified captioner for Kaggle"""
+        # Import torch here to avoid NameError
+        import torch
+        
         self.model_checkpoint = "OpenGVLab/InternVL3-8B-hf"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.data_type = torch.bfloat16
@@ -124,6 +127,7 @@ class KaggleFallbackCaptioner:
     def process_keyframe(self, image_path):
         """Generate caption for a single image"""
         try:
+            # Import necessary modules here to avoid NameError
             import torch
             from PIL import Image
             
