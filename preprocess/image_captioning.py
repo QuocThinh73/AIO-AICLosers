@@ -49,6 +49,7 @@ _ensure_dependencies()
 import os
 import json
 import glob
+import shutil
 from tqdm import tqdm
 
 # Import our model
@@ -148,8 +149,11 @@ def generate_captions(
             print("  - For 'single' mode, provide both lesson_name and video_name")
             return {"status": "error", "message": error_msg}
             
+        # Zip caption results for easy download
+        zip_path = zip_caption_results(output_dir)
+        
         # Return results as dictionary (similar to object_detection.py)
-        return {"status": "success", "message": "Caption generation completed successfully"}
+        return {"status": "success", "message": f"Caption generation completed successfully. Results zipped to {zip_path}"}
         
     except Exception as e:
         print(f"Error generating captions: {e}")
@@ -189,3 +193,37 @@ if __name__ == "__main__":
     else:
         print(f"Success: {result.get('message')}")
         sys.exit(0)
+
+
+def zip_caption_results(output_caption_dir: str) -> str:
+    """
+    Create a zip archive of the caption results for easy download.
+    
+    Args:
+        output_caption_dir (str): Directory containing caption results to zip
+        
+    Returns:
+        str: Path to the created zip file
+    """
+    # Get base directory and name
+    base_dir = os.path.dirname(output_caption_dir)
+    dir_name = os.path.basename(output_caption_dir)
+    
+    # Create zip file path
+    zip_path = os.path.join(base_dir, f"{dir_name}.zip")
+    
+    # Print info about zip process
+    print(f"Creating zip file of caption results: {zip_path}")
+    
+    try:
+        # Create zip file
+        shutil.make_archive(
+            os.path.join(base_dir, dir_name),  # Root name of the zip file
+            'zip',                             # Format
+            output_caption_dir                  # Directory to zip
+        )
+        print(f"Zip file created successfully at: {zip_path}")
+    except Exception as e:
+        print(f"Warning: Failed to create zip file: {e}")
+    
+    return zip_path
