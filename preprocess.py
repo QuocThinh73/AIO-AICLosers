@@ -243,15 +243,52 @@ def object_detection(argv):
 
 def image_captioning(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["all", "lesson"])
+    parser.add_argument("mode", choices=["all", "lesson", "single"])
+    parser.add_argument("input_keyframe_dir", type=str)
+    parser.add_argument("output_caption_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--video_name", type=str)
     
     args = parser.parse_args(argv)
     
-    # Check error TODO
+    # Check error
+    if not os.path.exists(args.input_keyframe_dir):
+        raise ValueError("Input keyframe directory does not exist")
     
-    # Main process TODO
-    from preprocess.image_captioning import caption_image
+    os.makedirs(args.output_caption_dir, exist_ok=True)
+    
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+        if not os.path.exists(lesson_keyframe_dir):
+            raise ValueError(f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
+    
+    elif args.mode == "single":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is single")
+        if not args.video_name:
+            raise ValueError("Video name is required when mode is single")
+        
+        lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+        if not os.path.exists(lesson_keyframe_dir):
+            raise ValueError(f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
+        
+        video_keyframe_dir = os.path.join(lesson_keyframe_dir, args.video_name)
+        if not os.path.exists(video_keyframe_dir):
+            raise ValueError(f"Video keyframe directory does not exist: {video_keyframe_dir}")
+    
+    # Main process
+    from preprocess.image_captioning import generate_captions
+    
+    if args.mode == "all":
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode)
+    elif args.mode == "lesson":
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name)
+    elif args.mode == "single":
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name, args.video_name)
+    
+    # Image captioning process completed
 
 def asr(argv):
     parser = argparse.ArgumentParser()
