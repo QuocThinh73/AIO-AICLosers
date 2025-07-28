@@ -117,19 +117,30 @@ def generate_captions(
     """Generate captions for keyframes in specified mode"""
     os.makedirs(output_caption_dir, exist_ok=True)
     
+    # Try to free up GPU memory
+    try:
+        import torch
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            logger.info("Cleared CUDA cache to free up memory")
+    except Exception as e:
+        logger.warning(f"Could not clear CUDA cache: {e}")
+    
     # Ensure dependencies are installed
     logger.info("Checking and installing required dependencies...")
     _ensure_dependencies()
     
-    # Initialize model with fallback to non-quantized version if quantization fails
+    # Initialize model for image captioning
     logger.info("Initializing InternVL3 model for image captioning...")
     try:
-        logger.info("Attempting to use 4-bit quantization...")
         captioner = InternVL3(task="image_captioning", use_quantization=True)
+        logger.info("Successfully loaded model with quantization")
     except Exception as e:
         logger.warning(f"Failed to load model with quantization: {e}")
-        logger.info("Falling back to non-quantized model...")
-        captioner = InternVL3(task="image_captioning", use_quantization=False)
+        logger.error("Exiting due to model initialization failure")
+        raise RuntimeError("Failed to initialize InternVL3 model")
     
     # Handle different modes
     if mode == "all":
@@ -176,21 +187,58 @@ def generate_captions(
         raise ValueError(f"Invalid mode: {mode}")
 
 
-def caption_image(image_path="path_to_your_image.jpg"):
+def caption_image(image_path="path_to_your_image.jpg", force_cpu=False):
     """Generate caption for a single image file"""
+    # Try to free up GPU memory
+    try:
+        import torch
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            logger.info("Cleared CUDA cache to free up memory")
+    except Exception as e:
+        logger.warning(f"Could not clear CUDA cache: {e}")
+    
     # Ensure dependencies are installed
     logger.info("Checking and installing required dependencies...")
     _ensure_dependencies()
     
-    # Initialize model with fallback to non-quantized version if quantization fails
+    # Initialize model with multiple fallback options
     logger.info("Initializing InternVL3 model for image captioning...")
-    try:
-        logger.info("Attempting to use 4-bit quantization...")
-        captioner = InternVL3(task="image_captioning", use_quantization=True)
-    except Exception as e:
-        logger.warning(f"Failed to load model with quantization: {e}")
-        logger.info("Falling back to non-quantized model...")
-        captioner = InternVL3(task="image_captioning", use_quantization=False)
+    captioner = None
+    
+    if not force_cpu:
+        # Try quantized GPU first (lowest memory footprint)
+        try:
+            logger.info("Attempting to use 4-bit quantization on GPU...")
+            captioner = InternVL3(task="image_captioning", use_quantization=True)
+            logger.info("Successfully loaded model with quantization")
+        except Exception as e:
+            logger.warning(f"Failed to load quantized model: {e}")
+            
+            # Try non-quantized GPU
+            try:
+                logger.info("Falling back to non-quantized GPU model...")
+                captioner = InternVL3(task="image_captioning", use_quantization=False)
+                logger.info("Successfully loaded non-quantized model on GPU")
+            except Exception as e:
+                logger.warning(f"Failed to load model on GPU: {e}")
+                logger.info("Will try CPU as last resort")
+                force_cpu = True
+    
+    # Use CPU as last resort
+    if force_cpu or captioner is None:
+        try:
+            logger.info("Loading model on CPU. This might be slow but should work...")
+            # Force CPU by setting device explicitly
+            import os
+            os.environ["CUDA_VISIBLE_DEVICES"] = ""
+            captioner = InternVL3(task="image_captioning", use_quantization=False)
+            logger.info("Successfully loaded model on CPU")
+        except Exception as e:
+            logger.error(f"All attempts to load model failed: {e}")
+            raise RuntimeError("Failed to initialize InternVL3 model after multiple attempts")
 
     # Generate caption
     caption = captioner.process_keyframe(image_path)
