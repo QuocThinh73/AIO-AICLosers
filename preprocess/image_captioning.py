@@ -12,18 +12,18 @@ logger = logging.getLogger(__name__)
 
 def _ensure_dependencies():
     """Ensure all required dependencies are installed"""
-    # On Kaggle, it's better to install transformers from git for latest features
+    # On Kaggle, it's better to install specific version of transformers compatible with InternVL3
     is_kaggle = os.path.exists('/kaggle')
     
     if is_kaggle:
         logger.info("Kaggle environment detected, installing dependencies for Kaggle...")
         try:
-            logger.info("Installing latest transformers from source...")
-            # Install directly from GitHub for latest version on Kaggle
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "git+https://github.com/huggingface/transformers", "-q"])
-            logger.info("Successfully installed transformers from source")
+            # InternVL3 works best with transformers 4.36.2
+            logger.info("Installing transformers 4.36.2 for InternVL3 compatibility...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers==4.36.2", "-q"])
+            logger.info("Successfully installed transformers 4.36.2")
         except Exception as e:
-            logger.error(f"Failed to install transformers from source: {e}")
+            logger.error(f"Failed to install transformers: {e}")
         
         try:
             logger.info("Installing latest bitsandbytes on Kaggle...")
@@ -40,16 +40,20 @@ def _ensure_dependencies():
             logger.info("Successfully installed/updated bitsandbytes")
         except Exception as e:
             logger.error(f"Failed to install/update bitsandbytes: {e}")
+        
+        logger.info("Installing compatible transformers version...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "transformers==4.36.2", "-q"])
+            logger.info("Successfully installed transformers 4.36.2")
+        except Exception as e:
+            logger.error(f"Failed to install transformers: {e}")
     
-    # List of other required packages
+    # Other required packages
     required_packages = [
-        "transformers" if not is_kaggle else None,  # Skip if already installed from source on Kaggle
         "accelerate"
     ]
     
     for package in required_packages:
-        if not package:  # Skip None entries
-            continue
         try:
             importlib.import_module(package)
             logger.info(f"Package {package} is already installed")
@@ -62,7 +66,108 @@ def _ensure_dependencies():
                 logger.error(f"Failed to install {package}: {e}")
 
 # Import InternVL3 from models (after ensuring dependencies)
-from models.internvl3 import InternVL3
+try:
+    from models.internvl3 import InternVL3
+except ImportError as e:
+    logger.warning(f"Cannot import InternVL3: {e}")
+    # Will use KaggleFallbackCaptioner instead
+
+
+# Fallback captioner for Kaggle compatibility issues
+class KaggleFallbackCaptioner:
+    """A simplified captioner that works directly with the model without using the InternVL3 class"""
+    
+    def __init__(self, task="image_captioning", use_quantization=False):
+        """Initialize a simplified captioner for Kaggle"""
+        self.model_checkpoint = "OpenGVLab/InternVL3-8B-hf"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.data_type = torch.bfloat16
+        self.max_new_tokens = 100
+        
+        if task == "image_captioning":
+            self.prompt = (
+                "You are an image captioning assistant processing still frames from live broadcast news videos. "
+                "Provide a concise but informative description that mentions the main subjects (people or objects), "
+                "their actions, and the scene context. "
+                "Ignore any on-screen graphics such as ticker text, news banners, program logos, watermarks, "
+                "or other unrelated overlays."
+            )
+        
+        logger.info("Loading processor and model directly in fallback captioner")
+        try:
+            # Import here to avoid circular imports
+            from transformers import AutoProcessor, AutoModelForImageTextToText
+            
+            # Load processor
+            self.processor = AutoProcessor.from_pretrained(self.model_checkpoint)
+            
+            # Load model based on quantization setting
+            if use_quantization:
+                from transformers import BitsAndBytesConfig
+                quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+                self.model = AutoModelForImageTextToText.from_pretrained(
+                    self.model_checkpoint,
+                    quantization_config=quantization_config,
+                    torch_dtype=self.data_type
+                ).eval().to(self.device)
+            else:
+                self.model = AutoModelForImageTextToText.from_pretrained(
+                    self.model_checkpoint,
+                    torch_dtype=self.data_type
+                ).eval().to(self.device)
+            
+            logger.info(f"Successfully loaded model on {self.device}")
+        except Exception as e:
+            logger.error(f"Failed to load model in fallback captioner: {e}")
+            raise RuntimeError(f"Cannot initialize fallback captioner: {e}")
+    
+    def process_keyframe(self, image_path):
+        """Generate caption for a single image"""
+        try:
+            import torch
+            from PIL import Image
+            
+            # Load image with PIL
+            image = Image.open(image_path).convert("RGB")
+            
+            # Prepare messages format
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "image": image},
+                        {"type": "text", "text": self.prompt}
+                    ]
+                }
+            ]
+            
+            # Apply chat template and tokenize
+            inputs = self.processor.apply_chat_template(
+                messages, 
+                add_generation_prompt=True, 
+                tokenize=True, 
+                return_dict=True, 
+                return_tensors="pt"
+            ).to(self.device)
+            
+            # Generate response
+            with torch.no_grad():
+                output = self.model.generate(
+                    **inputs, 
+                    max_new_tokens=self.max_new_tokens, 
+                    do_sample=False
+                )
+            
+            # Decode output
+            answer = self.processor.decode(
+                output[0, inputs["input_ids"].shape[1]:], 
+                skip_special_tokens=True
+            ).strip()
+            
+            return answer
+        except Exception as e:
+            logger.error(f"Error generating caption: {e}")
+            return f"[Error generating caption: {str(e)}]"
 
 
 def process_video_keyframes(
@@ -156,36 +261,63 @@ def generate_captions(
     _ensure_dependencies()
     
     # Initialize model for image captioning
-    logger.info("Initializing InternVL3 model for image captioning...")
+    logger.info("Initializing captioner for image captioning...")
     captioner = None
+    using_fallback = False
     
-    # First try with quantization
+    # First check if we can import InternVL3 at all
     try:
-        logger.info("Attempting to load model with 4-bit quantization...")
-        captioner = InternVL3(task="image_captioning", use_quantization=True)
-        logger.info("Successfully loaded model with quantization")
-    except ImportError as e:
-        if "bitsandbytes" in str(e):
-            logger.warning(f"bitsandbytes issue detected: {e}")
-            logger.info("Trying to load model without quantization...")
-            try:
-                captioner = InternVL3(task="image_captioning", use_quantization=False)
-                logger.info("Successfully loaded model without quantization")
-            except Exception as e2:
-                logger.error(f"Failed to load model without quantization: {e2}")
-                raise RuntimeError("Failed to initialize InternVL3 model in any mode")
-        else:
-            logger.error(f"Import error when loading model: {e}")
-            raise RuntimeError("Failed to import required modules for InternVL3")
-    except Exception as e:
-        logger.error(f"Unexpected error when initializing model: {e}")
-        logger.info("Trying to load model without quantization as fallback...")
+        # This will fail if the import in the global scope failed
+        from models.internvl3 import InternVL3
+        logger.info("InternVL3 class is available")
+        
+        # Try with quantization first
         try:
-            captioner = InternVL3(task="image_captioning", use_quantization=False)
-            logger.info("Successfully loaded model without quantization")
-        except Exception as e2:
-            logger.error(f"All attempts to load model failed. Last error: {e2}")
-            raise RuntimeError("Failed to initialize InternVL3 model in any mode")
+            logger.info("Attempting to load InternVL3 with 4-bit quantization...")
+            captioner = InternVL3(task="image_captioning", use_quantization=True)
+            logger.info("Successfully loaded InternVL3 with quantization")
+        except Exception as e:
+            logger.warning(f"Failed to load quantized InternVL3: {e}")
+            
+            # Try non-quantized
+            try:
+                logger.info("Trying to load InternVL3 without quantization...")
+                captioner = InternVL3(task="image_captioning", use_quantization=False)
+                logger.info("Successfully loaded InternVL3 without quantization")
+            except Exception as e2:
+                logger.error(f"Failed to load InternVL3 without quantization: {e2}")
+                # Will try fallback below
+                captioner = None
+    except ImportError:
+        logger.warning("InternVL3 class is not available, import failed earlier")
+        captioner = None
+    
+    # If all InternVL3 attempts failed, try the fallback
+    if captioner is None:
+        logger.warning("All attempts to use InternVL3 failed, trying fallback captioner for Kaggle...")
+        try:
+            # Try with quantization first for the fallback
+            logger.info("Attempting to load KaggleFallbackCaptioner with 4-bit quantization...")
+            captioner = KaggleFallbackCaptioner(task="image_captioning", use_quantization=True)
+            logger.info("Successfully loaded fallback captioner with quantization")
+            using_fallback = True
+        except Exception as e:
+            logger.warning(f"Failed to load quantized fallback captioner: {e}")
+            
+            # Try non-quantized fallback
+            try:
+                logger.info("Trying to load fallback captioner without quantization...")
+                captioner = KaggleFallbackCaptioner(task="image_captioning", use_quantization=False)
+                logger.info("Successfully loaded fallback captioner without quantization")
+                using_fallback = True
+            except Exception as e2:
+                logger.error(f"All attempts to initialize any captioner failed. Last error: {e2}")
+                raise RuntimeError("Failed to initialize any captioner after multiple attempts")
+    
+    if using_fallback:
+        logger.warning("Using KaggleFallbackCaptioner instead of InternVL3")
+    else:
+        logger.info("Using official InternVL3 model")
     
     # Handle different modes
     if mode == "all":
