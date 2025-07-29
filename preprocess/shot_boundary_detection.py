@@ -39,10 +39,10 @@ def process_video(video_path, output_shot_path, predict_video):
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     output_file = os.path.join(output_shot_path, f"{video_name}_shots.json")
     
-    # Chuyển đổi NumPy types sang Python native types
+    
     items = []
     for start_frame, end_frame in scenes:
-        # Đảm bảo sử dụng int Python chuẩn thay vì numpy.int32
+        
         items.append({
             "start_frame": int(start_frame),
             "end_frame": int(end_frame),

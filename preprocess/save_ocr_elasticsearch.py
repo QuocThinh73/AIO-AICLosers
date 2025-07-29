@@ -4,7 +4,6 @@ from elasticsearch import Elasticsearch
 import glob
 from tqdm import tqdm
 
-# Kết nối đến Elasticsearch
 def connect_to_elasticsearch():
     try:
         es = Elasticsearch(["http://localhost:9200"])
@@ -18,13 +17,11 @@ def connect_to_elasticsearch():
         print(f"Lỗi khi kết nối đến Elasticsearch: {str(e)}")
         return None
 
-# Tạo index nếu chưa tồn tại
 def create_index(es, index_name="ocr_results"):
     if es.indices.exists(index=index_name):
         print(f"Đang xóa index {index_name} cũ...")
         es.indices.delete(index=index_name)
     
-    # Định nghĩa mapping cho index
     mapping = {
         "mappings": {
             "properties": {
@@ -70,13 +67,10 @@ def create_index(es, index_name="ocr_results"):
         }
     }
     
-    # Tạo index với mapping
     es.indices.create(index=index_name, body=mapping)
     print(f"Đã tạo index {index_name} với mapping")
 
-# Lưu kết quả OCR vào Elasticsearch với đường dẫn đúng
 def index_ocr_results(ocr_dir, index_name="ocr_results"):
-    # Lấy danh sách các file JSON chứa kết quả OCR
     json_files = glob.glob(os.path.join(ocr_dir, "**/*.json"), recursive=True)
     print(f"Tìm thấy {len(json_files)} file kết quả OCR")
     
@@ -88,8 +82,6 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
             with open(json_file, "r", encoding="utf-8") as f:
                 ocr_results = json.load(f)
             
-            # Lấy tên video từ tên file
-            # Ví dụ: L01/V001.json -> L01_V001
             video_file = os.path.basename(json_file)
             video_name = video_file.replace(".json", "")
             lesson_name = os.path.basename(os.path.dirname(json_file))
@@ -98,12 +90,11 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
             
             print(f"Tên file: {video_file}, video_name sau xử lý: {video_name}")
             
-            # Xử lý từng keyframe trong file
             for entry in ocr_results:
                 keyframe = entry.get("image", "")
                 text_results = entry.get("results", [])
                 
-                # Tạo đường dẫn đúng theo cấu trúc thư mục thực tế L01/V001/L01_V001_000000.jpg
+               
                 if "_V" in video_name:
                     video_parts = video_name.split("_V")
                     if len(video_parts) == 2:
@@ -116,14 +107,14 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                 else:
                     correct_path = f"{video_name}/{keyframe}"
                 
-                # Format OCR text results
+                
                 formatted_results = []
                 for result in text_results:
                     text = result.get("text", "")
                     confidence = result.get("confidence", 0.0)
                     box = result.get("box", [])
                     
-                    # Kiểm tra nếu có đủ 4 điểm trong box
+                        
                     if len(box) == 4:
                         formatted_result = {
                             "text": text,
@@ -137,7 +128,7 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                         }
                         formatted_results.append(formatted_result)
                 
-                # Tạo document để lưu vào Elasticsearch
+                    
                 doc = {
                     "video_name": video_name,
                     "keyframe": keyframe,
@@ -145,7 +136,7 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                     "text_results": formatted_results
                 }
                 
-                # Lưu vào Elasticsearch với ID duy nhất
+                
                 doc_id = f"{video_name}_{keyframe}"
                 es.index(index=index_name, id=doc_id, body=doc)
                 total_indexed += 1
@@ -155,7 +146,6 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
     
     print(f"Đã lưu thành công {total_indexed} keyframes vào Elasticsearch")
 
-# Hàm trợ giúp để cài đặt thư viện nếu cần
 def ensure_dependencies():
     try:
         import elasticsearch
@@ -166,25 +156,20 @@ def ensure_dependencies():
         print("Đã cài đặt elasticsearch")
 
 
-# Hàm chính xử lý quá trình index OCR results vào Elasticsearch
 def index_ocr_results(ocr_dir, index_name="ocr_results"):
     try:
-        # Đảm bảo đã cài đặt các thư viện cần thiết
         ensure_dependencies()
         
-        # Kết nối đến Elasticsearch
         es = connect_to_elasticsearch()
         if es is None:
             return {"status": "error", "message": "Không thể kết nối đến Elasticsearch"}
         
-        # Tạo index mới
+        
         create_index(es, index_name)
         
-        # Kiểm tra thư mục có tồn tại không
         if not os.path.exists(ocr_dir):
             return {"status": "error", "message": f"Thư mục không tồn tại: {ocr_dir}"}
         
-        # Lấy danh sách các file JSON chứa kết quả OCR
         json_files = glob.glob(os.path.join(ocr_dir, "**/*.json"), recursive=True)
         print(f"Tìm thấy {len(json_files)} file kết quả OCR")
         
@@ -199,18 +184,14 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                 with open(json_file, "r", encoding="utf-8") as f:
                     ocr_results = json.load(f)
                 
-                # Lấy tên video từ tên file và loại bỏ hậu tố _ocr
-                # Ví dụ: L01_V001_ocr.json -> L01_V001
                 video_file = os.path.basename(json_file)
                 video_name = video_file.replace("_ocr.json", "")
                 print(f"Tên file: {video_file}, video_name sau xử lý: {video_name}")
                 
-                # Xử lý từng keyframe trong file
                 for entry in ocr_results:
                     keyframe = entry.get("image", "")
                     text_results = entry.get("results", [])
                     
-                    # Tạo đường dẫn đúng theo cấu trúc thư mục thực tế L01/V001/L01_V001_000000.jpg
                     if "_V" in video_name:
                         video_parts = video_name.split("_V")
                         if len(video_parts) == 2:
@@ -230,7 +211,6 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                         confidence = result.get("confidence", 0.0)
                         box = result.get("box", [])
                         
-                        # Kiểm tra nếu có đủ 4 điểm trong box
                         if len(box) == 4:
                             formatted_result = {
                                 "text": text,
@@ -244,7 +224,6 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                             }
                             formatted_results.append(formatted_result)
                     
-                    # Tạo document để lưu vào Elasticsearch
                     doc = {
                         "video_name": video_name,
                         "keyframe": keyframe,
@@ -252,7 +231,6 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
                         "text_results": formatted_results
                     }
                     
-                    # Lưu vào Elasticsearch với ID duy nhất
                     doc_id = f"{video_name}_{keyframe}"
                     es.index(index=index_name, id=doc_id, body=doc)
                     total_indexed += 1
@@ -268,25 +246,3 @@ def index_ocr_results(ocr_dir, index_name="ocr_results"):
     except Exception as e:
         return {"status": "error", "message": f"Lỗi: {str(e)}"}    
 
-
-def main():
-    # Parse command line arguments
-    import argparse
-    parser = argparse.ArgumentParser(description="Lưu kết quả OCR vào Elasticsearch")
-    parser.add_argument("input_dir", type=str, help="Thư mục chứa các file JSON kết quả OCR")
-    parser.add_argument("--index", type=str, default="ocr_results", help="Tên index trong Elasticsearch")
-    
-    args = parser.parse_args()
-    
-    # Gọi hàm chính
-    result = index_ocr_results(args.input_dir, args.index)
-    
-    if result["status"] == "error":
-        print(f"Lỗi: {result['message']}")
-        sys.exit(1)
-    else:
-        print(result["message"])
-    
-if __name__ == "__main__":
-    import sys
-    main()

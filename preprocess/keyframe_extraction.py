@@ -5,11 +5,7 @@ from utils import load_json
 
 def process_video(video_path, shot_path, output_keyframe_path):
     cap = None
-    try:
-        print(f"Bắt đầu xử lý video: {video_path}")
-        print(f"Sử dụng file shot: {shot_path}")
-        print(f"Thư mục lưu keyframes: {output_keyframe_path}")
-        
+    try:      
         os.makedirs(output_keyframe_path, exist_ok=True)
         
         if not os.path.exists(video_path):
@@ -20,7 +16,6 @@ def process_video(video_path, shot_path, output_keyframe_path):
             print(f"Lỗi: Không tìm thấy file shot: {shot_path}")
             return
         
-        print("Mở video với OpenCV...")
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             print(f"Lỗi: Không thể mở video file: {video_path}")
@@ -110,9 +105,6 @@ def extract_keyframe(input_video_dir, input_shot_dir, output_keyframe_dir, mode,
             shot_path = os.path.join(input_shot_dir, lesson_name, f"{video_name}_shots.json")
             output_keyframe_path = os.path.join(output_keyframe_dir, lesson_name, video_short_name)
             
-            print(f"Xử lý video: {video_path}")
-            print(f"Sử dụng file shot: {shot_path}")
-            print(f"Lưu keyframes vào: {output_keyframe_path}")
             
             process_video(video_path, shot_path, output_keyframe_path)
             
@@ -135,8 +127,5 @@ def extract_keyframe(input_video_dir, input_shot_dir, output_keyframe_dir, mode,
                 shot_path = os.path.join(input_shot_dir, lesson_folder, f"{video_name}_shots.json")
                 output_keyframe_path = os.path.join(output_keyframe_dir, lesson_folder, video_short_name)
                 
-                print(f"Xử lý video: {video_path}")
-                print(f"Sử dụng file shot: {shot_path}")
-                print(f"Lưu keyframes vào: {output_keyframe_path}")
                 
                 process_video(video_path, shot_path, output_keyframe_path)

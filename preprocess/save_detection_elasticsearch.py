@@ -5,7 +5,7 @@ import sys
 from tqdm import tqdm
 from elasticsearch import Elasticsearch
 
-# Kết nối đến Elasticsearch
+
 def connect_to_elasticsearch():
     try:
         es = Elasticsearch(["http://localhost:9200"])
@@ -19,13 +19,11 @@ def connect_to_elasticsearch():
         print(f"Lỗi khi kết nối đến Elasticsearch: {str(e)}")
         return None
 
-# Tạo index nếu chưa tồn tại
 def create_index(es, index_name="groundingdino"):
     if es.indices.exists(index=index_name):
         print(f"Đang xóa index {index_name} cũ...")
         es.indices.delete(index=index_name)
     
-    # Định nghĩa mapping cho index
     mapping = {
         "mappings": {
             "properties": {
@@ -53,11 +51,9 @@ def create_index(es, index_name="groundingdino"):
         }
     }
     
-    # Tạo index với mapping
     es.indices.create(index=index_name, body=mapping)
     print(f"Đã tạo index {index_name} với mapping")
 
-# Hàm trợ giúp để cài đặt thư viện nếu cần
 def ensure_dependencies():
     try:
         import elasticsearch
@@ -67,25 +63,19 @@ def ensure_dependencies():
         subprocess.check_call([sys.executable, "-m", "pip", "install", "elasticsearch"])
         print("Đã cài đặt elasticsearch")
 
-# Hàm chính xử lý quá trình index detection results vào Elasticsearch
 def index_detection_results(detection_dir, index_name="groundingdino"):
     try:
-        # Đảm bảo đã cài đặt các thư viện cần thiết
         ensure_dependencies()
         
-        # Kết nối đến Elasticsearch
         es = connect_to_elasticsearch()
         if es is None:
             return {"status": "error", "message": "Không thể kết nối đến Elasticsearch"}
         
-        # Tạo index mới
         create_index(es, index_name)
         
-        # Kiểm tra thư mục có tồn tại không
         if not os.path.exists(detection_dir):
             return {"status": "error", "message": f"Thư mục không tồn tại: {detection_dir}"}
         
-        # Lấy danh sách các file JSON chứa kết quả detection
         json_files = glob.glob(os.path.join(detection_dir, "*.json"))
         print(f"Tìm thấy {len(json_files)} file kết quả detection")
         
@@ -100,19 +90,14 @@ def index_detection_results(detection_dir, index_name="groundingdino"):
                 with open(json_file, "r", encoding="utf-8") as f:
                     detections = json.load(f)
                 
-                # Lấy tên video từ tên file và loại bỏ hậu tố _detection
-                # Ví dụ: L01_V001_detection.json -> L01_V001
                 video_file = os.path.basename(json_file)
                 video_name = video_file.replace("_detection.json", "")
                 print(f"Tên file: {video_file}, video_name sau xử lý: {video_name}")
-                
-                # Xử lý từng keyframe trong file
                 for entry in detections:
                     keyframe = entry.get("keyframe", "")
                     caption = entry.get("caption", "")
                     objects = entry.get("objects", [])
                     
-                    # Tạo đường dẫn đúng theo cấu trúc thư mục thực tế L01/V001/L01_V001_000000.jpg
                     if "_V" in video_name:
                         video_parts = video_name.split("_V")
                         if len(video_parts) == 2:
@@ -142,7 +127,6 @@ def index_detection_results(detection_dir, index_name="groundingdino"):
                         }
                         formatted_objects.append(formatted_object)
                     
-                    # Tạo document để lưu vào Elasticsearch
                     doc = {
                         "video_name": video_name,
                         "keyframe": keyframe,
@@ -151,7 +135,6 @@ def index_detection_results(detection_dir, index_name="groundingdino"):
                         "objects": formatted_objects
                     }
                     
-                    # Lưu vào Elasticsearch với ID duy nhất
                     doc_id = f"{video_name}_{keyframe}"
                     es.index(index=index_name, id=doc_id, body=doc)
                     total_indexed += 1
@@ -166,24 +149,3 @@ def index_detection_results(detection_dir, index_name="groundingdino"):
     
     except Exception as e:
         return {"status": "error", "message": f"Lỗi: {str(e)}"}
-
-def main():
-    # Parse command line arguments
-    import argparse
-    parser = argparse.ArgumentParser(description="Lưu kết quả detection vào Elasticsearch")
-    parser.add_argument("input_dir", type=str, help="Thư mục chứa các file JSON kết quả detection")
-    parser.add_argument("--index", type=str, default="groundingdino", help="Tên index trong Elasticsearch")
-    
-    args = parser.parse_args()
-    
-    # Gọi hàm chính
-    result = index_detection_results(args.input_dir, args.index)
-    
-    if result["status"] == "error":
-        print(f"Lỗi: {result['message']}")
-        sys.exit(1)
-    else:
-        print(result["message"])
-    
-if __name__ == "__main__":
-    main()

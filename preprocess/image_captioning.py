@@ -64,19 +64,6 @@ def generate_captions(
     lesson_name: str = None,
     video_name: str = None
 ) -> dict:
-    """
-    Generate captions for keyframes using the InternVL3 model.
-    
-    Args:
-        input_dir (str): Base directory for keyframes
-        output_dir (str): Output directory for captions
-        mode (str): Processing mode - "all", "lesson", or "single"
-        lesson_name (str, optional): Name of the lesson to process (for "lesson" and "single" modes)
-        video_name (str, optional): Name of the video to process (for "single" mode)
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     
@@ -142,11 +129,6 @@ def generate_captions(
             
         else:
             error_msg = "Invalid mode or missing required parameters"
-            print(f"Error: {error_msg}")
-            print("Usage: generate_captions(input_dir, output_dir, mode, [lesson_name], [video_name])")
-            print("  - mode: 'all', 'lesson', or 'single'")
-            print("  - For 'lesson' mode, provide lesson_name")
-            print("  - For 'single' mode, provide both lesson_name and video_name")
             return {"status": "error", "message": error_msg}
             
         # Zip caption results for easy download
@@ -164,15 +146,6 @@ def generate_captions(
 
 
 def zip_caption_results(output_caption_dir: str) -> str:
-    """
-    Create a zip archive of the caption results for easy download.
-    
-    Args:
-        output_caption_dir (str): Directory containing caption results to zip
-        
-    Returns:
-        str: Path to the created zip file
-    """
     # Get base directory and name
     base_dir = os.path.dirname(output_caption_dir)
     dir_name = os.path.basename(output_caption_dir)

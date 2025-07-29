@@ -19,18 +19,6 @@ def extract_text(
     mode: str,
     lesson_name: str = None
 ) -> Dict[str, Any]:
-    """
-    Extract text from keyframes using OCR.
-    
-    Args:
-        input_dir (str): Path to keyframes directory (e.g. 'database/keyframes')
-        output_dir (str): Path to output directory (e.g. 'database/ocr')
-        mode (str): Processing mode ('all' or 'lesson')
-        lesson_name (str, optional): Name of lesson folder (e.g. 'L01'), required for 'lesson' mode
-        
-    Returns:
-        Dict[str, Any]: Processing status and message
-    """
     try:
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -106,16 +94,6 @@ def extract_text(
 
 
 def process_lesson(ocr, lesson_dir: str, output_lesson_dir: str, target_size: Tuple[int, int], mask_boxes: List[Tuple[int, int, int, int]]) -> None:
-    """
-    Process all videos in a lesson directory.
-    
-    Args:
-        ocr: PaddleOCR instance
-        lesson_dir (str): Path to lesson directory
-        output_lesson_dir (str): Path to output lesson directory
-        target_size (tuple): Target size for image resizing
-        mask_boxes (list): List of regions to mask
-    """
     os.makedirs(output_lesson_dir, exist_ok=True)
     video_dirs = sorted([d for d in os.listdir(lesson_dir) if os.path.isdir(os.path.join(lesson_dir, d))])
     
@@ -139,18 +117,7 @@ def process_lesson(ocr, lesson_dir: str, output_lesson_dir: str, target_size: Tu
 
 
 def process_keyframes(ocr, keyframe_paths: List[str], target_size: Tuple[int, int], mask_boxes: List[Tuple[int, int, int, int]]) -> List[Dict[str, Any]]:
-    """
-    Process keyframes and extract text using OCR.
     
-    Args:
-        ocr: PaddleOCR instance
-        keyframe_paths (list): List of keyframe paths
-        target_size (tuple): Target size for image resizing
-        mask_boxes (list): List of regions to mask
-        
-    Returns:
-        list: List of OCR results for each keyframe
-    """
     ocr_results = []
     
     for keyframe_path in tqdm(keyframe_paths, desc="Processing keyframes"):
@@ -198,15 +165,7 @@ def process_keyframes(ocr, keyframe_paths: List[str], target_size: Tuple[int, in
 
 
 def zip_ocr_results(output_ocr_dir: str) -> str:
-    """
-    Create a zip archive of the OCR results for easy download.
-    
-    Args:
-        output_ocr_dir (str): Directory containing OCR results to zip
-        
-    Returns:
-        str: Path to the created zip file
-    """
+
     # Get base directory and name
     base_dir = os.path.dirname(output_ocr_dir)
     dir_name = os.path.basename(output_ocr_dir)
