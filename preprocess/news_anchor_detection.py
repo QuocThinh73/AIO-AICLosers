@@ -1,7 +1,8 @@
 import os
-from transformers import AutoModelForCausalLM, AutoProcessor
+from transformers import AutoModelForImageTextToText, AutoProcessor
 import torch
 import json
+import traceback
 
 PROMPT = """
 Does the image show a news anchor **actively presenting** news in a professional **broadcast TV studio** (e.g. desk with news branding, lighting rigs, large studio screens, official newsroom setup)?
@@ -20,9 +21,16 @@ Answer with only YES or NO.
     """
 
 def load_model():
-    model = AutoModelForCausalLM.from_pretrained("OpenGVLab/InternVL3-2B-hf", torch_dtype=torch.float32, device_map="auto")
-    processor = AutoProcessor.from_pretrained("OpenGVLab/InternVL3-2B-hf")
-    return model, processor
+    try:
+        print("Loading InternVL3 model for news anchor detection...")
+        model = AutoModelForImageTextToText.from_pretrained("OpenGVLab/InternVL3-2B-hf", torch_dtype=torch.float32, device_map="auto")
+        processor = AutoProcessor.from_pretrained("OpenGVLab/InternVL3-2B-hf")
+        print("Model loaded successfully!")
+        return model, processor
+    except Exception as e:
+        print(f"Error loading model: {str(e)}")
+        print(traceback.format_exc())
+        raise
 
 def classify_keyframe(keyframe_path, model, processor):
     messages = [
@@ -35,7 +43,7 @@ def classify_keyframe(keyframe_path, model, processor):
         }
     ]
     
-    inputs = processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt").to(model.device, dtype=DATA_TYPE)
+    inputs = processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt").to(model.device, dtype=torch.float32)
     output = model.generate(**inputs, max_new_tokens=10, do_sample=False)
     answer = processor.decode(output[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip().upper()
     return 1 if "YES" in answer else 0
