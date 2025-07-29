@@ -63,8 +63,8 @@ def keyframe_extraction(argv):
 
 def build_mapping_json(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_keyframe_dir", type=str)
-    parser.add_argument("output_mapping_json", type=str)
+    parser.add_argument("input_keyframe_dir", type=str, help="Directory containing keyframe images")
+    parser.add_argument("output_dir", type=str, help="Output directory where mapping.json will be created")
 
     args = parser.parse_args(argv)
     
@@ -74,7 +74,7 @@ def build_mapping_json(argv):
     
     # Main process
     from preprocess.build_mapping_json import build_mapping_json
-    build_mapping_json(args.input_keyframe_dir, args.output_mapping_json)
+    build_mapping_json(args.input_keyframe_dir, args.output_dir)
 
 def news_anchor_detection(argv):
     parser = argparse.ArgumentParser()
