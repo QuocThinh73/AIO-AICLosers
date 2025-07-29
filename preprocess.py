@@ -337,6 +337,50 @@ def ocr(argv):
     else:
         print(f"Success: {result['message']}")
     
+def save_detection_elasticsearch(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_dir", type=str)
+    parser.add_argument("--index", type=str, default="groundingdino")
+    
+    args = parser.parse_args(argv)
+    
+    # Check error
+    if not os.path.exists(args.input_dir):
+        print(f"Error: Input directory {args.input_dir} does not exist")
+        return
+    
+    # Main process
+    from preprocess.save_detection_elasticsearch import index_detection_results
+    
+    result = index_detection_results(args.input_dir, args.index)
+    
+    if result["status"] == "error":
+        print(f"Error: {result['message']}")
+    else:
+        print(f"Success: {result['message']}")
+
+
+def save_ocr_elasticsearch(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_dir", type=str)
+    parser.add_argument("--index", type=str, default="ocr")
+    
+    args = parser.parse_args(argv)
+    
+    # Check error
+    if not os.path.exists(args.input_dir):
+        print(f"Error: Input directory {args.input_dir} does not exist")
+        return
+    
+    # Main process
+    from preprocess.save_ocr_elasticsearch import index_ocr_results
+    
+    result = index_ocr_results(args.input_dir, args.index)
+    
+    if result["status"] == "error":
+        print(f"Error: {result['message']}")
+    else:
+        print(f"Success: {result['message']}")
 
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
@@ -350,6 +394,8 @@ TASKS = {
     "image_captioning": image_captioning,
     "asr": asr,
     "ocr": ocr,
+    "save_detection_elasticsearch": save_detection_elasticsearch,
+    "save_ocr_elasticsearch": save_ocr_elasticsearch,
 }
 
 if __name__ == "__main__":

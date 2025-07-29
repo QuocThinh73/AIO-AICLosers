@@ -80,6 +80,38 @@ Answer with only YES or NO.
         Returns:
             str: Generated response
         """
+        # For image_captioning task, preprocess the image: resize and remove banner/logo
+        if self.task == "image_captioning":
+            import cv2
+            import os
+            from utils import delete_banner_and_logo
+            
+            # Define target size and regions to mask
+            target_size = (1280, 720)
+            logo_box = (1000, 50, 1300, 130)
+            banner_box = (0, 660, 1280, 690)
+            mask_boxes = [logo_box, banner_box]
+            
+            # Read and resize image
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"Warning: Could not read image {image_path}")
+                return "Image could not be processed"
+            
+            # Resize image to target size
+            img_resized = cv2.resize(img, target_size)
+            
+            # Mask out banner and logo regions
+            masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
+            
+            # Save processed image temporarily
+            temp_dir = os.path.dirname(image_path)
+            temp_path = os.path.join(temp_dir, "_temp_processed.jpg")
+            cv2.imwrite(temp_path, masked_img)
+            
+            # Use the processed image instead
+            image_path = temp_path
+        
         messages = [
             {
                 "role": "user",
