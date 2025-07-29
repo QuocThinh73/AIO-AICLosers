@@ -11,8 +11,10 @@ def get_keyframe_paths(input_keyframe_dir):
                 keyframe_paths.append(os.path.join(root, file))
     return sorted(keyframe_paths)
 
-def build_mapping_json(input_keyframe_dir, output_mapping_json):
-    os.makedirs(os.path.dirname(output_mapping_json), exist_ok=True)
+def build_mapping_json(input_keyframe_dir, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+    
+    output_mapping_json = os.path.join(output_dir, "mapping.json")
     
     keyframe_paths = get_keyframe_paths(input_keyframe_dir)
     
@@ -25,7 +27,6 @@ def build_mapping_json(input_keyframe_dir, output_mapping_json):
         "total": len(items),
         "items": items
     }
-    #Save
     with open(output_mapping_json, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     
