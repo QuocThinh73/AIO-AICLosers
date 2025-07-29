@@ -133,6 +133,7 @@ def detect_news_anchor(input_keyframe_dir, output_news_anchor_dir, mode, lesson_
             video_path = os.path.join(input_keyframe_dir, lesson_name, video_folder)
             news_anchor_path = os.path.join(output_news_anchor_dir, lesson_name, f"{lesson_name}_{video_folder}_news_anchor.json")
             process_video(video_path, news_anchor_path, model, processor)
+            print(f"Completed processing {video_folder}")
             
     elif mode == "all":
         for lesson_folder in sorted(os.listdir(input_keyframe_dir)):
@@ -141,3 +142,4 @@ def detect_news_anchor(input_keyframe_dir, output_news_anchor_dir, mode, lesson_
                 video_path = os.path.join(input_keyframe_dir, lesson_folder, video_folder)
                 news_anchor_path = os.path.join(output_news_anchor_dir, lesson_folder, f"{lesson_folder}_{video_folder}_news_anchor.json")
                 process_video(video_path, news_anchor_path, model, processor)
+                print(f"Completed processing {lesson_folder}_{video_folder}")
