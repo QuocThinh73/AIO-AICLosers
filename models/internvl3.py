@@ -104,13 +104,22 @@ Answer with only YES or NO.
             # Mask out banner and logo regions
             masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
             
-            # Save processed image temporarily
-            temp_dir = os.path.dirname(image_path)
-            temp_path = os.path.join(temp_dir, "_temp_processed.jpg")
-            cv2.imwrite(temp_path, masked_img)
+            # Convert numpy array to base64 string
+            import base64
+            from io import BytesIO
+            from PIL import Image
             
-            # Use the processed image instead
-            image_path = temp_path
+            # Convert BGR to RGB (CV2 uses BGR, PIL uses RGB)
+            masked_img_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
+            pil_img = Image.fromarray(masked_img_rgb)
+            
+            # Save to buffer and convert to base64
+            buffered = BytesIO()
+            pil_img.save(buffered, format="JPEG")
+            img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            
+            # Create data URL for the image
+            image_path = f"data:image/jpeg;base64,{img_b64}"
         
         messages = [
             {
