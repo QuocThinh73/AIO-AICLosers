@@ -162,38 +162,6 @@ def generate_captions(
         return {"status": "error", "message": str(e)}
 
 
-# If the script is run directly
-if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Generate captions for keyframes using InternVL3")
-    parser.add_argument("--mode", type=str, default="all", choices=["all", "lesson", "single"],
-                        help="Processing mode: all lessons, single lesson, or single video")
-    parser.add_argument("--input_dir", type=str, default="database/keyframes",
-                        help="Base directory containing keyframes")
-    parser.add_argument("--output_dir", type=str, default="database/caption",
-                        help="Output directory for saving captions")
-    parser.add_argument("--lesson", type=str, help="Lesson name (required for 'lesson' and 'single' modes)")
-    parser.add_argument("--video", type=str, help="Video name (required for 'single' mode)")
-    
-    args = parser.parse_args()
-    
-    # Call the main function
-    result = generate_captions(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
-        mode=args.mode,
-        lesson_name=args.lesson,
-        video_name=args.video
-    )
-    
-    if result.get("status") == "error":
-        print(f"Error: {result.get('message')}")
-        sys.exit(1)
-    else:
-        print(f"Success: {result.get('message')}")
-        sys.exit(0)
-
 
 def zip_caption_results(output_caption_dir: str) -> str:
     """

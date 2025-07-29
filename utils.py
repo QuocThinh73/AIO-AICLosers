@@ -57,7 +57,24 @@ def seconds_to_frame(seconds, fps):
     Returns:
         int: Frame index.
     """
-    return int(seconds * fps)
+    return round(seconds * fps)
+
+
+def delete_banner_and_logo(image, regions):
+    """
+    Masks out specified regions (like banners and logos) from an image by filling them with white color.
+    
+    Args:
+        image (numpy.ndarray): The input image to mask regions from.
+        regions (list): List of tuples (x1, y1, x2, y2) representing the regions to mask.
+            Each tuple defines the top-left (x1, y1) and bottom-right (x2, y2) coordinates of a region.
+    
+    Returns:
+        numpy.ndarray: Image with the specified regions masked out (filled with white color).
+    """
+    for (x1, y1, x2, y2) in regions:
+        image[y1:y2, x1:x2] = 255  
+    return image
 
 
 def parse_lesson_video_name(name, with_frame=False):

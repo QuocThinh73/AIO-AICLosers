@@ -305,14 +305,37 @@ def asr(argv):
 def ocr(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
+    parser.add_argument("input_dir", type=str)
+    parser.add_argument("output_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
+
     
     args = parser.parse_args(argv)
     
-    # Check error TODO
+    # Check error
+    if args.mode == "lesson" and args.lesson_name is None:
+        print("Error: --lesson_name is required for lesson mode")
+        return
     
-    # Main process TODO
+    # Check if input directory exists
+    if not os.path.exists(args.input_dir):
+        print(f"Error: Input directory {args.input_dir} does not exist")
+        return
+    
+    # Main process
     from preprocess.ocr import extract_text
+    
+    result = extract_text(
+        input_dir=args.input_dir,
+        output_dir=args.output_dir,
+        mode=args.mode,
+        lesson_name=args.lesson_name
+    )
+    
+    if result["status"] == "error":
+        print(f"Error: {result['message']}")
+    else:
+        print(f"Success: {result['message']}")
     
 
 TASKS = {
