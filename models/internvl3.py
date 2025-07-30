@@ -84,7 +84,7 @@ Answer with only YES or NO.
         if self.task == "image_captioning":
             import cv2
             import os
-            from utils import delete_banner_and_logo
+            from utils.utils import delete_banner_and_logo
             
             # Define target size and regions to mask
             target_size = (1280, 720)

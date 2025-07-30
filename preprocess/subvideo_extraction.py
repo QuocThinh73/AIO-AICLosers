@@ -1,7 +1,7 @@
 import os
 import json
 import ffmpeg
-from utils import frame_to_seconds, get_video_fps
+from utils.utils import frame_to_seconds, get_video_fps
 
 
 def extract_subvideo_clip(input_video, output_video, start_time, end_time, ffmpeg_bin):
