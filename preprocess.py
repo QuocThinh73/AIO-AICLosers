@@ -439,8 +439,40 @@ def save_embedding_faiss(argv):
         print(f"Error: {result['message']}")
         sys.exit(1)
 def save_caption_qdrant(argv):
-    #TODO
-    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument("caption_dir", type=str, help="Directory containing caption files")
+    parser.add_argument("keyframe_dir", type=str, help="Directory containing keyframe images")
+    parser.add_argument("output_dir", type=str, help="Directory to store output files including mapping file")
+    parser.add_argument("--collection_name", type=str, default="captions", help="Name of the Qdrant collection")
+    
+    args = parser.parse_args(argv)
+    
+    # Check error
+    if not os.path.exists(args.caption_dir):
+        raise ValueError("Caption directory does not exist")
+    
+    if not os.path.exists(args.keyframe_dir):
+        raise ValueError("Keyframe directory does not exist")
+    
+    # Ensure output directory exists
+    os.makedirs(args.output_dir, exist_ok=True)
+    
+    # Main process
+    from preprocess.save_caption_qdrant import save_captions_qdrant
+    
+    result = save_captions_qdrant(
+        caption_dir=args.caption_dir,
+        keyframe_dir=args.keyframe_dir, 
+        output_dir=args.output_dir,
+        collection_name=args.collection_name
+    )
+    
+    if result["status"] == "error":
+        print(f"Error: {result['message']}")
+        sys.exit(1)
+    else:
+        print(f"Success: {result['message']}")
+        sys.exit(0)
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
     "keyframe_extraction": keyframe_extraction,
