@@ -412,8 +412,32 @@ def save_ocr_elasticsearch(argv):
     else:
         print(f"Success: {result['message']}")
 def save_embedding_faiss(argv):
-    #TODO
-    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_keyframe_dir", type=str)
+    parser.add_argument("output_dir", type=str)
+    parser.add_argument("--backbone", type=str, default="ViT-B-16")
+    parser.add_argument("--pretrained", type=str, default="dfn2b")
+    
+    args = parser.parse_args(argv)
+    
+    # Check error
+    if not os.path.exists(args.input_keyframe_dir):
+        raise ValueError("Input keyframe directory does not exist")
+    
+    # Main process
+    from preprocess.save_embedding_faiss import save_embeddings_faiss
+    result = save_embeddings_faiss(
+        args.input_keyframe_dir, 
+        args.output_dir,
+        backbone=args.backbone,
+        pretrained=args.pretrained
+    )
+    
+    if result["status"] == "success":
+        print(f"Success: {result['message']}")
+    else:
+        print(f"Error: {result['message']}")
+        sys.exit(1)
 def save_caption_qdrant(argv):
     #TODO
     pass
