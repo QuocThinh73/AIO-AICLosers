@@ -323,14 +323,42 @@ def image_captioning(argv):
 def asr(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
-    parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("input_video_dir", type=str, help="Directory containing video files")
+    parser.add_argument("output_transcript_dir", type=str, help="Directory to save transcript files")
+    parser.add_argument("--lesson_name", type=str, help="Specific lesson name to process when mode is 'lesson'")
     
     args = parser.parse_args(argv)
     
-    # Check error TODO
+    # Check error
+    if not os.path.exists(args.input_video_dir):
+        raise ValueError("Input video directory does not exist")
+        
+    if args.mode == "lesson" and not args.lesson_name:
+        raise ValueError("Lesson name is required when mode is 'lesson'")
+        
+    if args.mode == "lesson":
+        lesson_path = os.path.join(args.input_video_dir, args.lesson_name)
+        if not os.path.exists(lesson_path):
+            raise ValueError(f"Lesson directory {args.lesson_name} does not exist in {args.input_video_dir}")
     
-    # Main process TODO
-    from preprocess.asr import transcribe_audio
+    # Ensure output directory exists
+    os.makedirs(args.output_transcript_dir, exist_ok=True)
+    
+    # Main process
+    if args.mode == "all":
+        from preprocess.asr import process_all_lessons_asr
+        result = process_all_lessons_asr(args.input_video_dir, args.output_transcript_dir)
+    else:  # mode == "lesson"
+        from preprocess.asr import process_lesson_asr
+        lesson_path = os.path.join(args.input_video_dir, args.lesson_name)
+        result = process_lesson_asr(lesson_path, args.output_transcript_dir, args.lesson_name)
+    
+    if result["status"] == "error":
+        print(f"Error: {result['message']}")
+        sys.exit(1)
+    else:
+        print(f"Success: {result['message']}")
+        sys.exit(0)
     
 def ocr(argv):
     parser = argparse.ArgumentParser()
