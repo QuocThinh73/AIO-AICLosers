@@ -31,10 +31,13 @@ def ensure_whisperx_dependencies():
     
     # Cài đặt các thư viện theo thứ tự phụ thuộc
     dependencies = [
-        "numpy==1.26.4",  # Cố định phiên bản NumPy
+        "numpy==1.23.5",  # Phiên bản cũ hơn, tương thích tốt với nhiều thư viện ML
+        "scipy==1.10.1",  # Phiên bản tương thích với PyTorch và Pyannote
         "transformers==4.36.2",  # Phiên bản đã biết là hoạt động
         "accelerate",
-        "whisperx"
+        "pyannote.audio==3.1.1",  # Cố định phiên bản pyannote
+        "pytorch_lightning==2.1.0",  # Cố định phiên bản pytorch_lightning
+        "whisperx==3.1.1",  # Cố định phiên bản whisperx để đảm bảo tương thích
     ]
     
     for dep in dependencies:
@@ -105,6 +108,77 @@ def transcribe_audio(video_path, transcriber, corrector):
         print(f"Lỗi khi chuyển đổi âm thanh thành văn bản cho {video_path}: {str(e)}")
         return ""
 
+class KaggleFallbackTranscriber:
+    """
+    Lớp fallback cho transcriber khi chạy trên Kaggle gặp lỗi
+    Sử dụng phương pháp transcribe đơn giản hơn
+    """
+    def __init__(self, model="base", device="cpu"):
+        self.model_name = model
+        self.device = device
+        self.model = None
+        try:
+            import torch
+            import transformers
+            from transformers import pipeline
+            print(f"Khởi tạo Whisper fallback model ({model}) trên {device}...")
+            self.model = pipeline(
+                "automatic-speech-recognition",
+                model=f"openai/whisper-{model}",
+                device=device,
+                chunk_length_s=30,
+            )
+            print("Khởi tạo thành công mô hình Whisper fallback")
+        except Exception as e:
+            print(f"Không thể khởi tạo mô hình Whisper fallback: {str(e)}")
+    
+    def transcribe(self, audio, batch_size=2):
+        try:
+            if self.model is None:
+                return {"segments": [{"text": ""}]}
+                
+            result = self.model(audio)
+            text = result["text"] if isinstance(result, dict) else result
+            
+            # Convert to WhisperX-like format
+            return {"segments": [{"text": text}]}
+        except Exception as e:
+            print(f"Lỗi khi chuyển đổi âm thanh: {str(e)}")
+            return {"segments": [{"text": ""}]}
+
+def load_audio_fallback(audio_path):
+    """
+    Tải âm thanh sử dụng các phương pháp dự phòng khác nhau
+    """
+    try:
+        try:
+            # Thử cách 1: Sử dụng whisperx
+            import whisperx
+            return whisperx.load_audio(audio_path)
+        except ImportError:
+            # Thử cách 2: Sử dụng librosa
+            try:
+                import librosa
+                return librosa.load(audio_path, sr=16000)[0]
+            except ImportError:
+                # Thử cách 3: Sử dụng soundfile
+                import soundfile as sf
+                audio, sr = sf.read(audio_path)
+                if sr != 16000:
+                    # Resample to 16kHz (Whisper's expected sample rate)
+                    try:
+                        import resampy
+                        audio = resampy.resample(audio, sr, 16000)
+                    except ImportError:
+                        # Simple resample
+                        import numpy as np
+                        audio = np.array(audio[::int(sr/16000)])
+                return audio
+    except Exception as e:
+        print(f"Không thể đọc tệp âm thanh {audio_path}: {str(e)}")
+        import numpy as np
+        return np.zeros(1600)  # Return empty audio
+
 def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
     """
     Xử lý ASR cho một bài học cụ thể
@@ -123,8 +197,6 @@ def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
         
         ensure_whisperx_dependencies()
         import torch
-        import whisperx
-        from transformers import pipeline
         
         # Tạo thư mục đầu ra
         lesson_name = lesson_name or os.path.basename(lesson_path)
@@ -133,10 +205,38 @@ def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
         
         # Khởi tạo mô hình
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Đang khởi tạo mô hình WhisperX trên thiết bị {device}...")
-        transcriber = whisperx.load_model("large-v2", device=device, compute_type="int8")
+        print(f"Đang khởi tạo mô hình trên thiết bị {device}...")
+        
+        # Thử khởi tạo WhisperX
+        transcriber = None
+        try:
+            import whisperx
+            transcriber = whisperx.load_model("large-v2", device=device, compute_type="int8")
+            print("Đã khởi tạo thành công mô hình WhisperX")
+        except Exception as e:
+            print(f"Không thể khởi tạo mô hình WhisperX: {str(e)}")
+            print("Chuyển sang sử dụng mô hình dự phòng...")
+            transcriber = KaggleFallbackTranscriber(model="large", device=device)
+        
+        # Khởi tạo bộ hiệu chỉnh tiếng Việt
         print("Đang khởi tạo mô hình hiệu chỉnh tiếng Việt...")
-        corrector = pipeline("text2text-generation", model="bmd1905/vietnamese-correction")
+        corrector = None
+        try:
+            from transformers import pipeline
+            corrector = pipeline("text2text-generation", model="bmd1905/vietnamese-correction")
+            print("Đã khởi tạo thành công mô hình hiệu chỉnh tiếng Việt")
+        except Exception as e:
+            print(f"Không thể khởi tạo mô hình hiệu chỉnh tiếng Việt: {str(e)}")
+            print("Tiếp tục mà không sử dụng hiệu chỉnh")
+        
+        # Hàm hiệu chỉnh an toàn
+        def safe_correct(text):
+            if corrector and text.strip():
+                try:
+                    return correct_transcript(corrector, text)
+                except Exception as e:
+                    print(f"Lỗi khi hiệu chỉnh văn bản: {str(e)}")
+            return text
         
         results = {}
         total_videos_processed = 0
@@ -156,8 +256,39 @@ def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
                     continue
                     
                 subvideo_path = os.path.join(video_folder_path, subvideo)
-                transcript = transcribe_audio(subvideo_path, transcriber, corrector)
-                transcript = correct_transcript(corrector, transcript)  # Hiệu chỉnh thêm một lần nữa
+                
+                # Sử dụng cả hai phương pháp tải âm thanh
+                audio = None
+                try:
+                    # Thử sử dụng WhisperX nếu đã khởi tạo thành công
+                    if isinstance(transcriber, KaggleFallbackTranscriber):
+                        audio = load_audio_fallback(subvideo_path)
+                    else:
+                        import whisperx
+                        audio = whisperx.load_audio(subvideo_path)
+                except Exception as e:
+                    print(f"Lỗi khi tải âm thanh bằng WhisperX: {str(e)}")
+                    print("Chuyển sang phương pháp dự phòng...")
+                    audio = load_audio_fallback(subvideo_path)
+                
+                # Thực hiện chuyển đổi văn bản
+                transcript = ""
+                try:
+                    # Transcribe audio
+                    result = transcriber.transcribe(audio, batch_size=2)
+                    segments = result.get("segments", [])
+                    
+                    if segments:
+                        # Nối các đoạn văn bản lại với nhau
+                        segment_texts = [seg.get("text", "") for seg in segments]
+                        transcript = " ".join(segment_texts)
+                        
+                        # Hiệu chỉnh văn bản nếu có corrector
+                        if transcript.strip() and corrector is not None:
+                            transcript = safe_correct(transcript)
+                except Exception as e:
+                    print(f"Lỗi khi chuyển đổi âm thanh: {str(e)}")
+                    transcript = ""
                 
                 video_transcripts.append({
                     "subvideo": subvideo_path,
