@@ -8,22 +8,66 @@ from tqdm import tqdm
 def ensure_whisperx_dependencies():
     """
     Đảm bảo các thư viện cần thiết cho ASR đã được cài đặt
+    với các phiên bản tương thích
     """
-    dependencies = ["whisperx", "transformers", "accelerate"]
+    try:
+        # Kiểm tra phiên bản NumPy
+        import numpy
+        numpy_version = numpy.__version__
+        print(f"NumPy version detected: {numpy_version}")
+        
+        # Nếu là NumPy 2.x, hạ cấp xuống 1.x để tương thích
+        if numpy_version.startswith('2'):
+            print("Downgrading NumPy from 2.x to 1.26.4 for compatibility...")
+            import subprocess
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy==1.26.4", "--force-reinstall"])
+            print("NumPy downgraded successfully")
+            # Tải lại module NumPy
+            import importlib
+            importlib.reload(numpy)
+            print(f"New NumPy version: {numpy.__version__}")
+    except Exception as e:
+        print(f"Warning: Could not check/fix NumPy version: {str(e)}")
+    
+    # Cài đặt các thư viện theo thứ tự phụ thuộc
+    dependencies = [
+        "numpy==1.26.4",  # Cố định phiên bản NumPy
+        "transformers==4.36.2",  # Phiên bản đã biết là hoạt động
+        "accelerate",
+        "whisperx"
+    ]
     
     for dep in dependencies:
         try:
-            if dep == "whisperx":
-                import whisperx
-            elif dep == "transformers":
+            if "numpy" in dep:
+                import numpy
+                print(f"NumPy version: {numpy.__version__}")
+            elif "transformers" in dep:
+                from transformers import __version__ as transformers_version
+                print(f"Transformers version: {transformers_version}")
+                # Kiểm tra phiên bản transformers
                 from transformers import pipeline
-            elif dep == "accelerate":
+            elif "accelerate" in dep:
                 import accelerate
+            elif "whisperx" in dep:
+                import whisperx
         except ImportError:
             print(f"Đang cài đặt {dep}...")
-            import subprocess
-            subprocess.check_call([sys.executable, "-m", "pip", "install", dep])
-            print(f"Đã cài đặt {dep}")
+            try:
+                import subprocess
+                subprocess.check_call([sys.executable, "-m", "pip", "install", dep, "--ignore-installed"])
+                print(f"Đã cài đặt {dep}")
+            except Exception as install_error:
+                print(f"Lỗi khi cài đặt {dep}: {str(install_error)}")
+                print("Thử phương pháp cài đặt thay thế...")
+                try:
+                    # Thử cài đặt không chỉ định phiên bản nếu cài đặt cụ thể thất bại
+                    dep_name = dep.split('==')[0] if '==' in dep else dep
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", dep_name])
+                    print(f"Đã cài đặt {dep_name} (không chỉ định phiên bản)")
+                except Exception as alt_error:
+                    print(f"Không thể cài đặt {dep_name}: {str(alt_error)}")
+                    # Tiếp tục vì có thể thư viện đã được cài đặt trước đó
 
 def correct_transcript(corrector, transcript):
     """
