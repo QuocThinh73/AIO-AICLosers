@@ -2,75 +2,41 @@
 import os
 import sys
 import json
-import glob
 from tqdm import tqdm
 
-def ensure_whisperx_dependencies():
-    """
-    Đảm bảo các thư viện cần thiết cho ASR đã được cài đặt
-    với các phiên bản tương thích
-    """
-    try:
-        # Kiểm tra phiên bản NumPy
-        import numpy
-        numpy_version = numpy.__version__
-        print(f"NumPy version detected: {numpy_version}")
-        
-        # Nếu là NumPy 2.x, hạ cấp xuống 1.x để tương thích
-        if numpy_version.startswith('2'):
-            print("Downgrading NumPy from 2.x to 1.26.4 for compatibility...")
-            import subprocess
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy==1.26.4", "--force-reinstall"])
-            print("NumPy downgraded successfully")
-            # Tải lại module NumPy
-            import importlib
-            importlib.reload(numpy)
-            print(f"New NumPy version: {numpy.__version__}")
-    except Exception as e:
-        print(f"Warning: Could not check/fix NumPy version: {str(e)}")
-    
-    # Cài đặt các thư viện theo thứ tự phụ thuộc
+def install_dependencies():
+    """Cài đặt các thư viện cần thiết cho ASR"""
+    # Cài đặt thư viện theo thứ tự phụ thuộc
     dependencies = [
-        "numpy==1.23.5",  # Phiên bản cũ hơn, tương thích tốt với nhiều thư viện ML
-        "scipy==1.10.1",  # Phiên bản tương thích với PyTorch và Pyannote
-        "transformers==4.36.2",  # Phiên bản đã biết là hoạt động
+        "numpy==1.23.5", 
+        "scipy==1.10.1", 
+        "transformers==4.36.2",
         "accelerate",
-        "pyannote.audio==3.1.1",  # Cố định phiên bản pyannote
-        "pytorch_lightning==2.1.0",  # Cố định phiên bản pytorch_lightning
-        "whisperx==3.1.1",  # Cố định phiên bản whisperx để đảm bảo tương thích
+        "pyannote.audio==3.1.1",
+        "pytorch_lightning==2.1.0",
+        "whisperx==3.1.1",
     ]
     
     for dep in dependencies:
         try:
+            # Kiểm tra nếu đã có thư viện
             if "numpy" in dep:
                 import numpy
-                print(f"NumPy version: {numpy.__version__}")
             elif "transformers" in dep:
-                from transformers import __version__ as transformers_version
-                print(f"Transformers version: {transformers_version}")
-                # Kiểm tra phiên bản transformers
                 from transformers import pipeline
-            elif "accelerate" in dep:
-                import accelerate
             elif "whisperx" in dep:
                 import whisperx
+            else:
+                # Thử import tên gói
+                dep_name = dep.split('==')[0]
+                __import__(dep_name)
+                
         except ImportError:
             print(f"Đang cài đặt {dep}...")
-            try:
-                import subprocess
-                subprocess.check_call([sys.executable, "-m", "pip", "install", dep, "--ignore-installed"])
-                print(f"Đã cài đặt {dep}")
-            except Exception as install_error:
-                print(f"Lỗi khi cài đặt {dep}: {str(install_error)}")
-                print("Thử phương pháp cài đặt thay thế...")
-                try:
-                    # Thử cài đặt không chỉ định phiên bản nếu cài đặt cụ thể thất bại
-                    dep_name = dep.split('==')[0] if '==' in dep else dep
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", dep_name])
-                    print(f"Đã cài đặt {dep_name} (không chỉ định phiên bản)")
-                except Exception as alt_error:
-                    print(f"Không thể cài đặt {dep_name}: {str(alt_error)}")
-                    # Tiếp tục vì có thể thư viện đã được cài đặt trước đó
+            import subprocess
+            subprocess.check_call([sys.executable, "-m", "pip", "install", dep], 
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
 
 def correct_transcript(corrector, transcript):
     """
@@ -109,10 +75,6 @@ def transcribe_audio(video_path, transcriber, corrector):
         return ""
 
 class KaggleFallbackTranscriber:
-    """
-    Lớp fallback cho transcriber khi chạy trên Kaggle gặp lỗi
-    Sử dụng phương pháp transcribe đơn giản hơn
-    """
     def __init__(self, model="base", device="cpu"):
         self.model_name = model
         self.device = device
@@ -147,9 +109,6 @@ class KaggleFallbackTranscriber:
             return {"segments": [{"text": ""}]}
 
 def load_audio_fallback(audio_path):
-    """
-    Tải âm thanh sử dụng các phương pháp dự phòng khác nhau
-    """
     try:
         try:
             # Thử cách 1: Sử dụng whisperx
@@ -180,17 +139,6 @@ def load_audio_fallback(audio_path):
         return np.zeros(1600)  # Return empty audio
 
 def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
-    """
-    Xử lý ASR cho một bài học cụ thể
-    
-    Args:
-        lesson_path: Đường dẫn đến thư mục bài học
-        transcript_folder: Thư mục đầu ra cho bản ghi âm
-        lesson_name: Tên bài học (tùy chọn, mặc định lấy từ tên thư mục)
-        
-    Returns:
-        dict: Kết quả của quá trình xử lý
-    """
     try:
         if not os.path.exists(lesson_path):
             return {"status": "error", "message": f"Không tìm thấy thư mục bài học: {lesson_path}"}

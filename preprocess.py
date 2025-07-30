@@ -323,9 +323,9 @@ def image_captioning(argv):
 def asr(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
-    parser.add_argument("input_video_dir", type=str, help="Directory containing video files")
-    parser.add_argument("output_transcript_dir", type=str, help="Directory to save transcript files")
-    parser.add_argument("--lesson_name", type=str, help="Specific lesson name to process when mode is 'lesson'")
+    parser.add_argument("input_video_dir", type=str)
+    parser.add_argument("output_transcript_dir", type=str)
+    parser.add_argument("--lesson_name", type=str)
     
     args = parser.parse_args(argv)
     
