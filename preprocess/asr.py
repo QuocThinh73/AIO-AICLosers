@@ -10,102 +10,50 @@ def install_dependencies():
     import platform
     import os
     
-    print("Bắt đầu cài đặt thư viện cho ASR...")
+    print("Bắt đầu cài đặt thư viện cho ASR trong môi trường Google Colab...")
     
-    # Kiểm tra nếu đang chạy trên Google Colab
-    is_colab = 'google.colab' in sys.modules
-    if is_colab:
-        print("Phát hiện môi trường Google Colab. Cài đặt các phụ thuộc tương thích.")
-        
-        # Khi chạy trên Colab, sử dụng lệnh shell trực tiếp để đảm bảo thông báo rõ ràng
-        print("\n=== Cài đặt PyTorch phiên bản tương thích với WhisperX... ===\n")
-        # Cài đặt PyTorch 1.13.1 với CUDA 11.7 cho Google Colab
-        try:
-            os.system(f"{sys.executable} -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 -f https://download.pytorch.org/whl/torch_stable.html")
-        except:
-            # Nếu lỗi, cố gắng cài đặt phiên bản không có CUDA
-            print("Lỗi cài đặt PyTorch với CUDA. Thử phiên bản CPU...")
-            os.system(f"{sys.executable} -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1")
-        
-        print("\n=== Cài đặt các gói phụ thuộc cơ bản... ===\n")
-        # Cài đặt các gói phụ thuộc cần thiết
-        os.system(f"{sys.executable} -m pip install numpy==1.20.3 ffmpeg-python transformers==4.26.1 huggingface_hub==0.12.1 accelerate==0.17.1 librosa==0.9.1 setuptools-rust")
-        
-        print("\n=== Cài đặt pyannote.audio tương thích với WhisperX... ===\n")
-        # Gỡ cài đặt phiên bản hiện tại nếu có
-        os.system(f"{sys.executable} -m pip uninstall -y pyannote.audio")
-        # Thử cài đặt phiên bản 0.0.1 hoặc phiên bản 0.x nếu không tìm thấy 0.0.1
-        result = os.system(f"{sys.executable} -m pip install pyannote.audio==0.0.1")
-        if result != 0:
-            print("Không tìm thấy pyannote.audio phiên bản 0.0.1. Thử với phiên bản 0.x...")
-            os.system(f"{sys.executable} -m pip install pyannote.audio>=0.0.1,<1.0.0")
-        
-        print("\n=== Cài đặt WhisperX... ===\n")
-        # Gỡ cài đặt phiên bản hiện tại nếu có
-        os.system(f"{sys.executable} -m pip uninstall -y whisperx")
-        # Cài đặt WhisperX từ GitHub
-        result = os.system(f"{sys.executable} -m pip install git+https://github.com/m-bain/whisperx.git@v3.1.1")
-        if result != 0:
-            print("Không thể cài đặt WhisperX từ GitHub. Thử cài từ PyPI...")
-            os.system(f"{sys.executable} -m pip install whisperx==3.1.1")
-        
-        print("\n=== Cài đặt cuDNN... ===\n")
-        # Cài đặt cuDNN
-        os.system("apt-get update -qq")
-        # Thử cài đặt phiên bản cụ thể trước
-        result = os.system("apt-get install -qq libcudnn8=8.1.0.77-1+cuda11.2")
-        if result != 0:
-            # Nếu không tìm thấy phiên bản cụ thể, thử cài phiên bản mặc định
-            print("Không tìm thấy libcudnn8 phiên bản 8.1.0.77. Cài đặt phiên bản mặc định...")
-            os.system("apt-get install -qq libcudnn8")
-        
-        # Kiểm tra và thông báo về trạng thái CUDA
-        try:
-            import torch
-            print(f"\n=== Thông tin PyTorch và CUDA ===\n")
-            print(f"PyTorch phiên bản: {torch.__version__}")
-            print(f"CUDA khả dụng: {torch.cuda.is_available()}")
-            if torch.cuda.is_available():
-                print(f"CUDA phiên bản: {torch.version.cuda}")
-                print(f"Thiết bị CUDA: {torch.cuda.get_device_name(0)}")
-        except Exception as e:
-            print(f"Lỗi khi kiểm tra thông tin PyTorch: {str(e)}")
-    else:
-        # Cài đặt cho môi trường không phải Colab (ẩn output để gọn hơn)
-        print("Cài đặt các thư viện trong môi trường không phải Colab...")
-        
-        # Cài đặt PyTorch
-        try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "torch==1.13.1", "torchvision==0.14.1", "torchaudio==0.13.1"],
-                stdout=subprocess.DEVNULL
-            )
-            print("  [✓] Đã cài đặt PyTorch")
-        except Exception as e:
-            print(f"  [✗] Lỗi khi cài đặt PyTorch: {str(e)}")
-        
-        # Cài đặt các gói phụ thuộc
-        dependencies = [
-            "numpy==1.20.3",
-            "ffmpeg-python",
-            "transformers==4.26.1",
-            "huggingface_hub==0.12.1",
-            "accelerate==0.17.1",
-            "librosa==0.9.1",
-            "setuptools-rust",
-            "pyannote.audio>=0.0.1,<1.0.0",
-            "whisperx"
-        ]
-        
-        for dep in dependencies:
-            try:
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", "-U", dep],
-                    stdout=subprocess.DEVNULL
-                )
-                print(f"  [✓] Đã cài đặt {dep}")
-            except Exception as e:
-                print(f"  [✗] Lỗi khi cài đặt {dep}: {str(e)}")
+   
+    print("\n=== Cài đặt PyTorch phiên bản tương thích với WhisperX... ===\n")
+    try:
+        os.system(f"{sys.executable} -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 -f https://download.pytorch.org/whl/torch_stable.html")
+    except:
+        print("Lỗi cài đặt PyTorch với CUDA. Thử phiên bản CPU...")
+        os.system(f"{sys.executable} -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1")
+    
+    print("\n=== Cài đặt các gói phụ thuộc cơ bản... ===\n")
+    os.system(f"{sys.executable} -m pip install numpy==1.20.3 ffmpeg-python transformers==4.26.1 huggingface_hub==0.12.1 accelerate==0.17.1 librosa==0.9.1 setuptools-rust")
+    
+    print("\n=== Cài đặt pyannote.audio tương thích với WhisperX... ===\n")
+    os.system(f"{sys.executable} -m pip uninstall -y pyannote.audio")
+    result = os.system(f"{sys.executable} -m pip install pyannote.audio==0.0.1")
+    if result != 0:
+        print("Không tìm thấy pyannote.audio phiên bản 0.0.1. Thử với phiên bản 0.x...")
+        os.system(f"{sys.executable} -m pip install pyannote.audio>=0.0.1,<1.0.0")
+    
+    print("\n=== Cài đặt WhisperX... ===\n")
+    os.system(f"{sys.executable} -m pip uninstall -y whisperx")
+    result = os.system(f"{sys.executable} -m pip install git+https://github.com/m-bain/whisperx.git@v3.1.1")
+    if result != 0:
+        os.system(f"{sys.executable} -m pip install whisperx==3.1.1")
+    
+    print("\n=== Cài đặt cuDNN... ===\n")
+    os.system("apt-get update -qq")
+    result = os.system("apt-get install -qq libcudnn8=8.1.0.77-1+cuda11.2")
+    if result != 0:
+        print("Không tìm thấy libcudnn8 phiên bản 8.1.0.77. Cài đặt phiên bản mặc định...")
+        os.system("apt-get install -qq libcudnn8")
+    
+    # Kiểm tra và thông báo về trạng thái CUDA
+    try:
+        import torch
+        print(f"\n=== Thông tin PyTorch và CUDA ===\n")
+        print(f"PyTorch phiên bản: {torch.__version__}")
+        print(f"CUDA khả dụng: {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
+            print(f"CUDA phiên bản: {torch.version.cuda}")
+            print(f"Thiết bị CUDA: {torch.cuda.get_device_name(0)}")
+    except Exception as e:
+        print(f"Lỗi khi kiểm tra thông tin PyTorch: {str(e)}")
     
     print("\nHoàn tất cài đặt các thư viện cho ASR.")
     print("\nLưu ý: Nếu gặp lỗi về CUDA/cuDNN, hãy thử sử dụng CPU thay thế:")
