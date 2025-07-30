@@ -177,14 +177,44 @@ def remove_noise_keyframe(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
     parser.add_argument("keyframe_dir", type=str)
+    parser.add_argument("news_anchor_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
     
     args = parser.parse_args(argv)
     
-    # Check error TODO
+    # Check error
+    if not os.path.exists(args.keyframe_dir):
+        raise ValueError("Keyframe directory does not exist")
+    
+    if not os.path.exists(args.news_anchor_dir):
+        raise ValueError("News anchor directory does not exist")
+    
+    if args.mode == "lesson" and not args.lesson_name:
+        raise ValueError("Lesson name is required for lesson mode")
         
-    # Main process TODO
-    from preprocess.remove_noise_keyframe import remove_noise_keyframe
+    if args.mode == "lesson":
+        lesson_path = os.path.join(args.news_anchor_dir, args.lesson_name)
+        if not os.path.exists(lesson_path):
+            raise ValueError(f"News anchor directory for lesson {args.lesson_name} does not exist")
+    
+    # Main process
+    from preprocess.remove_noise_keyframe import remove_noise
+    
+    result = remove_noise(
+        keyframes_dir=args.keyframe_dir,
+        news_anchor_dir=args.news_anchor_dir,
+        mode=args.mode,
+        lesson_name=args.lesson_name
+    )
+    
+    if result["status"] == "success":
+        print(result["message"])
+        print(f"Videos processed: {result['videos_processed']}")
+        print(f"Total keyframes: {result['total_keyframes']}")
+        print(f"Removed keyframes: {result['removed_keyframes']}")
+    else:
+        print(f"Error: {result['message']}")
+        raise ValueError(result["message"])
 
 def object_detection(argv):
     parser = argparse.ArgumentParser()
@@ -381,7 +411,12 @@ def save_ocr_elasticsearch(argv):
         print(f"Error: {result['message']}")
     else:
         print(f"Success: {result['message']}")
-
+def save_embedding_faiss(argv):
+    #TODO
+    pass
+def save_caption_qdrant(argv):
+    #TODO
+    pass
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
     "keyframe_extraction": keyframe_extraction,
@@ -396,6 +431,8 @@ TASKS = {
     "ocr": ocr,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
+    "save_embedding_faiss": save_embedding_faiss,
+    "save_caption_qdrant": save_caption_qdrant,
 }
 
 if __name__ == "__main__":
