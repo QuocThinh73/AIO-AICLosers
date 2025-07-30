@@ -17,6 +17,9 @@ def install_dependencies():
     print("\n=== Cài đặt WhisperX... ===\n") 
     os.system(f"{sys.executable} -m pip install whisperx")
     
+    os.system("apt-get update -qq")
+    os.system("apt-get install -qq libcudnn8")
+    
     try:
         import torch
         print(f"\n=== Thông tin PyTorch và CUDA ===\n")
@@ -108,8 +111,15 @@ def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
             transcriber = whisperx.load_model("large-v2", device=device, compute_type="int8")
             print(f"Đã khởi tạo thành công mô hình WhisperX trên {device}")
         except Exception as e:
-            return {"status": "error", "message": f"Không thể khởi tạo mô hình WhisperX: {str(e)}"}
-        
+            print(f"Lỗi khi khởi tạo mô hình WhisperX với GPU: {str(e)}")
+            print("Thử lại với CPU...")
+            try:
+                device = "cpu"
+                transcriber = whisperx.load_model("large-v2", device=device, compute_type="float32")
+                print(f"Đã khởi tạo thành công mô hình WhisperX trên CPU")
+            except Exception as e2:
+                return {"status": "error", "message": f"Không thể khởi tạo mô hình WhisperX trên CPU: {str(e2)}"}
+         
         # Khởi tạo bộ hiệu chỉnh tiếng Việt
         print("Đang khởi tạo mô hình hiệu chỉnh tiếng Việt...")
         try:
