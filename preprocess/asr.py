@@ -5,33 +5,111 @@ import json
 from tqdm import tqdm
 
 def install_dependencies():
-    """Cài đặt các thư viện cần thiết cho ASR"""
+    """Cài đặt các thư viện và phụ thuộc cần thiết cho ASR"""
+    import subprocess
+    import platform
+    import os
+    
+    # Kiểm tra nếu đang chạy trên Google Colab
+    is_colab = 'google.colab' in sys.modules
+    if is_colab:
+        print("Phát hiện môi trường Google Colab. Cài đặt các phụ thuộc tương thích.")
+    
     # Danh sách các gói cần thiết cho WhisperX
     dependencies = [
-        "whisperx",
+        "torch",  # Cài đặt PyTorch trước vì các gói khác phụ thuộc vào nó
+        "torchaudio",
         "transformers",
         "accelerate",
+        "ffmpeg-python",
+        "pyannote.audio",
+        "whisperx",
     ]
     
     print("Kiểm tra và cài đặt thư viện...")
+    
+    # Kiểm tra CUDA availability trước
+    try:
+        import torch
+        cuda_available = torch.cuda.is_available()
+        if cuda_available:
+            cuda_version = torch.version.cuda
+            print(f"  [✓] CUDA đã có sẵn (phiên bản {cuda_version})")
+        else:
+            print("  [✗] CUDA không khả dụng - WhisperX sẽ chạy chậ hơn trên CPU")
+    except:
+        print("  [✗] Chưa cài đặt PyTorch")
+    
+    # Cấu hình CUDA cho tensorflow nếu đang dùng Colab
+    if is_colab:
+        print("  Cấu hình môi trường CUDA trên Colab...")
+        try:
+            # Enable TF32 for PyTorch to address the warning
+            import torch
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+            print("  [✓] Đã kích hoạt TensorFloat-32 (TF32) cho PyTorch")
+        except:
+            pass
+    
+    # Cài đặt các gói phụ thuộc
     for dep in dependencies:
         try:
             # Thử import gói
-            __import__(dep)
+            if dep == "ffmpeg-python":
+                import ffmpeg
+            else:
+                __import__(dep.split('-')[0])
             print(f"  [✓] {dep} đã được cài đặt")
         except ImportError:
             print(f"  [✗] Đang cài đặt {dep}...")
-            import subprocess
             try:
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", dep],
-                    stdout=subprocess.DEVNULL
-                )
+                # Nếu là PyTorch, sử dụng lệnh cài đặt riêng cho Colab
+                if dep == "torch" and is_colab:
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install", "torch==2.0.1+cu118", "torchvision==0.15.2+cu118", "-f", "https://download.pytorch.org/whl/torch_stable.html"],
+                        stdout=subprocess.DEVNULL
+                    )
+                else:
+                    subprocess.check_call(
+                        [sys.executable, "-m", "pip", "install", dep],
+                        stdout=subprocess.DEVNULL
+                    )
                 print(f"      Đã cài đặt thành công {dep}")
             except Exception as e:
                 print(f"      Lỗi khi cài đặt {dep}: {str(e)}")
-                print("      Vui lòng thử cài đặt thủ công.")
-    print("Hoàn tất kiểm tra thư viện.")
+    
+    # Kiểm tra libcudnn_ops_infer.so.8 nếu đang chạy trên Colab
+    if is_colab:
+        try:
+            # Cài đặt cudnn nếu cần
+            print("  Kiểm tra cuDNN...")
+            missing_cudnn = False
+            
+            # Kiểm tra xem có libcudnn_ops_infer.so.8 chưa
+            if not os.path.exists('/usr/lib/x86_64-linux-gnu/libcudnn_ops_infer.so.8'):
+                missing_cudnn = True
+            
+            if missing_cudnn:
+                print("  [✗] Thiếu thư viện cuDNN. Đang cài đặt...")  
+                subprocess.check_call(
+                    ["apt-get", "update", "-qq"], 
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                subprocess.check_call(
+                    ["apt-get", "install", "-qq", "libcudnn8"], 
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                print("      Đã cài đặt libcudnn8")
+            else:
+                print("  [✓] cuDNN đã được cài đặt")  
+        except Exception as e:
+            print(f"      Lỗi khi kiểm tra/cài đặt cuDNN: {str(e)}")
+            print("      Bạn có thể cần chạy: !apt-get update && apt-get install -y libcudnn8")
+    
+    print("Hoàn tất kiểm tra và cài đặt thư viện.")
     return True
 
 def correct_transcript(corrector, transcript):
