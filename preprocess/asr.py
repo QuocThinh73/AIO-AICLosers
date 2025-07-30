@@ -6,48 +6,17 @@ from tqdm import tqdm
 
 def install_dependencies():
     """Cài đặt các thư viện và phụ thuộc cần thiết cho ASR"""
-    import subprocess
-    import platform
     import os
     
-    print("Bắt đầu cài đặt thư viện cho ASR trong môi trường Google Colab...")
+    print("Bắt đầu cài đặt thư viện cho ASR trên Google Colab...")
     
-   
-    print("\n=== Cài đặt PyTorch phiên bản tương thích với WhisperX... ===\n")
-    try:
-        os.system(f"{sys.executable} -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 -f https://download.pytorch.org/whl/torch_stable.html")
-    except:
-        print("Lỗi cài đặt PyTorch với CUDA. Thử phiên bản CPU...")
-        os.system(f"{sys.executable} -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1")
+    # Sử dụng cách cài đặt đơn giản hơn, trực tiếp tương tự như notebook gốc
+    print("\n=== Cài đặt transformers và accelerate... ===\n")
+    os.system(f"{sys.executable} -m pip install transformers accelerate --quiet")
     
-    print("\n=== Cài đặt các gói phụ thuộc cơ bản... ===\n")
-    os.system(f"{sys.executable} -m pip install numpy==1.20.3 ffmpeg-python transformers==4.26.1 huggingface_hub==0.12.1 accelerate==0.17.1 librosa==0.9.1 setuptools-rust")
+    print("\n=== Cài đặt WhisperX... ===\n") 
+    os.system(f"{sys.executable} -m pip install whisperx")
     
-    print("\n=== Cài đặt pyannote.audio tương thích với WhisperX... ===\n")
-    os.system(f"{sys.executable} -m pip uninstall -y pyannote.audio")
-    result = os.system(f"{sys.executable} -m pip install pyannote.audio==0.0.1")
-    if result != 0:
-        print("Không tìm thấy pyannote.audio phiên bản 0.0.1. Thử với phiên bản 0.x...")
-        os.system(f"{sys.executable} -m pip install pyannote.audio>=0.0.1,<1.0.0")
-    
-    print("\n=== Cài đặt WhisperX... ===\n")
-    os.system(f"{sys.executable} -m pip uninstall -y whisperx")
-    result = os.system(f"{sys.executable} -m pip install git+https://github.com/m-bain/whisperx.git@v3.1.1")
-    if result != 0:
-        os.system(f"{sys.executable} -m pip install whisperx==3.1.1")
-    
-    print("\n=== Cài đặt transformers phiên bản tương thích với Wav2Vec2Processor... ===\n")
-    os.system(f"{sys.executable} -m pip uninstall -y transformers")
-    os.system(f"{sys.executable} -m pip install transformers==4.17.0")
-    
-    print("\n=== Cài đặt cuDNN... ===\n")
-    os.system("apt-get update -qq")
-    result = os.system("apt-get install -qq libcudnn8=8.1.0.77-1+cuda11.2")
-    if result != 0:
-        print("Không tìm thấy libcudnn8 phiên bản 8.1.0.77. Cài đặt phiên bản mặc định...")
-        os.system("apt-get install -qq libcudnn8")
-    
-    # Kiểm tra và thông báo về trạng thái CUDA
     try:
         import torch
         print(f"\n=== Thông tin PyTorch và CUDA ===\n")
