@@ -10,106 +10,107 @@ def install_dependencies():
     import platform
     import os
     
+    print("Bắt đầu cài đặt thư viện cho ASR...")
+    
     # Kiểm tra nếu đang chạy trên Google Colab
     is_colab = 'google.colab' in sys.modules
     if is_colab:
         print("Phát hiện môi trường Google Colab. Cài đặt các phụ thuộc tương thích.")
-    
-    # Danh sách các gói cần thiết cho WhisperX
-    dependencies = [
-        "torch",  # Cài đặt PyTorch trước vì các gói khác phụ thuộc vào nó
-        "torchaudio",
-        "transformers",
-        "accelerate",
-        "ffmpeg-python",
-        "pyannote.audio",
-        "whisperx",
-    ]
-    
-    print("Kiểm tra và cài đặt thư viện...")
-    
-    # Kiểm tra CUDA availability trước
-    try:
-        import torch
-        cuda_available = torch.cuda.is_available()
-        if cuda_available:
-            cuda_version = torch.version.cuda
-            print(f"  [✓] CUDA đã có sẵn (phiên bản {cuda_version})")
-        else:
-            print("  [✗] CUDA không khả dụng - WhisperX sẽ chạy chậ hơn trên CPU")
-    except:
-        print("  [✗] Chưa cài đặt PyTorch")
-    
-    # Cấu hình CUDA cho tensorflow nếu đang dùng Colab
-    if is_colab:
-        print("  Cấu hình môi trường CUDA trên Colab...")
+        
+        # Khi chạy trên Colab, sử dụng lệnh shell trực tiếp để đảm bảo thông báo rõ ràng
+        print("\n=== Cài đặt PyTorch phiên bản tương thích với WhisperX... ===\n")
+        # Cài đặt PyTorch 1.13.1 với CUDA 11.7 cho Google Colab
         try:
-            # Enable TF32 for PyTorch to address the warning
-            import torch
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-            print("  [✓] Đã kích hoạt TensorFloat-32 (TF32) cho PyTorch")
+            os.system(f"{sys.executable} -m pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 -f https://download.pytorch.org/whl/torch_stable.html")
         except:
-            pass
-    
-    # Cài đặt các gói phụ thuộc
-    for dep in dependencies:
+            # Nếu lỗi, cố gắng cài đặt phiên bản không có CUDA
+            print("Lỗi cài đặt PyTorch với CUDA. Thử phiên bản CPU...")
+            os.system(f"{sys.executable} -m pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1")
+        
+        print("\n=== Cài đặt các gói phụ thuộc cơ bản... ===\n")
+        # Cài đặt các gói phụ thuộc cần thiết
+        os.system(f"{sys.executable} -m pip install numpy==1.20.3 ffmpeg-python transformers==4.26.1 huggingface_hub==0.12.1 accelerate==0.17.1 librosa==0.9.1 setuptools-rust")
+        
+        print("\n=== Cài đặt pyannote.audio tương thích với WhisperX... ===\n")
+        # Gỡ cài đặt phiên bản hiện tại nếu có
+        os.system(f"{sys.executable} -m pip uninstall -y pyannote.audio")
+        # Thử cài đặt phiên bản 0.0.1 hoặc phiên bản 0.x nếu không tìm thấy 0.0.1
+        result = os.system(f"{sys.executable} -m pip install pyannote.audio==0.0.1")
+        if result != 0:
+            print("Không tìm thấy pyannote.audio phiên bản 0.0.1. Thử với phiên bản 0.x...")
+            os.system(f"{sys.executable} -m pip install pyannote.audio>=0.0.1,<1.0.0")
+        
+        print("\n=== Cài đặt WhisperX... ===\n")
+        # Gỡ cài đặt phiên bản hiện tại nếu có
+        os.system(f"{sys.executable} -m pip uninstall -y whisperx")
+        # Cài đặt WhisperX từ GitHub
+        result = os.system(f"{sys.executable} -m pip install git+https://github.com/m-bain/whisperx.git@v3.1.1")
+        if result != 0:
+            print("Không thể cài đặt WhisperX từ GitHub. Thử cài từ PyPI...")
+            os.system(f"{sys.executable} -m pip install whisperx==3.1.1")
+        
+        print("\n=== Cài đặt cuDNN... ===\n")
+        # Cài đặt cuDNN
+        os.system("apt-get update -qq")
+        # Thử cài đặt phiên bản cụ thể trước
+        result = os.system("apt-get install -qq libcudnn8=8.1.0.77-1+cuda11.2")
+        if result != 0:
+            # Nếu không tìm thấy phiên bản cụ thể, thử cài phiên bản mặc định
+            print("Không tìm thấy libcudnn8 phiên bản 8.1.0.77. Cài đặt phiên bản mặc định...")
+            os.system("apt-get install -qq libcudnn8")
+        
+        # Kiểm tra và thông báo về trạng thái CUDA
         try:
-            # Thử import gói
-            if dep == "ffmpeg-python":
-                import ffmpeg
-            else:
-                __import__(dep.split('-')[0])
-            print(f"  [✓] {dep} đã được cài đặt")
-        except ImportError:
-            print(f"  [✗] Đang cài đặt {dep}...")
-            try:
-                # Nếu là PyTorch, sử dụng lệnh cài đặt riêng cho Colab
-                if dep == "torch" and is_colab:
-                    subprocess.check_call(
-                        [sys.executable, "-m", "pip", "install", "torch==2.0.1+cu118", "torchvision==0.15.2+cu118", "-f", "https://download.pytorch.org/whl/torch_stable.html"],
-                        stdout=subprocess.DEVNULL
-                    )
-                else:
-                    subprocess.check_call(
-                        [sys.executable, "-m", "pip", "install", dep],
-                        stdout=subprocess.DEVNULL
-                    )
-                print(f"      Đã cài đặt thành công {dep}")
-            except Exception as e:
-                print(f"      Lỗi khi cài đặt {dep}: {str(e)}")
-    
-    # Kiểm tra libcudnn_ops_infer.so.8 nếu đang chạy trên Colab
-    if is_colab:
-        try:
-            # Cài đặt cudnn nếu cần
-            print("  Kiểm tra cuDNN...")
-            missing_cudnn = False
-            
-            # Kiểm tra xem có libcudnn_ops_infer.so.8 chưa
-            if not os.path.exists('/usr/lib/x86_64-linux-gnu/libcudnn_ops_infer.so.8'):
-                missing_cudnn = True
-            
-            if missing_cudnn:
-                print("  [✗] Thiếu thư viện cuDNN. Đang cài đặt...")  
-                subprocess.check_call(
-                    ["apt-get", "update", "-qq"], 
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-                subprocess.check_call(
-                    ["apt-get", "install", "-qq", "libcudnn8"], 
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-                print("      Đã cài đặt libcudnn8")
-            else:
-                print("  [✓] cuDNN đã được cài đặt")  
+            import torch
+            print(f"\n=== Thông tin PyTorch và CUDA ===\n")
+            print(f"PyTorch phiên bản: {torch.__version__}")
+            print(f"CUDA khả dụng: {torch.cuda.is_available()}")
+            if torch.cuda.is_available():
+                print(f"CUDA phiên bản: {torch.version.cuda}")
+                print(f"Thiết bị CUDA: {torch.cuda.get_device_name(0)}")
         except Exception as e:
-            print(f"      Lỗi khi kiểm tra/cài đặt cuDNN: {str(e)}")
-            print("      Bạn có thể cần chạy: !apt-get update && apt-get install -y libcudnn8")
+            print(f"Lỗi khi kiểm tra thông tin PyTorch: {str(e)}")
+    else:
+        # Cài đặt cho môi trường không phải Colab (ẩn output để gọn hơn)
+        print("Cài đặt các thư viện trong môi trường không phải Colab...")
+        
+        # Cài đặt PyTorch
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "torch==1.13.1", "torchvision==0.14.1", "torchaudio==0.13.1"],
+                stdout=subprocess.DEVNULL
+            )
+            print("  [✓] Đã cài đặt PyTorch")
+        except Exception as e:
+            print(f"  [✗] Lỗi khi cài đặt PyTorch: {str(e)}")
+        
+        # Cài đặt các gói phụ thuộc
+        dependencies = [
+            "numpy==1.20.3",
+            "ffmpeg-python",
+            "transformers==4.26.1",
+            "huggingface_hub==0.12.1",
+            "accelerate==0.17.1",
+            "librosa==0.9.1",
+            "setuptools-rust",
+            "pyannote.audio>=0.0.1,<1.0.0",
+            "whisperx"
+        ]
+        
+        for dep in dependencies:
+            try:
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "-U", dep],
+                    stdout=subprocess.DEVNULL
+                )
+                print(f"  [✓] Đã cài đặt {dep}")
+            except Exception as e:
+                print(f"  [✗] Lỗi khi cài đặt {dep}: {str(e)}")
     
-    print("Hoàn tất kiểm tra và cài đặt thư viện.")
+    print("\nHoàn tất cài đặt các thư viện cho ASR.")
+    print("\nLưu ý: Nếu gặp lỗi về CUDA/cuDNN, hãy thử sử dụng CPU thay thế:")
+    print("  model = whisperx.load_model('large-v2', device='cpu')")
+    
     return True
 
 def correct_transcript(corrector, transcript):
