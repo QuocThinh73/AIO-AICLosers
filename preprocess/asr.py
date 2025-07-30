@@ -36,6 +36,10 @@ def install_dependencies():
     if result != 0:
         os.system(f"{sys.executable} -m pip install whisperx==3.1.1")
     
+    print("\n=== Cài đặt transformers phiên bản tương thích với Wav2Vec2Processor... ===\n")
+    os.system(f"{sys.executable} -m pip uninstall -y transformers")
+    os.system(f"{sys.executable} -m pip install transformers==4.17.0")
+    
     print("\n=== Cài đặt cuDNN... ===\n")
     os.system("apt-get update -qq")
     result = os.system("apt-get install -qq libcudnn8=8.1.0.77-1+cuda11.2")
