@@ -36,23 +36,23 @@ Quy trình Preprocess.
          ┌────────────┴────────────┐
          ↓                         ↓
 ┌───────────────────┐    ┌───────────────────┐
-│ Phát hiện đối tượng│    │ OCR               │
+│ Image Captioning  │    │        OCR        │
 └────────┬──────────┘    └────────┬──────────┘
          │                        │
          ↓                        ↓
 ┌───────────────────┐    ┌───────────────────┐
-│ Chú thích hình ảnh│    │ Lưu OCR vào ES   │
+│ Object detection  │    │  Lưu OCR vào ES   │
 └────────┬──────────┘    └────────┬──────────┘
          │                        │
          ↓                        │
 ┌───────────────────┐             │
-│ Lưu phát hiện vào │             │
+│ Lưu detection vào │             │
 │ Elasticsearch     │             │
 └────────┬──────────┘             │
          │                        │
          ↓                        ↓
 ┌───────────────────────────────────────────┐
-│ Xây dựng tệp ánh xạ (build_mapping_json) │
+│ Xây dựng tệp ánh xạ (build_mapping_json)  │
 └───────────────────────────────────────────┘
 ```
 
@@ -260,22 +260,12 @@ python preprocess.py build_mapping_json --output_dir /path/to/output_dir
 
 ## Lưu ý quan trọng
 
-1. **GPU và CUDA**: Các tác vụ như phát hiện đoạn cắt, phát hiện người dẫn, object detection, OCR và image captioning đều yêu cầu GPU để đạt hiệu suất tốt.
+1. **FFmpeg**: Tác vụ trích xuất video phụ yêu cầu FFmpeg đã được cài đặt. Hãy cung cấp đường dẫn đến FFmpeg binary thông qua tham số `--ffmpeg_bin`.
 
-2. **FFmpeg**: Tác vụ trích xuất video phụ yêu cầu FFmpeg đã được cài đặt. Hãy cung cấp đường dẫn đến FFmpeg binary thông qua tham số `--ffmpeg_bin`.
+2. **Elasticsearch**: Các tác vụ lưu dữ liệu vào Elasticsearch yêu cầu một máy chủ Elasticsearch đang chạy.
 
-3. **Elasticsearch**: Các tác vụ lưu dữ liệu vào Elasticsearch yêu cầu một máy chủ Elasticsearch đang chạy.
+3. **Thứ tự thực hiện**: Đảm bảo tuân theo thứ tự quy trình như đã nêu ở trên, vì các bước sau thường phụ thuộc vào đầu ra của các bước trước.
 
-4. **Thứ tự thực hiện**: Đảm bảo tuân theo thứ tự quy trình như đã nêu ở trên, vì các bước sau thường phụ thuộc vào đầu ra của các bước trước.
+4. **ASR trên Colab**: Đối với ASR, Google Colab là lựa chọn tốt nhất vì nó đã được cài đặt sẵn cuDNN mà WhisperX cần.
 
-5. **ASR trên Colab**: Đối với ASR, Google Colab là lựa chọn tốt nhất vì nó đã được cài đặt sẵn cuDNN mà WhisperX cần.
-
-6. **I/O Bound vs. Compute Bound**: Các tác vụ như news_segmentation và extract_subvideo chủ yếu là I/O bound và không cần GPU, nên chạy cục bộ hiệu quả hơn.
-
-## Các vấn đề đã biết
-
-1. **Kaggle và đường dẫn chỉ đọc**: Kaggle không cho phép ghi vào thư mục `/kaggle/input`. Đảm bảo đặt đường dẫn đầu ra trong `/kaggle/working`.
-
-2. **Cài đặt thư viện trên Kaggle**: Các module đã được thiết kế để tự động cài đặt các phụ thuộc cần thiết, nhưng một số (như GroundingDINO) có thể yêu cầu thêm bước cài đặt thủ công.
-
-3. **Lỗi WhisperX/cuDNN**: Nếu gặp lỗi cuDNN khi chạy ASR, hãy thử chạy trên Google Colab hoặc đảm bảo cuDNN được cài đặt đúng cách nếu chạy cục bộ.
+5. **I/O Bound vs. Compute Bound**: Các tác vụ như news_segmentation và extract_subvideo chủ yếu là I/O bound và không cần GPU, nên chạy cục bộ hiệu quả hơn.
