@@ -236,7 +236,7 @@ python preprocess.py save_ocr_elasticsearch --input_dir /path/to/ocr --es_host l
 **Môi trường**: Local
 
 ```bash
-python preprocess.py save_embedding_faiss --input_keyframe_dir /path/to/keyframes --output_dir /path/to/faiss_index
+python preprocess.py save_embedding_faiss /path/to/keyframes /path/to/faiss_index
 ```
 
 ### 14. Lưu caption vào Qdrant
@@ -244,7 +244,7 @@ python preprocess.py save_embedding_faiss --input_keyframe_dir /path/to/keyframe
 **Môi trường**: Local
 
 ```bash
-python preprocess.py save_caption_qdrant --input_dir /path/to/captions --qdrant_url http://localhost:6333
+python preprocess.py save_caption_qdrant /path/to/captions /path/to/keyframes /path/to/output_dir --collection_name captions
 ```
 
 ### 15. Xây dựng tệp ánh xạ (Build Mapping JSON)

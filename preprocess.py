@@ -468,10 +468,10 @@ def save_embedding_faiss(argv):
         sys.exit(1)
 def save_caption_qdrant(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("caption_dir", type=str, help="Directory containing caption files")
-    parser.add_argument("keyframe_dir", type=str, help="Directory containing keyframe images")
-    parser.add_argument("output_dir", type=str, help="Directory to store output files including mapping file")
-    parser.add_argument("--collection_name", type=str, default="captions", help="Name of the Qdrant collection")
+    parser.add_argument("caption_dir", type=str)
+    parser.add_argument("keyframe_dir", type=str)
+    parser.add_argument("output_dir", type=str)
+    parser.add_argument("--collection_name", type=str, default="captions")
     
     args = parser.parse_args(argv)
     
