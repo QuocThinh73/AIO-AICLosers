@@ -86,133 +86,139 @@ cd AIO-AIClosers
 
 ### 1. Phát hiện đoạn cắt (Shot Boundary Detection)
 
-Tính năng này tốt nhất nên chạy trên Kaggle (có GPU).
+**Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py shot_boundary_detection --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py shot_boundary_detection --mode all --input_video_dir /path/to/videos --output_dir /path/to/output
 
-# Chạy cho tất cả các lesson
-python preprocess.py shot_boundary_detection --input_video_dir /path/to/videos --output_dir /path/to/output --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py shot_boundary_detection --mode lesson --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01
 
 # Chạy cho một video cụ thể
-python preprocess.py shot_boundary_detection --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01 --video_name V001 --mode video
+python preprocess.py shot_boundary_detection --mode video --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01 --video_name V001
 ```
 
 ### 2. Trích xuất khung hình (Keyframe Extraction)
 
-```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py keyframe_extraction --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01 --mode lesson
+**Môi trường**: Local
 
-# Chạy cho tất cả các lesson
-python preprocess.py keyframe_extraction --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --mode all
+```bash
+# Chạy cho tất cả các bài học
+python preprocess.py keyframe_extraction --mode all --input_shot_dir /path/to/shots --output_dir /path/to/keyframes
+
+# Chạy cho một bài học cụ thể
+python preprocess.py keyframe_extraction --mode lesson --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01
 
 # Chạy cho một video cụ thể
-python preprocess.py keyframe_extraction --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01 --video_name V001 --mode video
+python preprocess.py keyframe_extraction --mode video --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01 --video_name V001
 ```
 
 ### 3. Phát hiện người dẫn tin (News Anchor Detection)
 
-Tính năng này tốt nhất nên chạy trên Kaggle (có GPU).
+**Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py news_anchor_detection --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py news_anchor_detection --mode all --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor
 
-# Chạy cho tất cả các lesson
-python preprocess.py news_anchor_detection --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py news_anchor_detection --mode lesson --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor --lesson_name L01
 ```
 
 ### 4. Phân đoạn tin tức (News Segmentation)
 
-Tính năng này nên chạy cục bộ (local).
+**Môi trường**: Local
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py segment_news --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py segment_news --mode all --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments
 
-# Chạy cho tất cả các lesson
-python preprocess.py segment_news --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py segment_news --mode lesson --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments --lesson_name L01
 ```
 
 ### 5. Trích xuất video phụ (Extract Subvideo)
 
-Tính năng này nên chạy cục bộ (local) do cần FFmpeg.
+**Môi trường**: Local (cần FFmpeg)
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py extract_subvideo --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py extract_subvideo --mode all --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg
 
-# Chạy cho tất cả các lesson
-python preprocess.py extract_subvideo --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py extract_subvideo --mode lesson --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg --lesson_name L01
 ```
 
 ### 6. ASR (Automatic Speech Recognition)
 
-Tính năng này tốt nhất nên chạy trên Google Colab (có GPU và cuDNN).
+**Môi trường**: Google Colab (cần GPU và cuDNN)
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py asr --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py asr --mode all --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts
 
-# Chạy cho tất cả các lesson
-python preprocess.py asr --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py asr --mode lesson --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts --lesson_name L01
 ```
 
 ### 7. Lọc keyframe (Remove Noise Keyframe)
 
-```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py remove_noise_keyframe --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes --lesson_name L01 --mode lesson
+**Môi trường**: Local
 
-# Chạy cho tất cả các lesson
-python preprocess.py remove_noise_keyframe --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes --mode all
+```bash
+# Chạy cho tất cả các bài học
+python preprocess.py remove_noise_keyframe --mode all --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes
+
+# Chạy cho một bài học cụ thể
+python preprocess.py remove_noise_keyframe --mode lesson --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes --lesson_name L01
 ```
 
 ### 8. Phát hiện đối tượng (Object Detection)
 
-Tính năng này tốt nhất nên chạy trên Kaggle (có GPU).
+**Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py object_detection --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py object_detection --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections
 
-# Chạy cho tất cả các lesson
-python preprocess.py object_detection --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py object_detection --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01
 
 # Chạy cho một video cụ thể
-python preprocess.py object_detection --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001 --mode video
+python preprocess.py object_detection --mode video --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001
 
-# Chạy cho một keyframes cụ thể
-python preprocess.py object_detection --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001 --keyframe_name 000001.jpg --mode single
+# Chạy cho một khung hình cụ thể
+python preprocess.py object_detection --mode single --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001 --keyframe_name 000001.jpg
 ```
 
 ### 9. OCR (Optical Character Recognition)
 
-Tính năng này tốt nhất nên chạy trên Kaggle/Colab (có GPU).
+**Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho một lesson cụ thể
-python preprocess.py ocr --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr --lesson_name L01 --mode lesson
+# Chạy cho tất cả các bài học
+python preprocess.py ocr --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr
 
-# Chạy cho tất cả các lesson
-python preprocess.py ocr --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr --mode all
+# Chạy cho một bài học cụ thể
+python preprocess.py ocr --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr --lesson_name L01
 ```
 
 ### 10. Chú thích hình ảnh (Image Captioning)
 
-Tính năng này tốt nhất nên chạy trên Kaggle (có GPU).
+**Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho một bài học cụ thể
-python preprocess.py image_captioning --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions --lesson_name L01 --mode lesson
-
 # Chạy cho tất cả các bài học
-python preprocess.py image_captioning --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions --mode all
+python preprocess.py image_captioning --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions
+
+# Chạy cho một bài học cụ thể
+python preprocess.py image_captioning --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions --lesson_name L01
 ```
 
 ### 11. Lưu phát hiện vào Elasticsearch
+
+**Môi trường**: Local (cần Elasticsearch)
 
 ```bash
 python preprocess.py save_detection_elasticsearch --input_dir /path/to/detections --es_host localhost --es_port 9200
@@ -220,39 +226,37 @@ python preprocess.py save_detection_elasticsearch --input_dir /path/to/detection
 
 ### 12. Lưu OCR vào Elasticsearch
 
+**Môi trường**: Local (cần Elasticsearch)
+
 ```bash
 python preprocess.py save_ocr_elasticsearch --input_dir /path/to/ocr --es_host localhost --es_port 9200
 ```
 
 ### 13. Xây dựng tệp ánh xạ (Build Mapping JSON)
 
+**Môi trường**: Local/Kaggle/Colab
+
 ```bash
 python preprocess.py build_mapping_json --output_dir /path/to/output_dir
 ```
 
-## Các môi trường thực thi được khuyến nghị
+## Phân loại môi trường thực thi
 
-| Module | Local | Kaggle | Colab | GPU cần thiết |
-|--------|-------|--------|-------|-------------|
-| shot_boundary_detection | ✓ | ✓✓✓ | ✓✓ | Có |
-| keyframe_extraction | ✓✓✓ | ✓ | ✓ | Không |
-| news_anchor_detection | ✓ | ✓✓✓ | ✓✓ | Có |
-| news_segmentation | ✓✓✓ | ✓ | ✓ | Không |
-| extract_subvideo | ✓✓✓ | × | ✓ | Không (cần FFmpeg) |
-| asr | ✓ | ✓ | ✓✓✓ | Có (+ cuDNN) |
-| remove_noise_keyframe | ✓✓✓ | ✓ | ✓ | Không |
-| object_detection | ✓ | ✓✓✓ | ✓✓ | Có |
-| ocr | ✓ | ✓✓✓ | ✓✓ | Có |
-| image_captioning | ✓ | ✓✓✓ | ✓✓ | Có |
-| save_detection_elasticsearch | ✓✓✓ | ✓ | ✓ | Không (cần Elasticsearch) |
-| save_ocr_elasticsearch | ✓✓✓ | ✓ | ✓ | Không (cần Elasticsearch) |
-| build_mapping_json | ✓✓✓ | ✓✓✓ | ✓✓✓ | Không |
-
-Ghi chú:
-- ✓✓✓ = Khuyến nghị cao
-- ✓✓ = Khả thi
-- ✓ = Có thể nhưng không tối ưu
-- × = Không khuyến nghị/khó khăn
+| Module | Môi trường thực thi | Lý do |
+|--------|---------------------|-------|
+| shot_boundary_detection | **Kaggle** | Cần GPU để xử lý nhanh TransNetV2 |
+| keyframe_extraction | **Local** | Không cần GPU, chỉ xử lý I/O |
+| news_anchor_detection | **Kaggle** | Cần GPU để chạy mô hình InternVL3 |
+| news_segmentation | **Local** | Không cần GPU, chỉ phân tích JSON |
+| extract_subvideo | **Local** | Cần FFmpeg và xử lý I/O lớn |
+| asr | **Google Colab** | Cần GPU và cuDNN được cài đặt sẵn |
+| remove_noise_keyframe | **Local** | Không cần GPU, chỉ phân tích hình ảnh đơn giản |
+| object_detection | **Kaggle** | Cần GPU để chạy GroundingDINO |
+| ocr | **Kaggle** | Cần GPU để chạy EasyOCR hiệu quả |
+| image_captioning | **Kaggle** | Cần GPU để chạy InternVL3 |
+| save_detection_elasticsearch | **Local** | Cần kết nối Elasticsearch |
+| save_ocr_elasticsearch | **Local** | Cần kết nối Elasticsearch |
+| build_mapping_json | **Local/Kaggle/Colab** | Không có yêu cầu đặc biệt |
 
 ## Lưu ý quan trọng
 
