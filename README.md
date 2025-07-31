@@ -61,17 +61,19 @@ Quy trình Preprocess.
 | Giai đoạn | Đầu vào | Đầu ra | Phụ thuộc |
 |-----------|---------|--------|----------|
 | shot_boundary_detection | Video gốc | File shot JSON | TransNetV2 (GPU) |
-| keyframe_extraction | File shot JSON | Khung hình | Phát hiện đoạn cắt |
+| keyframe_extraction | File Video gốc và File shot JSON | Khung hình | Phát hiện đoạn cắt |
 | news_anchor_detection | Khung hình | File phân loại JSON | InternVL3 (GPU) |
-| news_segmentation | File phân loại người dẫn | File phân đoạn JSON | Phát hiện người dẫn |
-| extract_subvideo | File phân đoạn tin tức | Video phụ | Phân đoạn tin tức, FFmpeg |
-| asr | Video phụ | File bản ghi | WhisperX (GPU) |
-| remove_noise_keyframe | Khung hình | Khung hình đã lọc | Trích xuất khung hình |
-| object_detection | Khung hình | File phát hiện JSON | GroundingDINO (GPU) |
-| ocr | Khung hình | File OCR JSON | EasyOCR (GPU) |
-| image_captioning | Khung hình | File chú thích JSON | InternVL3 (GPU) |
-| save_detection_elasticsearch | File phát hiện | ES Index | Elasticsearch, phát hiện đối tượng |
-| save_ocr_elasticsearch | File OCR | ES Index | Elasticsearch, OCR |
+| news_segmentation | File keyframes và File news anchor JSON | File phân đoạn JSON | Phát hiện người dẫn |
+| extract_subvideo | File video gốc và File phân đoạn JSON | Video phụ | Phân đoạn tin tức, FFmpeg |
+| asr | File SubVideo | File bản ghi | WhisperX (GPU) |
+| remove_noise_keyframe | File Keyframes và File news anchor JSON | Khung hình đã lọc | Trích xuất khung hình |
+| object_detection | File Keyframes và File Caption JSON | File phát hiện JSON | GroundingDINO (GPU) |
+| ocr | File Keyframes | File OCR JSON | EasyOCR (GPU) |
+| image_captioning | File Keyframes | File chú thích JSON | InternVL3 (GPU) |
+| save_detection_elasticsearch | File detection JSON | ES Index | Elasticsearch, phát hiện đối tượng |
+| save_ocr_elasticsearch | File OCR JSON | ES Index | Elasticsearch, OCR |
+| save_embedding_faiss | File Keyframes | Faiss Index | Faiss |
+| save_caption_qdrant | File Caption JSON | Qdrant Index | Qdrant |
 | build_mapping_json | Thư mục đầu ra | mapping.json | Các giai đoạn khác |
 
 ## Hướng dẫn chạy
@@ -89,10 +91,10 @@ cd AIO-AIClosers
 **Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py shot_boundary_detection --mode all --input_video_dir /path/to/videos --output_dir /path/to/output
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py shot_boundary_detection --mode lesson --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01
 
 # Chạy cho một video cụ thể
@@ -104,10 +106,10 @@ python preprocess.py shot_boundary_detection --mode video --input_video_dir /pat
 **Môi trường**: Local
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py keyframe_extraction --mode all --input_shot_dir /path/to/shots --output_dir /path/to/keyframes
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py keyframe_extraction --mode lesson --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01
 
 # Chạy cho một video cụ thể
@@ -119,10 +121,10 @@ python preprocess.py keyframe_extraction --mode video --input_shot_dir /path/to/
 **Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py news_anchor_detection --mode all --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py news_anchor_detection --mode lesson --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor --lesson_name L01
 ```
 
@@ -131,10 +133,10 @@ python preprocess.py news_anchor_detection --mode lesson --input_keyframe_dir /p
 **Môi trường**: Local
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py segment_news --mode all --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py segment_news --mode lesson --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments --lesson_name L01
 ```
 
@@ -143,10 +145,10 @@ python preprocess.py segment_news --mode lesson --input_news_anchor_dir /path/to
 **Môi trường**: Local (cần FFmpeg)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py extract_subvideo --mode all --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py extract_subvideo --mode lesson --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg --lesson_name L01
 ```
 
@@ -155,10 +157,10 @@ python preprocess.py extract_subvideo --mode lesson --input_video_dir /path/to/v
 **Môi trường**: Google Colab (cần GPU và cuDNN)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py asr --mode all --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py asr --mode lesson --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts --lesson_name L01
 ```
 
@@ -167,10 +169,10 @@ python preprocess.py asr --mode lesson --input_video_dir /path/to/subvideos --ou
 **Môi trường**: Local
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py remove_noise_keyframe --mode all --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py remove_noise_keyframe --mode lesson --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes --lesson_name L01
 ```
 
@@ -179,17 +181,14 @@ python preprocess.py remove_noise_keyframe --mode lesson --input_keyframe_dir /p
 **Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py object_detection --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py object_detection --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01
 
 # Chạy cho một video cụ thể
 python preprocess.py object_detection --mode video --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001
-
-# Chạy cho một khung hình cụ thể
-python preprocess.py object_detection --mode single --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001 --keyframe_name 000001.jpg
 ```
 
 ### 9. OCR (Optical Character Recognition)
@@ -197,10 +196,10 @@ python preprocess.py object_detection --mode single --input_keyframe_dir /path/t
 **Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py ocr --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py ocr --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr --lesson_name L01
 ```
 
@@ -209,10 +208,10 @@ python preprocess.py ocr --mode lesson --input_keyframe_dir /path/to/filtered_ke
 **Môi trường**: Kaggle (cần GPU)
 
 ```bash
-# Chạy cho tất cả các bài học
+# Chạy cho tất cả các Lesson
 python preprocess.py image_captioning --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions
 
-# Chạy cho một bài học cụ thể
+# Chạy cho một Lesson cụ thể
 python preprocess.py image_captioning --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions --lesson_name L01
 ```
 
@@ -232,7 +231,23 @@ python preprocess.py save_detection_elasticsearch --input_dir /path/to/detection
 python preprocess.py save_ocr_elasticsearch --input_dir /path/to/ocr --es_host localhost --es_port 9200
 ```
 
-### 13. Xây dựng tệp ánh xạ (Build Mapping JSON)
+### 13. Lưu embedding vào Faiss
+
+**Môi trường**: Local
+
+```bash
+python preprocess.py save_embedding_faiss --input_keyframe_dir /path/to/keyframes --output_dir /path/to/faiss_index
+```
+
+### 14. Lưu caption vào Qdrant
+
+**Môi trường**: Local
+
+```bash
+python preprocess.py save_caption_qdrant --input_dir /path/to/captions --qdrant_url http://localhost:6333
+```
+
+### 15. Xây dựng tệp ánh xạ (Build Mapping JSON)
 
 **Môi trường**: Local/Kaggle/Colab
 
@@ -256,6 +271,8 @@ python preprocess.py build_mapping_json --output_dir /path/to/output_dir
 | image_captioning | **Kaggle** | Cần GPU để chạy InternVL3 |
 | save_detection_elasticsearch | **Local** | Cần kết nối Elasticsearch |
 | save_ocr_elasticsearch | **Local** | Cần kết nối Elasticsearch |
+| save_embedding_faiss | **Local** | Không cần GPU |
+| save_caption_qdrant | **Local** | Không cần GPU |
 | build_mapping_json | **Local/Kaggle/Colab** | Không có yêu cầu đặc biệt |
 
 ## Lưu ý quan trọng
