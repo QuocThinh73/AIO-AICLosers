@@ -92,13 +92,10 @@ cd AIO-AIClosers
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py shot_boundary_detection --mode all --input_video_dir /path/to/videos --output_dir /path/to/output
+python preprocess.py shot_boundary_detection all /path/to/videos /path/to/output
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py shot_boundary_detection --mode lesson --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01
-
-# Chạy cho một video cụ thể
-python preprocess.py shot_boundary_detection --mode video --input_video_dir /path/to/videos --output_dir /path/to/output --lesson_name L01 --video_name V001
+python preprocess.py shot_boundary_detection lesson /path/to/videos /path/to/output --lesson_name L01
 ```
 
 ### 2. Trích xuất khung hình (Keyframe Extraction)
@@ -107,13 +104,10 @@ python preprocess.py shot_boundary_detection --mode video --input_video_dir /pat
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py keyframe_extraction --mode all --input_shot_dir /path/to/shots --output_dir /path/to/keyframes
+python preprocess.py keyframe_extraction all /path/to/videos /path/to/shots /path/to/output/keyframes
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py keyframe_extraction --mode lesson --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01
-
-# Chạy cho một video cụ thể
-python preprocess.py keyframe_extraction --mode video --input_shot_dir /path/to/shots --output_dir /path/to/keyframes --lesson_name L01 --video_name V001
+python preprocess.py keyframe_extraction lesson /path/to/videos /path/to/shots /path/to/output/keyframes --lesson_name L01
 ```
 
 ### 3. Phát hiện người dẫn tin (News Anchor Detection)
@@ -122,10 +116,10 @@ python preprocess.py keyframe_extraction --mode video --input_shot_dir /path/to/
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py news_anchor_detection --mode all --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor
+python preprocess.py news_anchor_detection all /path/to/keyframes /path/to/output/news_anchor
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py news_anchor_detection --mode lesson --input_keyframe_dir /path/to/keyframes --output_dir /path/to/news_anchor --lesson_name L01
+python preprocess.py news_anchor_detection lesson /path/to/keyframes /path/to/output/news_anchor --lesson_name L01
 ```
 
 ### 4. Phân đoạn tin tức (News Segmentation)
@@ -134,10 +128,10 @@ python preprocess.py news_anchor_detection --mode lesson --input_keyframe_dir /p
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py segment_news --mode all --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments
+python preprocess.py segment_news all /path/to/keyframes /path/to/news_anchor /path/to/output/news_segments
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py segment_news --mode lesson --input_news_anchor_dir /path/to/news_anchor --output_dir /path/to/news_segments --lesson_name L01
+python preprocess.py segment_news lesson /path/to/keyframes /path/to/news_anchor /path/to/output/news_segments --lesson_name L01
 ```
 
 ### 5. Trích xuất video phụ (Extract Subvideo)
@@ -146,10 +140,10 @@ python preprocess.py segment_news --mode lesson --input_news_anchor_dir /path/to
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py extract_subvideo --mode all --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg
+python preprocess.py extract_subvideo all /path/to/videos /path/to/news_segments /path/to/output/subvideos /path/to/ffmpeg
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py extract_subvideo --mode lesson --input_video_dir /path/to/videos --input_segment_dir /path/to/news_segments --output_dir /path/to/subvideos --ffmpeg_bin /path/to/ffmpeg --lesson_name L01
+python preprocess.py extract_subvideo lesson /path/to/videos /path/to/news_segments /path/to/output/subvideos /path/to/ffmpeg --lesson_name L01
 ```
 
 ### 6. ASR (Automatic Speech Recognition)
@@ -158,10 +152,10 @@ python preprocess.py extract_subvideo --mode lesson --input_video_dir /path/to/v
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py asr --mode all --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts
+python preprocess.py asr all /path/to/subvideos /path/to/output/transcripts
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py asr --mode lesson --input_video_dir /path/to/subvideos --output_dir /path/to/transcripts --lesson_name L01
+python preprocess.py asr lesson /path/to/subvideos /path/to/output/transcripts --lesson_name L01
 ```
 
 ### 7. Lọc keyframe (Remove Noise Keyframe)
@@ -170,10 +164,10 @@ python preprocess.py asr --mode lesson --input_video_dir /path/to/subvideos --ou
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py remove_noise_keyframe --mode all --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes
+python preprocess.py remove_noise_keyframe all /path/to/keyframes /path/to/output/filtered_keyframes
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py remove_noise_keyframe --mode lesson --input_keyframe_dir /path/to/keyframes --output_dir /path/to/filtered_keyframes --lesson_name L01
+python preprocess.py remove_noise_keyframe lesson /path/to/keyframes /path/to/output/filtered_keyframes --lesson_name L01
 ```
 
 ### 8. Phát hiện đối tượng (Object Detection)
@@ -182,13 +176,13 @@ python preprocess.py remove_noise_keyframe --mode lesson --input_keyframe_dir /p
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py object_detection --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections
+python preprocess.py object_detection all /path/to/keyframes /path/to/captions /path/to/output/detections
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py object_detection --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01
+python preprocess.py object_detection lesson /path/to/keyframes /path/to/captions /path/to/output/detections --lesson_name L01
 
 # Chạy cho một video cụ thể
-python preprocess.py object_detection --mode video --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/detections --lesson_name L01 --video_name V001
+python preprocess.py object_detection video /path/to/keyframes /path/to/captions /path/to/output/detections --lesson_name L01 --video_name V001
 ```
 
 ### 9. OCR (Optical Character Recognition)
@@ -197,10 +191,10 @@ python preprocess.py object_detection --mode video --input_keyframe_dir /path/to
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py ocr --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr
+python preprocess.py ocr all /path/to/keyframes /path/to/output/ocr
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py ocr --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/ocr --lesson_name L01
+python preprocess.py ocr lesson /path/to/keyframes /path/to/output/ocr --lesson_name L01
 ```
 
 ### 10. Chú thích hình ảnh (Image Captioning)
@@ -209,10 +203,10 @@ python preprocess.py ocr --mode lesson --input_keyframe_dir /path/to/filtered_ke
 
 ```bash
 # Chạy cho tất cả các Lesson
-python preprocess.py image_captioning --mode all --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions
+python preprocess.py image_captioning all /path/to/keyframes /path/to/output/captions
 
 # Chạy cho một Lesson cụ thể
-python preprocess.py image_captioning --mode lesson --input_keyframe_dir /path/to/filtered_keyframes --output_dir /path/to/captions --lesson_name L01
+python preprocess.py image_captioning lesson /path/to/keyframes /path/to/output/captions --lesson_name L01
 ```
 
 ### 11. Lưu phát hiện vào Elasticsearch
@@ -220,7 +214,7 @@ python preprocess.py image_captioning --mode lesson --input_keyframe_dir /path/t
 **Môi trường**: Local (cần Elasticsearch)
 
 ```bash
-python preprocess.py save_detection_elasticsearch --input_dir /path/to/detections --es_host localhost --es_port 9200
+python preprocess.py save_detection_elasticsearch /path/to/detections --index groundingdino
 ```
 
 ### 12. Lưu OCR vào Elasticsearch
@@ -228,7 +222,7 @@ python preprocess.py save_detection_elasticsearch --input_dir /path/to/detection
 **Môi trường**: Local (cần Elasticsearch)
 
 ```bash
-python preprocess.py save_ocr_elasticsearch --input_dir /path/to/ocr --es_host localhost --es_port 9200
+python preprocess.py save_ocr_elasticsearch /path/to/ocr --index ocr
 ```
 
 ### 13. Lưu embedding vào Faiss
@@ -236,7 +230,7 @@ python preprocess.py save_ocr_elasticsearch --input_dir /path/to/ocr --es_host l
 **Môi trường**: Local
 
 ```bash
-python preprocess.py save_embedding_faiss /path/to/keyframes /path/to/faiss_index
+python preprocess.py save_embedding_faiss /path/to/keyframes /path/to/faiss_index --backbone ViT-B-16 --pretrained dfn2b
 ```
 
 ### 14. Lưu caption vào Qdrant
@@ -286,3 +280,5 @@ python preprocess.py build_mapping_json --output_dir /path/to/output_dir
 4. **ASR trên Colab**: Đối với ASR, Google Colab là lựa chọn tốt nhất vì nó đã được cài đặt sẵn cuDNN mà WhisperX cần.
 
 5. **I/O Bound vs. Compute Bound**: Các tác vụ như news_segmentation và extract_subvideo chủ yếu là I/O bound và không cần GPU, nên chạy cục bộ hiệu quả hơn.
+
+6. **Mấy cái có -- phía trước**: Là mấy cái optional.
