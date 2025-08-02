@@ -80,6 +80,47 @@ Answer with only YES or NO.
         Returns:
             str: Generated response
         """
+        # For image_captioning task, preprocess the image: resize and remove banner/logo
+        if self.task == "image_captioning":
+            import cv2
+            import os
+            from utils.utils import delete_banner_and_logo
+            
+            # Define target size and regions to mask
+            target_size = (1280, 720)
+            logo_box = (1000, 50, 1300, 130)
+            banner_box = (0, 660, 1280, 690)
+            mask_boxes = [logo_box, banner_box]
+            
+            # Read and resize image
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"Warning: Could not read image {image_path}")
+                return "Image could not be processed"
+            
+            # Resize image to target size
+            img_resized = cv2.resize(img, target_size)
+            
+            # Mask out banner and logo regions
+            masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
+            
+            # Convert numpy array to base64 string
+            import base64
+            from io import BytesIO
+            from PIL import Image
+            
+            # Convert BGR to RGB (CV2 uses BGR, PIL uses RGB)
+            masked_img_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
+            pil_img = Image.fromarray(masked_img_rgb)
+            
+            # Save to buffer and convert to base64
+            buffered = BytesIO()
+            pil_img.save(buffered, format="JPEG")
+            img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            
+            # Create data URL for the image
+            image_path = f"data:image/jpeg;base64,{img_b64}"
+        
         messages = [
             {
                 "role": "user",
