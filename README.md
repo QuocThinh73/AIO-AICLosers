@@ -6,54 +6,21 @@ Quy trình Preprocess.
 
 ## Quy trình xử lý (Pipeline Workflow)
 
-```
-┌───────────────────────┐
-│ Phát hiện đoạn cắt    │ (shot_boundary_detection)
-└───────────┬───────────┘
-            ↓
-┌───────────────────────┐
-│ Trích xuất khung hình │ (keyframe_extraction)
-└───────────┬───────────┘
-            ↓
-┌───────────────────────┐
-│ Phát hiện người dẫn   │ (news_anchor_detection)
-└───────────┬───────────┘
-            ↓
-┌───────────────────────┐
-│ Phân đoạn tin tức     │ (news_segmentation)
-└───────────┬───────────┘
-            ↓
-┌───────────────────────┐
-│ Trích xuất video phụ  │ (extract_subvideo)
-└───────────┬───────────┘
-            ↓
-   ┌────────┴────────┐
-   ↓                 ↓
-┌──────────┐  ┌───────────────┐
-│ ASR      │  │ Lọc keyframe  │ (remove_noise_keyframe)
-└──────────┘  └───────┬───────┘
-                      ↓
-         ┌────────────┴────────────┐
-         ↓                         ↓
-┌───────────────────┐    ┌───────────────────┐
-│ Image Captioning  │    │        OCR        │
-└────────┬──────────┘    └────────┬──────────┘
-         │                        │
-         ↓                        ↓
-┌───────────────────┐    ┌───────────────────┐
-│ Object detection  │    │  Lưu OCR vào ES   │
-└────────┬──────────┘    └────────┬──────────┘
-         │                        │
-         ↓                        │
-┌───────────────────┐             │
-│ Lưu detection vào │             │
-│ Elasticsearch     │             │
-└────────┬──────────┘             │
-         │                        │
-         ↓                        ↓
-┌───────────────────────────────────────────┐
-│ Xây dựng tệp ánh xạ (build_mapping_json)  │
-└───────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Phát hiện đoạn cắt<br>(shot_boundary_detection)] --> B[Trích xuất khung hình<br>(keyframe_extraction)]
+    B --> C[Phát hiện người dẫn<br>(news_anchor_detection)]
+    C --> D[Phân đoạn tin tức<br>(news_segmentation)]
+    D --> E[Trích xuất video phụ<br>(extract_subvideo)]
+    E --> F1[ASR]
+    E --> F2[Lọc keyframe<br>(remove_noise_keyframe)]
+    F2 --> G1[Image Captioning]
+    F2 --> G2[OCR]
+    G1 --> H1[Object detection]
+    H1 --> I1[Lưu detection vào<br>Elasticsearch]
+    I1 --> Z[Xây dựng tệp ánh xạ<br>(build_mapping_json)]
+    G2 --> I2[Lưu OCR vào ES]
+    I2 --> Z
 ```
 
 ## Phụ thuộc theo giai đoạn xử lý

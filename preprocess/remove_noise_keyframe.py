@@ -2,7 +2,7 @@ import os
 import json
 import glob
 from typing import List, Dict, Tuple
-from utils.utils import load_json, parse_lesson_video_name, get_lesson_directories
+from .utils import load_json, parse_lesson_video_name, get_lesson_directories
 
 
 def load_news_anchor_predictions(news_anchor_dir: str) -> Dict[str, List[Dict[str, any]]]:

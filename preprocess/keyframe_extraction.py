@@ -1,6 +1,6 @@
 import os
 import cv2
-from utils.utils import load_json
+from .utils import load_json
 
 
 def process_video(video_path, shot_path, output_keyframe_path):
