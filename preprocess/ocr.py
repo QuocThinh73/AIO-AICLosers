@@ -10,7 +10,7 @@ from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
 # Import utility functions
-from utils.utils import delete_banner_and_logo
+from .utils import delete_banner_and_logo
 
 
 def extract_text(

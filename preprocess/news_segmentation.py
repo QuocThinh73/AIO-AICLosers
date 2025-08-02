@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 import sys
-from utils.utils import parse_lesson_video_name
+from .utils import parse_lesson_video_name
 
 
 def load_classification_results(json_file):
