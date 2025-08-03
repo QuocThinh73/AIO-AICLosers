@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from backend.app.models.schemas import BaseSearchRequest, TemporalSearchRequest
 from backend.app.services.search_service import search_service
+from backend.app.core.config import settings
 router = APIRouter()
 
 @router.post("/base_search")
@@ -13,7 +14,12 @@ def base_search(base_search_request: BaseSearchRequest):
     }
 
     if base_search_request.embedding:
-       embedding_result = search_service.embedding_search(base_search_request.embedding_text, base_search_request.top_k) 
+       # Sử dụng embedding_model từ request nếu có, nếu không sẽ sử dụng tất cả các model có sẵn
+       embedding_result = search_service.embedding_search(
+           base_search_request.embedding_text, 
+           base_search_request.top_k, 
+           base_search_request.embedding_model if hasattr(base_search_request, 'embedding_model') else None
+       )
        result["embedding"] = embedding_result
     if base_search_request.captioning:
        captioning_result = search_service.captioning_search(base_search_request.captioning_text, base_search_request.top_k)
