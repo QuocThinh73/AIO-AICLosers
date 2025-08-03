@@ -1,97 +1,99 @@
 # HCMAI2025 - Video Preprocessing Pipeline
 
-## Tổng quan
+## Overview
 
-Pipeline tiền xử lý video để trích xuất và phân tích nội dung đa phương tiện, bao gồm phát hiện cảnh, trích xuất keyframe, nhận dạng người dẫn tin, phân đoạn video, ASR, OCR, và mô tả hình ảnh.
+A comprehensive video preprocessing pipeline for extracting and analyzing multimedia content, including shot detection, keyframe extraction, news anchor detection, video segmentation, ASR, OCR, and image captioning.
 
-## Cấu trúc thư mục dữ liệu
+## Data Directory Structure
 
 ```
 data/
-├── videos/              # Video gốc đầu vào
+├── videos/              # Original input videos
 │   ├── L01/
 │   │   ├── L01_V001.mp4
 │   │   ├── L01_V002.mp4
 │   │   └── ...
 │   ├── L02/
 │   └── ...
-├── shots/               # Kết quả phát hiện đoạn cắt
+├── shots/               # Shot boundary detection results
 │   ├── L01/
 │   │   ├── L01_V001_shots.json
 │   │   └── ...
 │   └── ...
-├── keyframes/           # Khung hình trích xuất
+├── keyframes/           # Extracted keyframes
 │   ├── L01/
 │   │   ├── V001/
 │   │   │   ├── L01_V001_000001.jpg
 │   │   │   └── ...
 │   │   └── ...
 │   └── ...
-├── news_anchor/         # Kết quả phát hiện người dẫn tin
+├── news_anchor/         # News anchor detection results
 │   ├── L01/
 │   │   ├── L01_V001_news_anchor.json
 │   │   └── ...
 │   └── ...
-├── news_segments/       # Kết quả phân đoạn tin tức
+├── news_segments/       # News segmentation results
 │   ├── L01/
 │   │   ├── L01_V001_news_segment.json
 │   │   └── ...
 │   └── ...
-├── subvideos/           # Video phụ đã cắt
+├── subvideos/           # Extracted subvideos
 │   ├── L01/
-│   │   ├── V001/
-│   │   │   ├── segment_001.mp4
+│   │   ├── L01_V001/
+│   │   │   ├── L01_V001_000260_001125.mp4
+│   │   │   ├── L01_V001_001168_003635.mp4
 │   │   │   └── ...
 │   │   └── ...
 │   └── ...
-├── transcripts/         # Kết quả ASR
+├── transcripts/         # ASR results
 │   ├── L01/
-│   │   ├── segment_001_transcript.txt
+│   │   ├── L01_V001_transcript.json
+│   │   ├── L01_V002_transcript.json
 │   │   └── ...
 │   └── ...
-├── captions/            # Kết quả mô tả hình ảnh
+├── captions/            # Image captioning results
 │   ├── L01/
 │   │   ├── L01_V001_caption.json
 │   │   └── ...
 │   └── ...
-├── ocr/                 # Kết quả OCR
+├── ocr/                 # OCR results
 │   ├── L01/
 │   │   ├── L01_V001_ocr.json
 │   │   └── ...
 │   └── ...
-├── detections/          # Kết quả phát hiện đối tượng
+├── detections/          # Object detection results
 │   ├── L01/
 │   │   ├── L01_V001_detection.json
 │   │   └── ...
 │   └── ...
-├── embeddings/         # FAISS vector index
+├── embeddings/          # FAISS vector index
 │   └── OpenCLIP_ViT-B-16_dfn2b_embeddings.bin
-└── id2path.json         # File ánh xạ ID và đường dẫn
+└── id2path.json         # ID to path mapping file
 ```
 
-## Bảng tổng hợp các task
+## Task Summary
 
-| Task | Input | Output | Nhiệm vụ |
-|------|-------|--------|----------|
-| **shot_boundary_detection** | Video files (.mp4) | JSON files chứa thông tin đoạn cắt | Phát hiện các đoạn cắt trong video để chia video thành các scene |
-| **keyframe_extraction** | Video files + Shot JSON files | Image files (.jpg) | Trích xuất các khung hình đại diện từ mỗi đoạn cắt |
-| **news_anchor_detection** | Keyframe images | JSON files với kết quả phân loại | Phát hiện và phân loại khung hình có người dẫn tin |
-| **news_segmentation** | Keyframes + News anchor JSON | JSON files với thông tin phân đoạn | Phân đoạn video dựa trên sự xuất hiện của người dẫn tin |
-| **subvideo_extraction** | Video files + News segment JSON | Subvideo files (.mp4) | Cắt video thành các đoạn phụ dựa trên kết quả phân đoạn |
-| **asr** | Subvideo files | Text files (.txt) | Chuyển đổi âm thanh trong video thành văn bản |
-| **remove_noise_keyframe** | Keyframes + News anchor JSON | Filtered keyframes | Loại bỏ các keyframe nhiễu không chứa thông tin quan trọng |
-| **image_captioning** | Keyframe images | JSON files với mô tả | Tạo mô tả văn bản cho các keyframe |
-| **ocr** | Keyframe images | JSON files với văn bản trích xuất | Trích xuất văn bản từ hình ảnh trong keyframe |
-| **object_detection** | Keyframes + Caption JSON | JSON files với đối tượng phát hiện | Phát hiện và định vị các đối tượng trong keyframe |
-| **save_detection_elasticsearch** | Detection JSON files | Elasticsearch index | Lưu trữ kết quả phát hiện đối tượng vào Elasticsearch |
-| **save_ocr_elasticsearch** | OCR JSON files | Elasticsearch index | Lưu trữ kết quả OCR vào Elasticsearch |
-| **save_embedding_faiss** | Keyframe images | FAISS index files | Tạo và lưu trữ vector embedding của keyframe vào FAISS |
-| **save_caption_qdrant** | Caption JSON + Keyframes | Qdrant database | Lưu trữ embedding của caption vào Qdrant vector database |
-| **build_mapping_json** | Keyframe directory | mapping.json file | Tạo file ánh xạ giữa ID và đường dẫn keyframe |
+| Task | Input | Output | Purpose |
+|------|-------|--------|---------|
+| **shot_boundary_detection** | Video files (.mp4) | JSON files with shot boundaries | Detect scene changes in videos to segment into shots |
+| **keyframe_extraction** | Video files + Shot JSON files | Image files (.jpg) | Extract representative frames from each shot |
+| **news_anchor_detection** | Keyframe images | JSON files with classification results | Detect and classify frames containing news anchors |
+| **news_segmentation** | Keyframes + News anchor JSON | JSON files with segment information | Segment videos based on news anchor appearance |
+| **subvideo_extraction** | Video files + News segment JSON | Subvideo files (.mp4) | Cut videos into segments based on segmentation results |
+| **asr** | Subvideo files | JSON files with transcripts | Convert audio in subvideos to text transcripts |
+| **remove_noise_keyframe** | Keyframes + News anchor JSON | Filtered keyframes | Remove noisy keyframes without important information |
+| **image_captioning** | Keyframe images | JSON files with descriptions | Generate text descriptions for keyframes |
+| **ocr** | Keyframe images | JSON files with extracted text | Extract text from images in keyframes |
+| **object_detection** | Keyframes + Caption JSON | JSON files with detected objects | Detect and locate objects in keyframes |
+| **save_detection_elasticsearch** | Detection JSON files | Elasticsearch index | Store object detection results in Elasticsearch |
+| **save_ocr_elasticsearch** | OCR JSON files | Elasticsearch index | Store OCR results in Elasticsearch |
+| **save_embedding_faiss** | Keyframe images | FAISS index files | Create and store keyframe vector embeddings in FAISS |
+| **save_caption_qdrant** | Caption JSON + Keyframes | Qdrant database | Store caption embeddings in Qdrant vector database |
+| **build_mapping_json** | Keyframe directory | mapping.json file | Create mapping file between IDs and keyframe paths |
 
-## Hướng dẫn chạy từng task
+## Task Usage Guide
 
-### Cài đặt
+### Installation
 
 ```bash
 git clone <repository-url>
@@ -99,168 +101,168 @@ cd HCMAI2025
 pip install -r requirements.txt
 ```
 
-### 1. Phát hiện đoạn cắt (Shot Boundary Detection)
+### 1. Shot Boundary Detection
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py shot_boundary_detection all data/videos data/shots
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py shot_boundary_detection lesson data/videos data/shots --lesson_name L01
 ```
 
-**Yêu cầu**: GPU (TransNetV2), môi trường Kaggle khuyến nghị
+**Requirements**: GPU (TransNetV2), Kaggle environment recommended
 
-### 2. Trích xuất keyframe (Keyframe Extraction)
+### 2. Keyframe Extraction
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py keyframe_extraction all data/videos data/shots data/keyframes
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py keyframe_extraction lesson data/videos data/shots data/keyframes --lesson_name L01
 ```
 
-**Yêu cầu**: Môi trường local, không cần GPU
+**Requirements**: Local environment, no GPU needed
 
-### 3. Phát hiện người dẫn tin (News Anchor Detection)
+### 3. News Anchor Detection
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py news_anchor_detection all data/keyframes data/news_anchor
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py news_anchor_detection lesson data/keyframes data/news_anchor --lesson_name L01
 ```
 
-**Yêu cầu**: GPU (InternVL3), môi trường Kaggle khuyến nghị
+**Requirements**: GPU (InternVL3), Kaggle environment recommended
 
-### 4. Phân đoạn tin tức (News Segmentation)
+### 4. News Segmentation
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py news_segmentation all data/keyframes data/news_anchor data/news_segments
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py news_segmentation lesson data/keyframes data/news_anchor data/news_segments --lesson_name L01
 ```
 
-**Yêu cầu**: Môi trường local, không cần GPU
+**Requirements**: Local environment, no GPU needed
 
-### 5. Trích xuất video phụ (Subvideo Extraction)
+### 5. Subvideo Extraction
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py subvideo_extraction all data/videos data/news_segments data/subvideos /path/to/ffmpeg
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py subvideo_extraction lesson data/videos data/news_segments data/subvideos /path/to/ffmpeg --lesson_name L01
 ```
 
-**Yêu cầu**: FFmpeg, môi trường local
+**Requirements**: FFmpeg, local environment
 
-### 6. Nhận dạng giọng nói (ASR)
+### 6. Automatic Speech Recognition (ASR)
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py asr all data/subvideos data/transcripts
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py asr lesson data/subvideos data/transcripts --lesson_name L01
 ```
 
-**Yêu cầu**: GPU (WhisperX), môi trường Google Colab khuyến nghị
+**Requirements**: GPU (WhisperX), Google Colab recommended
 
-### 7. Lọc keyframe nhiễu (Remove Noise Keyframe)
+### 7. Remove Noise Keyframes
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py remove_noise_keyframe all data/keyframes data/news_anchor
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py remove_noise_keyframe lesson data/keyframes data/news_anchor --lesson_name L01
 ```
 
-**Yêu cầu**: Môi trường local, không cần GPU
+**Requirements**: Local environment, no GPU needed
 
-### 8. Mô tả hình ảnh (Image Captioning)
+### 8. Image Captioning
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py image_captioning all data/keyframes data/captions
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py image_captioning lesson data/keyframes data/captions --lesson_name L01
 
-# Một video cụ thể
+# Single video
 python preprocess.py image_captioning single data/keyframes data/captions --lesson_name L01 --video_name V001
 ```
 
-**Yêu cầu**: GPU (InternVL3), môi trường Kaggle khuyến nghị
+**Requirements**: GPU (InternVL3), Kaggle environment recommended
 
-### 9. Nhận dạng văn bản (OCR)
+### 9. Optical Character Recognition (OCR)
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py ocr all data/keyframes data/ocr
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py ocr lesson data/keyframes data/ocr --lesson_name L01
 ```
 
-**Yêu cầu**: GPU (PaddleOCR), môi trường Kaggle khuyến nghị
+**Requirements**: GPU (PaddleOCR), Kaggle environment recommended
 
-### 10. Phát hiện đối tượng (Object Detection)
+### 10. Object Detection
 
 ```bash
-# Tất cả lessons
+# All lessons
 python preprocess.py object_detection all data/keyframes data/captions data/detections
 
-# Một lesson cụ thể
+# Specific lesson
 python preprocess.py object_detection lesson data/keyframes data/captions data/detections --lesson_name L01
 
-# Một video cụ thể
+# Single video
 python preprocess.py object_detection single data/keyframes data/captions data/detections --lesson_name L01 --video_name V001
 ```
 
-**Yêu cầu**: GPU (GroundingDINO), môi trường Kaggle khuyến nghị
+**Requirements**: GPU (GroundingDINO), Kaggle environment recommended
 
-### 11. Lưu detection vào Elasticsearch
+### 11. Save Detection to Elasticsearch
 
 ```bash
 python preprocess.py save_detection_elasticsearch data/detections --index groundingdino
 ```
 
-**Yêu cầu**: Elasticsearch server running, môi trường local
+**Requirements**: Elasticsearch server running, local environment
 
-### 12. Lưu OCR vào Elasticsearch
+### 12. Save OCR to Elasticsearch
 
 ```bash
 python preprocess.py save_ocr_elasticsearch data/ocr --index ocr
 ```
 
-**Yêu cầu**: Elasticsearch server running, môi trường local
+**Requirements**: Elasticsearch server running, local environment
 
-### 13. Lưu embedding vào FAISS
-
-```bash
-python preprocess.py save_embedding_faiss data/keyframes data/faiss_index --backbone ViT-B-16 --pretrained dfn2b
-```
-
-**Yêu cầu**: Môi trường local hoặc Kaggle
-
-### 14. Lưu caption vào Qdrant
+### 13. Save Embeddings to FAISS
 
 ```bash
-python preprocess.py save_caption_qdrant data/captions data/keyframes data/qdrant_data --collection_name captions
+python preprocess.py save_embedding_faiss data/keyframes data/embeddings --backbone ViT-B-16 --pretrained dfn2b
 ```
 
-**Yêu cầu**: Qdrant server running, môi trường local
+**Requirements**: Local or Kaggle environment
 
-### 15. Tạo file mapping
+### 14. Save Captions to Qdrant
+
+```bash
+python preprocess.py save_caption_qdrant data/captions data/keyframes data/ --collection_name captions
+```
+
+**Requirements**: Qdrant server running, local environment
+
+### 15. Build Mapping JSON
 
 ```bash
 python preprocess.py build_mapping_json data/keyframes data/
 ```
 
-**Yêu cầu**: Môi trường bất kỳ
+**Requirements**: Any environment
