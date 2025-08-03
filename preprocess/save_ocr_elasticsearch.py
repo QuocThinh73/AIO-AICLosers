@@ -5,7 +5,7 @@ import sys
 from tqdm import tqdm
 from database.my_elasticsearch import MyElasticsearch, ensure_elasticsearch_dependencies
 
-def index_ocr_results(ocr_dir, index_name="ocr_results"):
+def save_ocr_elasticsearch(ocr_dir, index_name="ocr_results"):
     try:
         ensure_elasticsearch_dependencies()
         

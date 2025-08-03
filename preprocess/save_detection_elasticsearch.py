@@ -5,7 +5,7 @@ import sys
 from tqdm import tqdm
 from database.my_elasticsearch import MyElasticsearch, ensure_elasticsearch_dependencies
 
-def index_detection_results(detection_dir, index_name="groundingdino"):
+def save_detection_elasticsearch(detection_dir, index_name="groundingdino"):
     try:
         ensure_elasticsearch_dependencies()
         

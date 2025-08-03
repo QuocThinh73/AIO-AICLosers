@@ -39,7 +39,6 @@ def process_video(video_path, output_shot_path, predict_video):
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     output_file = os.path.join(output_shot_path, f"{video_name}_shots.json")
     
-    
     items = []
     for start_frame, end_frame in scenes:
         

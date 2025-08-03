@@ -1,4 +1,3 @@
-
 import os
 import sys
 import json
@@ -50,7 +49,7 @@ def correct_transcript(corrector, transcript):
     """
     return corrector(transcript, max_length=512, do_sample=False)[0]["generated_text"]
 
-def transcribe_audio(video_path, transcriber, corrector=None):
+def transcribe_single_audio(video_path, transcriber, corrector=None):
     """
     Thực hiện chuyển đổi âm thanh trong video thành văn bản và hiệu chỉnh nếu có
     
@@ -150,7 +149,7 @@ def process_lesson_asr(lesson_path, transcript_folder, lesson_name=None):
                 subvideo_path = os.path.join(video_folder_path, subvideo)
                 
                 # Sử dụng hàm transcribe_audio để chuyển đổi âm thanh thành văn bản
-                transcript = transcribe_audio(subvideo_path, transcriber, corrector)
+                transcript = transcribe_single_audio(subvideo_path, transcriber, corrector)
                 
                 video_transcripts.append({
                     "subvideo": subvideo_path,
@@ -239,3 +238,50 @@ def process_all_lessons_asr(input_video_dir, transcript_folder):
         import traceback
         traceback.print_exc()
         return {"status": "error", "message": f"Lỗi khi xử lý ASR: {str(e)}"}
+
+def process_video(video_path, output_transcript_dir, lesson_name):
+    install_dependencies()
+    
+    import whisperx
+    import torch
+    transcriber = whisperx.load_model("medium", device="cuda" if torch.cuda.is_available() else "cpu")
+    
+    video_name = os.path.splitext(os.path.basename(video_path))[0]
+    
+    # Process subvideos in this video directory
+    video_folder_path = os.path.dirname(video_path).replace("videos", "subvideos")
+    if os.path.exists(video_folder_path):
+        for subvideo in sorted(os.listdir(video_folder_path)):
+            if not subvideo.endswith((".mp4", ".avi", ".mov")):
+                continue
+                
+            subvideo_path = os.path.join(video_folder_path, subvideo)
+            transcript = transcribe_single_audio(subvideo_path, transcriber, None)
+            
+            # Save transcript
+            lesson_output_dir = os.path.join(output_transcript_dir, lesson_name)
+            os.makedirs(lesson_output_dir, exist_ok=True)
+            
+            transcript_file = os.path.join(lesson_output_dir, f"{os.path.splitext(subvideo)[0]}_transcript.txt")
+            with open(transcript_file, 'w', encoding='utf-8') as f:
+                f.write(transcript)
+
+def transcribe_audio(input_video_dir, output_transcript_dir, mode, lesson_name=None):
+    os.makedirs(output_transcript_dir, exist_ok=True)
+    
+    if mode == "lesson":
+        lesson_video_dir = os.path.join(input_video_dir, lesson_name)
+        for video_file in sorted(os.listdir(lesson_video_dir)):
+            if not video_file.endswith(".mp4"):
+                continue
+            video_path = os.path.join(lesson_video_dir, video_file)
+            process_video(video_path, output_transcript_dir, lesson_name)
+    else:
+        for lesson_folder in sorted(os.listdir(input_video_dir)):
+            lesson_video_dir = os.path.join(input_video_dir, lesson_folder)
+            if os.path.isdir(lesson_video_dir):
+                for video_file in sorted(os.listdir(lesson_video_dir)):
+                    if not video_file.endswith(".mp4"):
+                        continue
+                    video_path = os.path.join(lesson_video_dir, video_file)
+                    process_video(video_path, output_transcript_dir, lesson_folder)
