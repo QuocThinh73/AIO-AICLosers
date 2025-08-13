@@ -10,3 +10,8 @@ numpy
 Pillow
 python-multipart
 python-dotenv
+open-clip-torch
+transformers
+tokenizers
+safetensors
+huggingface-hub

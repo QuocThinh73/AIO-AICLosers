@@ -42,11 +42,11 @@ class Settings(BaseSettings):
             "pretrained": "dfn2b",
             "embeddings_file": "OpenCLIP_ViT-B-16_dfn2b_embeddings.bin"
         },
-        "OpenCLIP ViT-B-16 webli": {
+        "OpenCLIP ViT-B-16 SigLIP": {
             "model_type": "openclip",
-            "backbone": "ViT-B-16", 
-            "pretrained": "webli",
-            "embeddings_file": "OpenCLIP_ViT-B-16_webli_embeddings.bin"
+            "backbone": "ViT-B-16-SigLIP",  
+            "pretrained": "webli",          
+            "embeddings_file": "OpenCLIP_ViT-B-16-SigLIP_webli_embeddings.bin"
         },
     }
     
