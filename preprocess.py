@@ -173,7 +173,7 @@ def subvideo_extraction(argv):
     elif args.mode == "lesson":
         extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.ffmpeg_bin, args.lesson_name)
 
-def remove_noise_keyframe(argv):
+def remove_noise_keyframes(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
     parser.add_argument("keyframe_dir", type=str)
@@ -198,11 +198,11 @@ def remove_noise_keyframe(argv):
             raise ValueError("Lesson news anchor directory does not exist")
     
     # Main process
-    from preprocess.remove_noise_keyframe import remove_noise
+    from preprocess.remove_noise_keyframes import remove_noise_keyframes
     if args.mode == "all":
-        remove_noise(args.keyframe_dir, args.news_anchor_dir, args.mode)
+        remove_noise_keyframes(args.keyframe_dir, args.news_anchor_dir, args.mode)
     elif args.mode == "lesson":
-        remove_noise(args.keyframe_dir, args.news_anchor_dir, args.mode, args.lesson_name)
+        remove_noise_keyframes(args.keyframe_dir, args.news_anchor_dir, args.mode, args.lesson_name)
 
 def object_detection(argv):
     parser = argparse.ArgumentParser()
@@ -357,6 +357,51 @@ def ocr(argv):
         extract_text(args.input_dir, args.output_dir, args.mode)
     elif args.mode == "lesson":
         extract_text(args.input_dir, args.output_dir, args.mode, args.lesson_name)
+
+def embed_image(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=["all", "lesson", "video"])
+    parser.add_argument("input_keyframe_dir", type=str)
+    parser.add_argument("input_mapping_json", type=str)
+    parser.add_argument("output_embedded_vector_dir", type=str)
+    parser.add_argument("--backbone", type=str, default="ViT-B-16")
+    parser.add_argument("--pretrained", type=str, default="dfn2b")
+    parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--video_name", type=str)
+
+    args = parser.parse_args(argv)
+
+    # Check error
+    if not os.path.exists(args.input_keyframe_dir):
+        raise ValueError("Input keyframe directory does not exist")
+    
+    if not os.path.exists(args.input_mapping_json):
+        raise ValueError("Input mapping json does not exist")
+
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+            raise ValueError("Lesson keyframe directory does not exist")
+    
+    if args.mode == "video":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is video")
+        if not args.video_name:
+            raise ValueError("Video name is required when mode is video")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+            raise ValueError("Lesson keyframe directory does not exist")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name, args.video_name)):
+            raise ValueError("Video keyframe directory does not exist")
+    
+    # Main process
+    from preprocess.embed_image import embed_image
+    if args.mode == "all":
+        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
+    elif args.mode == "lesson":
+        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name)
+    elif args.mode == "video":
+        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name, args.video_name)
     
 def save_detection_elasticsearch(argv):
     parser = argparse.ArgumentParser()
@@ -433,11 +478,12 @@ TASKS = {
     "news_anchor_detection": news_anchor_detection,
     "news_segmentation": news_segmentation,
     "subvideo_extraction": subvideo_extraction,
-    "remove_noise_keyframe": remove_noise_keyframe,
+    "remove_noise_keyframes": remove_noise_keyframes,
     "object_detection": object_detection,
     "image_captioning": image_captioning,
     "asr": asr,
     "ocr": ocr,
+    "embed_image": embed_image,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
     "save_embedding_faiss": save_embedding_faiss,
