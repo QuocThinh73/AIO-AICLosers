@@ -4,6 +4,10 @@ from typing import Dict, Any, Optional, List
 from elasticsearch import Elasticsearch
 from qdrant_client import QdrantClient
 import faiss
+import sys
+
+# Thêm đường dẫn gốc dự án vào sys.path để import database module
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
 # Import config
 from backend.app.core.config import (
@@ -30,22 +34,39 @@ class DatabaseService:
         """Initialize available embedding models using FAISS."""
         try:
             import faiss
-        except ImportError:
-            logging.error("FAISS not available. Embedding search will not work.")
+            from database.my_faiss import Faiss
+        except ImportError as e:
+            logging.error(f"FAISS or my_faiss module not available: {str(e)}. Embedding search will not work.")
             return
             
         for model_name, model_info in settings.EMBEDDING_MODELS.items():
             try:
                 embeddings_file = os.path.join(self.embeddings_path, model_info.get("embeddings_file", ""))
+                
                 if os.path.exists(embeddings_file) and os.path.exists(self.mapping_json):
-                    faiss_instance = faiss.IndexFlatIP(512)  # Placeholder - actual dimension depends on the model
                     logging.info(f"Loading embedding model {model_name} from {embeddings_file}")
-                    # In actual implementation, this would load the model properly
-                    # faiss.read_index(embeddings_file)
-                    self.embedding_models[model_name] = faiss_instance
-                    logging.info(f"Successfully loaded embedding model {model_name}")
+                    
+                    # Khởi tạo object Faiss - model được đặt là None vì chúng ta chỉ load index sẵn có
+                    # không cần encode lại
+                    faiss_instance = Faiss(model=None)
+                    
+                    # Load FAISS index và mapping
+                    try:
+                        # Load FAISS index từ file
+                        faiss_instance.load_embeddings(embeddings_file)
+                        
+                        # Load mapping từ JSON
+                        faiss_instance.load_mapping(self.mapping_json)
+                        
+                        # Lưu instance vào dictionary
+                        self.embedding_models[model_name] = faiss_instance
+                        logging.info(f"Successfully loaded embedding model {model_name}")
+                    except Exception as load_error:
+                        logging.error(f"Error loading index for {model_name}: {str(load_error)}")
+                else:
+                    logging.warning(f"Embedding file {embeddings_file} or mapping file {self.mapping_json} not found")
             except Exception as e:
-                logging.error(f"Failed to load embedding model {model_name}: {str(e)}")
+                logging.error(f"Failed to initialize embedding model {model_name}: {str(e)}")
     
     def _connect_qdrant(self):
         """Connect to Qdrant vector database for caption search."""
