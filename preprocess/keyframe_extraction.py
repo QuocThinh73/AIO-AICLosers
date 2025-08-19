@@ -90,42 +90,82 @@ def extract_keyframe(input_video_dir, input_shot_dir, output_keyframe_dir, mode,
     
     if mode == "lesson":
         os.makedirs(os.path.join(output_keyframe_dir, lesson_name), exist_ok=True)
-        for video_file in sorted(os.listdir(os.path.join(input_video_dir, lesson_name))):
-            if not video_file.endswith(".mp4"):
-                continue
+        lesson_path = os.path.join(input_video_dir, lesson_name)
+        
+        for video_folder in sorted(os.listdir(lesson_path)):
+            video_folder_path = os.path.join(lesson_path, video_folder)
+            
+            if os.path.isdir(video_folder_path):
+                for video_file in sorted(os.listdir(video_folder_path)):
+                    if not video_file.endswith(".mp4"):
+                        continue
+                        
+                    video_name = os.path.splitext(video_file)[0]
+                    video_path = os.path.join(video_folder_path, video_file)
+                    
+                    if '_' in video_name and video_name.startswith(lesson_name):
+                        video_short_name = video_name[len(lesson_name)+1:]
+                    else:
+                        video_short_name = video_name
+                    
+                    shot_path = os.path.join(input_shot_dir, lesson_name, video_folder, f"{video_name}_shots.json")
+                    output_keyframe_path = os.path.join(output_keyframe_dir, lesson_name, video_short_name)
+                    
+                    process_video(video_path, shot_path, output_keyframe_path)
+            
+            elif video_folder.endswith(".mp4"):
+                video_name = os.path.splitext(video_folder)[0]
+                video_path = video_folder_path
                 
-            video_name = os.path.splitext(video_file)[0]
-            video_path = os.path.join(input_video_dir, lesson_name, video_file)
-            
-            if '_' in video_name and video_name.startswith(lesson_name):
-                video_short_name = video_name[len(lesson_name)+1:]
-            else:
-                video_short_name = video_name
-            
-            shot_path = os.path.join(input_shot_dir, lesson_name, f"{video_name}_shots.json")
-            output_keyframe_path = os.path.join(output_keyframe_dir, lesson_name, video_short_name)
-            
-            
-            process_video(video_path, shot_path, output_keyframe_path)
+                if '_' in video_name and video_name.startswith(lesson_name):
+                    video_short_name = video_name[len(lesson_name)+1:]
+                else:
+                    video_short_name = video_name
+                
+                shot_path = os.path.join(input_shot_dir, lesson_name, f"{video_name}_shots.json")
+                output_keyframe_path = os.path.join(output_keyframe_dir, lesson_name, video_short_name)
+                
+                process_video(video_path, shot_path, output_keyframe_path)
             
     elif mode == "all":
         for lesson_folder in sorted(os.listdir(input_video_dir)):
+            lesson_path = os.path.join(input_video_dir, lesson_folder)
+            if not os.path.isdir(lesson_path):
+                continue
+                
             os.makedirs(os.path.join(output_keyframe_dir, lesson_folder), exist_ok=True)
-            for video_file in sorted(os.listdir(os.path.join(input_video_dir, lesson_folder))):
-                if not video_file.endswith(".mp4"):
-                    continue
+            
+            for video_folder in sorted(os.listdir(lesson_path)):
+                video_folder_path = os.path.join(lesson_path, video_folder)
+                
+                if os.path.isdir(video_folder_path):
+                    for video_file in sorted(os.listdir(video_folder_path)):
+                        if not video_file.endswith(".mp4"):
+                            continue
+                            
+                        video_name = os.path.splitext(video_file)[0]
+                        video_path = os.path.join(video_folder_path, video_file)
+                        
+                        if '_' in video_name and video_name.startswith(lesson_folder):
+                            video_short_name = video_name[len(lesson_folder)+1:]
+                        else:
+                            video_short_name = video_name
+                        
+                        shot_path = os.path.join(input_shot_dir, lesson_folder, video_folder, f"{video_name}_shots.json")
+                        output_keyframe_path = os.path.join(output_keyframe_dir, lesson_folder, video_short_name)
+                        
+                        process_video(video_path, shot_path, output_keyframe_path)
+                
+                elif video_folder.endswith(".mp4"):
+                    video_name = os.path.splitext(video_folder)[0]
+                    video_path = video_folder_path
                     
-                video_name = os.path.splitext(video_file)[0]
-                video_path = os.path.join(input_video_dir, lesson_folder, video_file)
-                
-  
-                if '_' in video_name and video_name.startswith(lesson_folder):
-                    video_short_name = video_name[len(lesson_folder)+1:]
-                else:
-                    video_short_name = video_name
-
-                shot_path = os.path.join(input_shot_dir, lesson_folder, f"{video_name}_shots.json")
-                output_keyframe_path = os.path.join(output_keyframe_dir, lesson_folder, video_short_name)
-                
-                
-                process_video(video_path, shot_path, output_keyframe_path)
+                    if '_' in video_name and video_name.startswith(lesson_folder):
+                        video_short_name = video_name[len(lesson_folder)+1:]
+                    else:
+                        video_short_name = video_name
+                    
+                    shot_path = os.path.join(input_shot_dir, lesson_folder, f"{video_name}_shots.json")
+                    output_keyframe_path = os.path.join(output_keyframe_dir, lesson_folder, video_short_name)
+                    
+                    process_video(video_path, shot_path, output_keyframe_path)
