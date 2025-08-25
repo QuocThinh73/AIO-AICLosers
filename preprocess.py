@@ -569,12 +569,15 @@ def embed_image(argv):
     
     # Main process
     from preprocess.embed_image import embed_image
+    
     if args.mode == "all":
         embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
     elif args.mode == "lesson":
-        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
+                   args.lesson_name)
     elif args.mode == "video":
-        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name, args.video_name)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
+                   args.lesson_name, args.video_name)
 
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
