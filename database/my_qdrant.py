@@ -1,155 +1,190 @@
 from qdrant_client import QdrantClient, models
-from FlagEmbedding import BGEM3FlagModel
 import json
 import os
-from app.config import MAPPING_JSON
+import numpy as np
 
 class Qdrant:
-    def __init__(self, host="localhost", port=6333, model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)):
+    def __init__(self, host="localhost", port=6333, model=None):
+        """
+        Initialize Qdrant client for OpenCLIP embeddings
+        
+        Args:
+            host: Qdrant server host
+            port: Qdrant server port
+            model: OpenCLIP model instance for embedding generation
+        """
         self.client = QdrantClient(host=host, port=port)
         self.model = model
-        self.id2path = self.load_mapping(MAPPING_JSON)
-        
-    def load_mapping(self, mapping_json):
-        """Load id2path mapping from JSON file"""
-        with open(mapping_json, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        items = data.get("items", [])
-        return {item["id"]: item["path"] for item in items}
-        
-    def get_keyframe_name(self, path):
-        """Extract keyframe name from path"""
-        return os.path.basename(path)
         
     def is_collection_exists(self, collection_name):
+        """Check if collection exists in Qdrant"""
         return self.client.collection_exists(collection_name)
         
-    def create_sparse_vector(self, sparse_data):
-        """Convert BGE-M3 sparse output to Qdrant sparse vector format"""
-        sparse_indices = []
-        sparse_values = []
+    def create_collection(self, collection_name, vector_size=512):
+        """
+        Create a new collection in Qdrant
         
-        for key, value in sparse_data.items():
-            # Only process positive values
-            if float(value) > 0:
-                # Handle string keys
-                if isinstance(key, str):
-                    if key.isdigit():
-                        key = int(key)
-                    else:
-                        continue
-                    
-                sparse_indices.append(key)
-                sparse_values.append(float(value))
-        
-        return models.SparseVector(
-            indices=sparse_indices,
-            values=sparse_values
-        )
-        
-    def generate_embeddings(self, text):
-        return self.model.encode(
-            [text], 
-            return_dense=True,
-            return_sparse=True,
-            return_colbert_vecs=True
-        )
-        
-    def create_qdrant_collection(self, collection_name):
-        self.client.create_collection(
-            collection_name=collection_name,
-        vectors_config={
-            "dense": models.VectorParams(
-                size=1024,
-                distance=models.Distance.COSINE
-            ),
-            "colbert": models.VectorParams(
-                size=1024,
-                distance=models.Distance.COSINE,
-                multivector_config=models.MultiVectorConfig(
-                    comparator=models.MultiVectorComparator.MAX_SIM
-                ),
-            )
-        },
-        sparse_vectors_config={
-            "sparse": models.SparseVectorParams(
-                index=models.SparseIndexParams(
-                    on_disk=True
+        Args:
+            collection_name: Name of the collection
+            vector_size: Size of the embedding vectors (default: 512 for OpenCLIP)
+        """
+        if not self.is_collection_exists(collection_name):
+            self.client.create_collection(
+                collection_name=collection_name,
+                vectors_config=models.VectorParams(
+                    size=vector_size,
+                    distance=models.Distance.COSINE
                 )
             )
-        },
-    )
+            return True
+        return False
     
-    def insert_to_qdrant(self, embeddings, collection_name):
-        for embedding in embeddings:
-            point_id = embedding["point_id"]
-            keyframe = embedding["keyframe"]
-            caption = embedding["caption"]
-            dense_vector = embedding["dense_vector"]
-            colbert_vectors = embedding["colbert_vectors"]
-            sparse_data = embedding["sparse_weights"]
-
-            # Convert sparse weights to Qdrant format
-            qdrant_sparse = self.create_sparse_vector(sparse_data)
-            
-            # Insert into Qdrant
-            self.client.upsert(
-                collection_name=collection_name,
-                points=[
-                    models.PointStruct(
-                        id=point_id,
-                        payload={
-                            "keyframe": keyframe,
-                            "caption": caption
-                        },
-                        vector={
-                            "dense": dense_vector,
-                            "colbert": colbert_vectors,
-                            "sparse": qdrant_sparse
-                        }
-                    )
-                ]
+    def batch_upload_points(self, embeddings_data, collection_name):
+        """
+        Upload a batch of points to Qdrant
+        
+        Args:
+            embeddings_data: List of dictionaries with embedding data 
+                             Each dict should have: id, vector, keyframe, path
+            collection_name: Name of the collection to upload to
+        """
+        points = []
+        
+        for data in embeddings_data:
+            points.append(
+                models.PointStruct(
+                    id=data["id"],
+                    vector=data["vector"].tolist() if isinstance(data["vector"], np.ndarray) else data["vector"],
+                    payload={
+                        "keyframe": data["keyframe"],
+                        "path": data["path"]
+                    }
+                )
             )
         
-    def search(self, search_query, collection_name, limit=100, prefetch_limit=300):
-        # Generate embeddings for the query
-        query_outputs = self.model.encode(
-            [search_query],
-            return_dense=True,
-            return_sparse=True,
-            return_colbert_vecs=True
+        if points:
+            self.client.upsert(
+                collection_name=collection_name,
+                points=points
+            )
+    
+    def search_by_image(self, image, collection_name, limit=10):
+        """
+        Search for similar images in the collection
+        
+        Args:
+            image: PIL Image object
+            collection_name: Name of the collection to search in
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of dictionaries with search results
+        """
+        if not self.model:
+            raise ValueError("Model not provided. Cannot encode image.")
+            
+        # Encode image using OpenCLIP
+        vector = self.model.encode_image(image)
+        
+        # Search in Qdrant
+        results = self.client.search(
+            collection_name=collection_name,
+            query_vector=vector.tolist() if isinstance(vector, np.ndarray) else vector,
+            limit=limit
         )
         
-        dense_vec = query_outputs["dense_vecs"][0]
-        sparse_vec = query_outputs["lexical_weights"][0]
-        colbert_vec = query_outputs["colbert_vecs"][0]
-        
-        # Convert sparse vector to Qdrant format
-        qdrant_sparse = self.create_sparse_vector(sparse_vec)
-        
-        # Set up prefetch for hybrid search
-        prefetch = [
-            models.Prefetch(
-                query=qdrant_sparse,
-                using="sparse",
-                limit=prefetch_limit),
-            models.Prefetch(
-                query=dense_vec,
-                using="dense",
-                limit=prefetch_limit)
-        ]
-        
-        # Perform reranking with ColBERT
-        results = self.client.query_points(
-            collection_name,
-            prefetch=prefetch,
-            query=colbert_vec,
-            using="colbert",
-            with_payload=True,
-            limit=limit,
-        )["results"]["points"]
-        
-        indices, scores = zip(*[(point.id, point.score) for point in results])                   
-        paths = [self.id2path[int(idx)] for idx in indices]
+        # Format results
+        formatted_results = []
+        for point in results:
+            formatted_results.append({
+                "id": point.id,
+                "score": float(point.score),
+                "keyframe": point.payload.get("keyframe", ""),
+                "path": point.payload.get("path", "")
+            })
+            
+        return formatted_results
     
-        return scores, indices, paths
+    def search_by_text(self, text, collection_name, limit=10):
+        """
+        Search for images matching text in the collection
+        
+        Args:
+            text: Text query
+            collection_name: Name of the collection to search in
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of dictionaries with search results
+        """
+        if not self.model:
+            raise ValueError("Model not provided. Cannot encode text.")
+            
+        # Encode text using OpenCLIP
+        vector = self.model.encode_text(text)
+        
+        # Search in Qdrant
+        results = self.client.search(
+            collection_name=collection_name,
+            query_vector=vector.tolist() if isinstance(vector, np.ndarray) else vector,
+            limit=limit
+        )
+        
+        # Format results
+        formatted_results = []
+        for point in results:
+            formatted_results.append({
+                "id": point.id,
+                "score": float(point.score),
+                "keyframe": point.payload.get("keyframe", ""),
+                "path": point.payload.get("path", "")
+            })
+            
+        return formatted_results
+    
+    def search(self, query, collection_name, limit=10):
+        """
+        Search for images matching query text in the collection
+        This is an alias for search_by_text for compatibility
+        
+        Args:
+            query: Text query
+            collection_name: Name of the collection to search in
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of dictionaries with search results
+        """
+        return self.search_by_text(query, collection_name, limit)
+    
+    def load_mapping(self, mapping_file):
+        """
+        Load mapping between IDs and paths from file
+        
+        Args:
+            mapping_file: Path to the mapping JSON file
+        
+        Returns:
+            Dictionary with mapping data
+        """
+        try:
+            with open(mapping_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading mapping file: {e}")
+            return {}
+            
+    def delete_collection(self, collection_name):
+        """
+        Delete a collection from Qdrant
+        
+        Args:
+            collection_name: Name of the collection to delete
+        
+        Returns:
+            Boolean indicating success
+        """
+        if self.is_collection_exists(collection_name):
+            self.client.delete_collection(collection_name)
+            return True
+        return False
