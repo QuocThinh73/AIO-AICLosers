@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import tqdm
 import sys
 import subprocess
@@ -50,23 +51,45 @@ def get_image_embedder(backbone, pretrained):
     image_embedder = OpenCLIP(backbone, pretrained, device=device)
     return image_embedder
 
-def process_video(keyframe_dir, output_embedded_vector_path, image_embedder):
-    embedded_vectors = []
-    # Chỉ xử lý các file ảnh
-    image_files = [f for f in sorted(os.listdir(keyframe_dir)) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+def process_video(video_dir, output_embedded_vector_path, image_embedder):
+    """
+    Xử lý một video, tạo embeddings cho các keyframes
     
-    if not image_files:
-        print(f"Không tìm thấy file ảnh trong {keyframe_dir}")
+    Args:
+        video_dir: Đường dẫn đến thư mục chứa keyframes của video
+        output_embedded_vector_path: Đường dẫn đến file output JSON
+        image_embedder: Model embedder
+        
+    Returns:
+        int: Số lượng keyframes đã xử lý
+    """
+    # Kiểm tra xem thư mục có tồn tại không
+    if not os.path.exists(video_dir) or not os.path.isdir(video_dir):
+        print(f"Thư mục không tồn tại: {video_dir}")
         return 0
     
-    print(f"Tìm thấy {len(image_files)} ảnh trong {keyframe_dir}")
+    # Tìm tất cả các keyframes (file ảnh)
+    image_files = []
+    for ext in ['.jpg', '.jpeg', '.png']:
+        image_files.extend(glob.glob(os.path.join(video_dir, f'*{ext}')))
+    
+    if not image_files:
+        print(f"Không tìm thấy keyframes nào trong {video_dir}")
+        return 0
+    
+    print(f"Tìm thấy {len(image_files)} keyframes")
+    
+    # Tạo embedded vectors
+    embedded_vectors = []
+    for image_file in tqdm.tqdm(image_files, desc="Processing keyframes"):
+        # Lấy tên keyframe từ đường dẫn
+        keyframe_name = os.path.basename(image_file)
         
-    # Sử dụng tqdm để hiển thị thanh tiến trình
-    for keyframe_name in tqdm.tqdm(image_files, desc="Embedding images"):
-        keyframe_path = os.path.join(keyframe_dir, keyframe_name)
-        image = Image.open(keyframe_path).convert("RGB")
+        # Tạo embedded vector
+        image = Image.open(image_file).convert("RGB")
         embedded_vector = image_embedder.encode_image(image)
-
+        
+        # Lưu vào danh sách kết quả
         embedded_vectors.append({
             "keyframe": keyframe_name,
             "embedded_vector": embedded_vector.tolist()
@@ -143,6 +166,10 @@ def embed_image(input_keyframe_dir, output_embedded_vector_dir, mode, backbone, 
                 
                 if num_processed:
                     total_processed += 1
+                    # Nén file JSON thành ZIP ngay sau khi xử lý mỗi video
+                    zip_path = zip_single_json_file(output_path)
+                    output_path = zip_path if zip_path else output_path
+                    
                     results["processed_videos"].append({
                         "lesson": lesson,
                         "video": video,
@@ -175,6 +202,10 @@ def embed_image(input_keyframe_dir, output_embedded_vector_dir, mode, backbone, 
             
             if num_processed:
                 total_processed += 1
+                # Nén file JSON thành ZIP ngay sau khi xử lý mỗi video
+                zip_path = zip_single_json_file(output_path)
+                output_path = zip_path if zip_path else output_path
+                
                 results["processed_videos"].append({
                     "lesson": lesson_name,
                     "video": video,
@@ -200,6 +231,10 @@ def embed_image(input_keyframe_dir, output_embedded_vector_dir, mode, backbone, 
         num_processed = process_video(video_dir, output_path, image_embedder)
         
         if num_processed:
+            # Nén file JSON thành ZIP ngay sau khi xử lý video
+            zip_path = zip_single_json_file(output_path)
+            output_path = zip_path if zip_path else output_path
+            
             results["processed_videos"].append({
                 "lesson": lesson_name,
                 "video": video_name,
@@ -221,17 +256,65 @@ def embed_image(input_keyframe_dir, output_embedded_vector_dir, mode, backbone, 
     
     return results
 
-def create_zip_file(output_embedded_vector_dir):
+def zip_single_json_file(json_file_path):
     """
-    Tạo file zip từ thư mục embedding vectors
+    Tạo file zip từ một file JSON đơn lẻ
     
     Args:
-        output_embedded_vector_dir: Thư mục chứa các file embedding vectors
+        json_file_path: Đường dẫn đến file JSON cần nén
         
     Returns:
         str: Đường dẫn đến file zip
     """
     import shutil
+    import os
+    
+    # Kiểm tra file tồn tại
+    if not os.path.exists(json_file_path):
+        print(f"Không tìm thấy file: {json_file_path}")
+        return None
+    
+    # Tạo đường dẫn file zip
+    zip_base_path = os.path.splitext(json_file_path)[0]
+    zip_path = f"{zip_base_path}.zip"
+    
+    try:
+        # Tạo file zip
+        base_dir = os.path.dirname(json_file_path)
+        file_name = os.path.basename(json_file_path)
+        
+        print(f"Đang nén file {file_name}...")
+        # Tạo file zip chỉ chứa file JSON này
+        import zipfile
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(json_file_path, arcname=file_name)
+        
+        print(f"Đã tạo file zip thành công: {zip_path}")
+        
+        # Xóa file JSON gốc để tiết kiệm không gian
+        os.remove(json_file_path)
+        print(f"Đã xóa file JSON gốc: {json_file_path}")
+        
+    except Exception as e:
+        print(f"Cảnh báo: Không thể tạo file zip cho {json_file_path}: {e}")
+        return None
+    
+    return zip_path
+
+def create_zip_file(output_embedded_vector_dir):
+    """
+    Tạo file zip từ thư mục embedding vectors (đã chứa các file zip con)
+    
+    Args:
+        output_embedded_vector_dir: Thư mục chứa các file embedding vectors đã được nén
+        
+    Returns:
+        str: Đường dẫn đến file zip
+    """
+    import shutil
+    import glob
+    import zipfile
+    
     # Lấy thư mục cơ sở và tên
     base_dir = os.path.dirname(output_embedded_vector_dir)
     dir_name = os.path.basename(output_embedded_vector_dir)
@@ -239,18 +322,34 @@ def create_zip_file(output_embedded_vector_dir):
     # Tạo đường dẫn file zip
     zip_path = os.path.join(base_dir, f"{dir_name}.zip")
     
-    # In thông tin về quá trình tạo file zip
-    print(f"Đang tạo file zip của embedded vectors: {zip_path}")
+    # In thông tin về quá trình tạo file zip tổng hợp
+    print(f"Đang tạo file zip tổng hợp: {zip_path}")
     
     try:
-        # Tạo file zip
-        shutil.make_archive(
-            os.path.join(base_dir, dir_name),  # Tên gốc của file zip
-            'zip',                             # Format
-            output_embedded_vector_dir          # Thư mục cần zip
-        )
-        print(f"Đã tạo file zip thành công tại: {zip_path}")
+        # Tìm tất cả file zip con trong thư mục
+        zip_files = []
+        for root, _, _ in os.walk(output_embedded_vector_dir):
+            zip_files.extend(glob.glob(os.path.join(root, "*.zip")))
+        
+        if not zip_files:
+            print(f"Không tìm thấy file zip nào trong {output_embedded_vector_dir}")
+            # Sử dụng phương pháp nén truyền thống nếu không có file zip con
+            shutil.make_archive(
+                os.path.join(base_dir, dir_name),  # Tên gốc của file zip
+                'zip',                             # Format
+                output_embedded_vector_dir          # Thư mục cần zip
+            )
+        else:
+            # Tạo file zip mới chứa tất cả các file zip con
+            print(f"Tìm thấy {len(zip_files)} file zip con để nén")
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for zip_file in zip_files:
+                    # Lưu trữ đường dẫn tương đối trong file zip
+                    rel_path = os.path.relpath(zip_file, output_embedded_vector_dir)
+                    zipf.write(zip_file, arcname=rel_path)
+        
+        print(f"Đã tạo file zip tổng hợp thành công tại: {zip_path}")
     except Exception as e:
-        print(f"Cảnh báo: Không thể tạo file zip: {e}")
+        print(f"Cảnh báo: Không thể tạo file zip tổng hợp: {e}")
     
     return zip_path
