@@ -1,7 +1,45 @@
 import os
 import json
 import tqdm
+import sys
+import subprocess
 from PIL import Image
+
+
+def _ensure_dependencies():
+    """Đảm bảo các thư viện phụ thuộc đã được cài đặt"""
+    print("Kiểm tra và cài đặt các thư viện cần thiết...")
+    
+    # Kiểm tra xem có đang chạy trong Kaggle không
+    in_kaggle = 'KAGGLE_KERNEL_RUN_TYPE' in os.environ
+    
+    required_packages = [
+        "open_clip_torch",
+        "ftfy",
+        "regex"
+    ]
+    
+    for package in required_packages:
+        try:
+            # Thử import package
+            if package == "open_clip_torch":
+                try:
+                    import open_clip
+                    print(f"Đã tìm thấy {package}")
+                    continue
+                except ImportError:
+                    pass
+            
+            print(f"Đang cài đặt {package}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package])
+            print(f"Đã cài đặt {package} thành công")
+                
+        except Exception as e:
+            print(f"Cảnh báo: Không thể cài đặt {package}. Lỗi: {e}")
+            # Tiếp tục vì package có thể đã được cài đặt
+
+# Đảm bảo các thư viện phụ thuộc đã được cài đặt
+_ensure_dependencies()
 
 
 def get_image_embedder(backbone, pretrained):
