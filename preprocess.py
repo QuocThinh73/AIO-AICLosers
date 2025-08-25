@@ -539,7 +539,6 @@ def embed_image(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson", "video"])
     parser.add_argument("input_keyframe_dir", type=str)
-    parser.add_argument("input_mapping_json", type=str)
     parser.add_argument("output_embedded_vector_dir", type=str)
     parser.add_argument("--backbone", type=str, default="ViT-B-16")
     parser.add_argument("--pretrained", type=str, default="dfn2b")
@@ -551,9 +550,6 @@ def embed_image(argv):
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
-    if not os.path.exists(args.input_mapping_json):
-        raise ValueError("Input mapping json does not exist")
 
     if args.mode == "lesson":
         if not args.lesson_name:
@@ -574,11 +570,11 @@ def embed_image(argv):
     # Main process
     from preprocess.embed_image import embed_image
     if args.mode == "all":
-        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
     elif args.mode == "lesson":
-        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name)
     elif args.mode == "video":
-        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name, args.video_name)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name, args.video_name)
 
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
