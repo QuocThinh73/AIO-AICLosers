@@ -1,11 +1,10 @@
-from qdrant_client import QdrantClient, models
-import json
-import os
 import uuid
-from backend.app.core.config import settings
+import numpy as np
+from FlagEmbedding import BGEM3FlagModel
+from qdrant_client import QdrantClient, models
 
 class Qdrant:
-    def __init__(self, host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)):
+    def __init__(self, host, port, model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)):
         self.client = QdrantClient(host=host, port=port)
         self.model = model
         
@@ -106,13 +105,6 @@ class Qdrant:
         dense_vec = query_outputs["dense_vecs"][0]
         sparse_vec = query_outputs["lexical_weights"][0]
         colbert_vec = query_outputs["colbert_vecs"][0]
-        
-        # Search in Qdrant
-        results = self.client.search(
-            collection_name=collection_name,
-            query_vector=vector.tolist() if isinstance(vector, np.ndarray) else vector,
-            limit=limit
-        )
         
         # Set up prefetch for hybrid search
         prefetch = [
