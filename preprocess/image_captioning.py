@@ -52,9 +52,26 @@ import glob
 import shutil
 from tqdm import tqdm
 
-# Import our model
+# Import our model using importlib to handle dot in filename
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models.internvl3_5 import InternVL35
+import importlib.util
+
+# Load InternVL35 module dynamically to handle dot in filename
+models_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models')
+model_path = os.path.join(models_dir, 'internvl3.5.py')
+
+if os.path.exists(model_path):
+    # Load module using importlib.util
+    spec = importlib.util.spec_from_file_location("internvl3_5_module", model_path)
+    internvl3_5_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(internvl3_5_module)
+    InternVL35 = internvl3_5_module.InternVL35
+else:
+    # Fallback to standard import
+    try:
+        from models.internvl3_5 import InternVL35
+    except ImportError:
+        from models.internvl3 import InternVL35
 
 
 def generate_captions(
