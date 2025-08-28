@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     QDRANT_HOST: str
     QDRANT_PORT: int
 
+    ELASTICSEARCH_HOST: str
+    ELASTICSEARCH_PORT: int
+
     # Load environment variables
     model_config = SettingsConfigDict(
         env_file="backend.env",
