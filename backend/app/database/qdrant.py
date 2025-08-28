@@ -1,12 +1,14 @@
 import uuid
 import numpy as np
-from FlagEmbedding import BGEM3FlagModel
 from qdrant_client import QdrantClient, models
+from FlagEmbedding import BGEM3FlagModel
+from models.openclip import OpenCLIP
 
 class Qdrant:
-    def __init__(self, host, port, model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)):
+    def __init__(self, host, port, caption_model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True), openclip_model=OpenCLIP('ViT-B-16', pretrained='dfn2b')):
         self.client = QdrantClient(host=host, port=port)
-        self.model = model
+        self.caption_model = caption_model
+        self.openclip_model = openclip_model
         
     def is_collection_exists(self, collection_name):
         """Check if collection exists in Qdrant"""
@@ -36,7 +38,7 @@ class Qdrant:
         )
         
     def generate_caption_embeddings(self, text):
-        return self.model.encode(
+        return self.caption_model.encode(
             [text], 
             return_dense=True,
             return_sparse=True,
@@ -132,11 +134,11 @@ class Qdrant:
         
         return keyframes
 
-    def generate_openclip_embeddings(self, text):
-        return self.model.encode(
-            [text],
-            return_dense=True
-        )
+    def generate_openclip_embeddings(self, text, image):
+        if text:
+            return self.openclip_model.encode_text(text)
+        elif image:
+            return self.openclip_model.encode_image(image)
 
     def create_openclip_collection(self, collection_name):
         self.client.create_collection(
@@ -169,8 +171,8 @@ class Qdrant:
                 ]
             )
 
-    def search_openclip(self, search_query, collection_name, limit=100):
-        query_outputs = self.generate_openclip_embeddings(search_query)
+    def search_openclip_text(self, text, image, collection_name, limit=100):
+        query_outputs = self.generate_openclip_embeddings(text=text)
 
         dense_vec = query_outputs["dense_vecs"][0]
 

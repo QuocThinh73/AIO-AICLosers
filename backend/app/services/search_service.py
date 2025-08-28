@@ -24,31 +24,21 @@ class SearchService:
         self.videos_path = os.path.abspath(VIDEOS_FOLDER) if VIDEOS_FOLDER else ""
     
     
-    def embedding_search(self, embedding_text: str, top_k: int, embedding_models: List[str] = None) -> List[Dict[str, Any]]:
+    def embedding_search(self, embedding: str, top_k: int) -> List[str]:
         """Perform text-to-image search using embedding models."""
-        if not embedding_text:
+        if not embedding:
             return []
-            
-        # Get available models from database service
-        available_models = database_service.get_available_embedding_models()
-        
-        # If specific models requested, filter to only those that are available
-        if embedding_models and isinstance(embedding_models, list):
-            models_to_use = [model for model in embedding_models if model in available_models]
-        else:
-            models_to_use = available_models
-            
-        if not models_to_use:
+
+        results = database_service.search_openclip(embedding=embedding, top_k=top_k)
+        return results
+
+    def captioning_search(self, captioning: str, top_k: int) -> List[str]:
+        """Perform search using image captions in Qdrant."""
+        if not captioning:
             return []
-        
-        # Collect results from all requested models
-        results = []
-        for model_name in models_to_use:
-            try:
-                faiss_handler = database_service.get_embedding_model(model_name)
-                if not faiss_handler:
-                    continue
-                    
+
+        results = database_service.search_caption(captioning, top_k)
+        return results
                 distances, indices, paths = faiss_handler.text_search(query=embedding_text, top_k=top_k)
                 
                 # Format results

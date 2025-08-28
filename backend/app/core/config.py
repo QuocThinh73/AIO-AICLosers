@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     ELASTICSEARCH_HOST: str
     ELASTICSEARCH_PORT: int
 
+    OPENCLIP_COLLECTION_NAME: str
+    CAPTION_COLLECTION_NAME: str
+
     # Load environment variables
     model_config = SettingsConfigDict(
         env_file="backend.env",
