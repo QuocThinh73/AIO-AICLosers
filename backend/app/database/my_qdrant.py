@@ -2,24 +2,13 @@ from qdrant_client import QdrantClient, models
 from FlagEmbedding import BGEM3FlagModel
 import json
 import os
-from app.config import MAPPING_JSON
+import uuid
+from backend.app.core.config import settings
 
 class Qdrant:
-    def __init__(self, host="localhost", port=6333, model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)):
+    def __init__(self, host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)):
         self.client = QdrantClient(host=host, port=port)
         self.model = model
-        self.id2path = self.load_mapping(MAPPING_JSON)
-        
-    def load_mapping(self, mapping_json):
-        """Load id2path mapping from JSON file"""
-        with open(mapping_json, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        items = data.get("items", [])
-        return {item["id"]: item["path"] for item in items}
-        
-    def get_keyframe_name(self, path):
-        """Extract keyframe name from path"""
-        return os.path.basename(path)
         
     def is_collection_exists(self, collection_name):
         return self.client.collection_exists(collection_name)
@@ -47,7 +36,7 @@ class Qdrant:
             values=sparse_values
         )
         
-    def generate_embeddings(self, text):
+    def generate_caption_embeddings(self, text):
         return self.model.encode(
             [text], 
             return_dense=True,
@@ -55,7 +44,7 @@ class Qdrant:
             return_colbert_vecs=True
         )
         
-    def create_qdrant_collection(self, collection_name):
+    def create_caption_collection(self, collection_name):
         self.client.create_collection(
             collection_name=collection_name,
         vectors_config={
@@ -80,9 +69,8 @@ class Qdrant:
         },
     )
     
-    def insert_to_qdrant(self, embeddings, collection_name):
+    def insert_to_caption_collection(self, embeddings, collection_name):
         for embedding in embeddings:
-            point_id = embedding["point_id"]
             keyframe = embedding["keyframe"]
             caption = embedding["caption"]
             dense_vector = embedding["dense_vector"]
@@ -97,7 +85,7 @@ class Qdrant:
                 collection_name=collection_name,
                 points=[
                     models.PointStruct(
-                        id=point_id,
+                        id=uuid.uuid4(),
                         payload={
                             "keyframe": keyframe,
                             "caption": caption
@@ -111,14 +99,9 @@ class Qdrant:
                 ]
             )
         
-    def search(self, search_query, collection_name, limit=100, prefetch_limit=300):
-        # Generate embeddings for the query
-        query_outputs = self.model.encode(
-            [search_query],
-            return_dense=True,
-            return_sparse=True,
-            return_colbert_vecs=True
-        )
+    def search_caption(self, search_query, collection_name, limit=100, prefetch_limit=300):
+        # Generate caption embeddings for the query
+        query_outputs = self.generate_caption_embeddings(search_query)
         
         dense_vec = query_outputs["dense_vecs"][0]
         sparse_vec = query_outputs["lexical_weights"][0]
@@ -149,7 +132,59 @@ class Qdrant:
             limit=limit,
         )["results"]["points"]
         
-        indices, scores = zip(*[(point.id, point.score) for point in results])                   
-        paths = [self.id2path[int(idx)] for idx in indices]
-    
-        return scores, indices, paths
+        keyframes = [point.payload["keyframe"] for point in results]              
+        
+        return keyframes
+
+    def generate_openclip_embeddings(self, text):
+        return self.model.encode(
+            [text],
+            return_dense=True
+        )
+
+    def create_openclip_collection(self, collection_name):
+        self.client.create_collection(
+            collection_name=collection_name,
+            vectors_config={
+                "dense": models.VectorParams(
+                    size=1024,
+                    distance=models.Distance.COSINE
+                )
+            }
+        )
+
+    def insert_to_openclip_collection(self, embeddings, collection_name):
+        for embedding in embeddings:
+            keyframe = embedding["keyframe"]
+            dense_vector = embedding["dense_vector"]
+
+            self.client.upsert(
+                collection_name=collection_name,
+                points=[
+                    models.PointStruct(
+                        id=uuid.uuid4(),
+                        payload={
+                            "keyframe": keyframe
+                        },
+                        vector={
+                            "dense": dense_vector
+                        }
+                    )
+                ]
+            )
+
+    def search_openclip(self, search_query, collection_name, limit=100):
+        query_outputs = self.generate_openclip_embeddings(search_query)
+
+        dense_vec = query_outputs["dense_vecs"][0]
+
+        results = self.client.query_points(
+            collection_name,
+            query=dense_vec,
+            using="dense",
+            with_payload=True,
+            limit=limit,
+        )["results"]["points"]
+        
+        keyframes = [point.payload["keyframe"] for point in results]
+        return keyframes

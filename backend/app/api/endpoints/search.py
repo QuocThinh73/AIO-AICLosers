@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from backend.app.models.schemas import BaseSearchRequest, TemporalSearchRequest
 from backend.app.services.search_service import search_service
-from backend.app.core.config import settings
+
 router = APIRouter()
 
 @router.post("/base_search")
