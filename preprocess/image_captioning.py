@@ -87,7 +87,7 @@ def generate_captions(
     try:
         # Initialize the model (use quantization if CUDA is available)
         model = InternVL35(task="image_captioning", use_quantization=True)
-        print(f"Initialized InternVL3.5-4B model on {model.device} device")
+        print(f"Initialized InternVL3.5-1B model on {model.device} device")
         
         # Process based on the selected mode
         if mode == "all":

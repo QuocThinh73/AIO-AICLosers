@@ -20,9 +20,9 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
 class InternVL35:
-    def __init__(self, task, model_checkpoint="OpenGVLab/InternVL3_5-4B", max_new_tokens=512, use_quantization=True):
+    def __init__(self, task, model_checkpoint="OpenGVLab/InternVL3_5-1B", max_new_tokens=512, use_quantization=True):
         """
-        Initialize the InternVL3.5-4B model for different tasks.
+        Initialize the InternVL3.5-1B model for different tasks.
         
         Args:
             task (str): Task type - "image_captioning" or "news_anchor_classification"
@@ -68,7 +68,7 @@ Answer with only YES or NO."""
     
     def _load_model(self, use_quantization=True):
         """Load the tokenizer and model with advanced configuration."""
-        print(f"🔄 Loading InternVL3.5-4B from {self.model_checkpoint}...")
+        print(f"🔄 Loading InternVL3.5-1B from {self.model_checkpoint}...")
         
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
