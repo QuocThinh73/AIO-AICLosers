@@ -15,7 +15,7 @@ def _ensure_dependencies():
     
     # Required packages
     required_packages = [
-        "transformers",  # For model loading
+        "transformers>=4.52.1",  # For InternVL3.5 model loading
         "bitsandbytes",  # For quantization
         "accelerate",   # For optimized inference
         "torch"         # PyTorch
@@ -27,9 +27,9 @@ def _ensure_dependencies():
             continue
             
         try:
-            if package == "transformers" and in_kaggle:
-                # On Kaggle, always install latest transformers from source
-                print(f"Installing {package} from source (required for latest InternVL3 support)...")
+            if package.startswith("transformers") and in_kaggle:
+                # On Kaggle, always install latest transformers from source for InternVL3.5 support
+                print(f"Installing {package} from source (required for latest InternVL3.5 support)...")
                 subprocess.check_call([sys.executable, "-m", "pip", "install", 
                                       "--upgrade", "git+https://github.com/huggingface/transformers"])
             else:
@@ -54,7 +54,7 @@ from tqdm import tqdm
 
 # Import our model
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models.internvl3 import InternVL3
+from models.internvl3_5 import InternVL35
 
 
 def generate_captions(
@@ -69,8 +69,8 @@ def generate_captions(
     
     try:
         # Initialize the model (use quantization if CUDA is available)
-        model = InternVL3(task="image_captioning", use_quantization=True)
-        print(f"Initialized InternVL3 model on {model.device} device")
+        model = InternVL35(task="image_captioning", use_quantization=True)
+        print(f"Initialized InternVL3.5-4B model on {model.device} device")
         
         # Process based on the selected mode
         if mode == "all":
