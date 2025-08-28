@@ -1,5 +1,4 @@
 from qdrant_client import QdrantClient, models
-from FlagEmbedding import BGEM3FlagModel
 import json
 import os
 import uuid
@@ -11,6 +10,7 @@ class Qdrant:
         self.model = model
         
     def is_collection_exists(self, collection_name):
+        """Check if collection exists in Qdrant"""
         return self.client.collection_exists(collection_name)
         
     def create_sparse_vector(self, sparse_data):
@@ -107,8 +107,12 @@ class Qdrant:
         sparse_vec = query_outputs["lexical_weights"][0]
         colbert_vec = query_outputs["colbert_vecs"][0]
         
-        # Convert sparse vector to Qdrant format
-        qdrant_sparse = self.create_sparse_vector(sparse_vec)
+        # Search in Qdrant
+        results = self.client.search(
+            collection_name=collection_name,
+            query_vector=vector.tolist() if isinstance(vector, np.ndarray) else vector,
+            limit=limit
+        )
         
         # Set up prefetch for hybrid search
         prefetch = [

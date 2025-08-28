@@ -65,21 +65,46 @@ def detect_shot_boundary(input_video_dir, output_shot_dir, mode, lesson_name=Non
     if mode == "lesson":
         lesson_output_dir = os.path.join(output_shot_dir, lesson_name)
         os.makedirs(lesson_output_dir, exist_ok=True)
-        for video_file in sorted(os.listdir(os.path.join(input_video_dir, lesson_name))):
-            if not video_file.endswith(".mp4"):
-                continue
-            video_path = os.path.join(input_video_dir, lesson_name, video_file)
-            process_video(video_path, lesson_output_dir, predict_video)
+        lesson_path = os.path.join(input_video_dir, lesson_name)
+        
+        for video_folder in sorted(os.listdir(lesson_path)):
+            video_folder_path = os.path.join(lesson_path, video_folder)
+            if os.path.isdir(video_folder_path):
+                video_folder_output = os.path.join(lesson_output_dir, video_folder)
+                os.makedirs(video_folder_output, exist_ok=True)
+                
+                for video_file in sorted(os.listdir(video_folder_path)):
+                    if not video_file.endswith(".mp4"):
+                        continue
+                    video_path = os.path.join(video_folder_path, video_file)
+                    process_video(video_path, video_folder_output, predict_video)
+            elif video_folder.endswith(".mp4"):
+                video_path = video_folder_path
+                process_video(video_path, lesson_output_dir, predict_video)
 
-    else:
+    else:  # mode == "all"
         for lesson_folder in sorted(os.listdir(input_video_dir)):
+            lesson_path = os.path.join(input_video_dir, lesson_folder)
+            if not os.path.isdir(lesson_path):
+                continue
+                
             lesson_output_dir = os.path.join(output_shot_dir, lesson_folder)
             os.makedirs(lesson_output_dir, exist_ok=True)
-            for video_file in sorted(os.listdir(os.path.join(input_video_dir, lesson_folder))):
-                if not video_file.endswith(".mp4"):
-                    continue
-                video_path = os.path.join(input_video_dir, lesson_folder, video_file)
-                process_video(video_path, lesson_output_dir, predict_video)
+            
+            for video_folder in sorted(os.listdir(lesson_path)):
+                video_folder_path = os.path.join(lesson_path, video_folder)
+                if os.path.isdir(video_folder_path):
+                    video_folder_output = os.path.join(lesson_output_dir, video_folder)
+                    os.makedirs(video_folder_output, exist_ok=True)
+                    
+                    for video_file in sorted(os.listdir(video_folder_path)):
+                        if not video_file.endswith(".mp4"):
+                            continue
+                        video_path = os.path.join(video_folder_path, video_file)
+                        process_video(video_path, video_folder_output, predict_video)
+                elif video_folder.endswith(".mp4"):
+                    video_path = video_folder_path
+                    process_video(video_path, lesson_output_dir, predict_video)
     
     
     

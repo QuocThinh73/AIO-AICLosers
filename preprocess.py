@@ -29,6 +29,7 @@ def shot_boundary_detection(argv):
     elif args.mode == "lesson":
         detect_shot_boundary(args.input_video_dir, args.output_shot_dir, args.mode, args.lesson_name)
     
+
 def keyframe_extraction(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
@@ -466,6 +467,38 @@ def save_embedding_faiss(argv):
     else:
         print(f"Error: {result['message']}")
         sys.exit(1)
+
+def save_embedding_qdrant(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("keyframe_dir", type=str)
+    parser.add_argument("output_dir", type=str)
+    parser.add_argument("--collection_name", type=str, default="embeddings")
+    parser.add_argument("--backbone", type=str, default="ViT-B-16")
+    parser.add_argument("--pretrained", type=str, default="dfn2b")
+    
+    args = parser.parse_args(argv)
+    
+    # Validate arguments
+    if not os.path.exists(args.keyframe_dir):
+        raise ValueError("Input keyframe directory does not exist")
+    
+    # Main process
+    from preprocess.save_embedding_qdrant_openclip import save_embeddings_qdrant
+    result = save_embeddings_qdrant(
+        args.keyframe_dir, 
+        args.output_dir,
+        collection_name=args.collection_name,
+        backbone=args.backbone,
+        pretrained=args.pretrained
+    )
+    
+    if result["status"] == "error":
+        print(f"Error: {result['message']}")
+        sys.exit(1)
+    else:
+        print(f"Success: {result['message']}")
+        sys.exit(0)
+
 def save_caption_qdrant(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("caption_dir", type=str)
@@ -501,6 +534,51 @@ def save_caption_qdrant(argv):
     else:
         print(f"Success: {result['message']}")
         sys.exit(0)
+
+def embed_image(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=["all", "lesson", "video"])
+    parser.add_argument("input_keyframe_dir", type=str)
+    parser.add_argument("output_embedded_vector_dir", type=str)
+    parser.add_argument("--backbone", type=str, default="ViT-B-16")
+    parser.add_argument("--pretrained", type=str, default="dfn2b")
+    parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--video_name", type=str)
+
+    args = parser.parse_args(argv)
+
+    # Check error
+    if not os.path.exists(args.input_keyframe_dir):
+        raise ValueError("Input keyframe directory does not exist")
+
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+            raise ValueError("Lesson keyframe directory does not exist")
+    
+    if args.mode == "video":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is video")
+        if not args.video_name:
+            raise ValueError("Video name is required when mode is video")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
+            raise ValueError("Lesson keyframe directory does not exist")
+        if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name, args.video_name)):
+            raise ValueError("Video keyframe directory does not exist")
+    
+    # Main process
+    from preprocess.embed_image import embed_image
+    
+    if args.mode == "all":
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
+    elif args.mode == "lesson":
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
+                   args.lesson_name)
+    elif args.mode == "video":
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
+                   args.lesson_name, args.video_name)
+
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
     "keyframe_extraction": keyframe_extraction,
@@ -513,9 +591,11 @@ TASKS = {
     "image_captioning": image_captioning,
     "asr": asr,
     "ocr": ocr,
+    "embed_image": embed_image,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
     "save_embedding_faiss": save_embedding_faiss,
+    "save_embedding_qdrant": save_embedding_qdrant,
     "save_caption_qdrant": save_caption_qdrant,
 }
 
@@ -536,4 +616,4 @@ if __name__ == "__main__":
         print(f"Task '{task}' not found. Available tasks:")
         for task in TASKS:
             print(f"- {task}")
-        sys.exit(1)      
+        sys.exit(1)
