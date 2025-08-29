@@ -440,7 +440,7 @@ def save_ocr_elasticsearch(argv):
     else:
         print(f"Success: {result['message']}")
 
-def save_embedding_qdrant(argv):
+def save_embeddings_qdrant(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("input_embedded_vector_dir", type=str)
     
@@ -549,7 +549,7 @@ TASKS = {
     "embed_image": embed_image,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
-    "save_embedding_qdrant": save_embedding_qdrant,
+    "save_embeddings_qdrant": save_embeddings_qdrant,
     "save_caption_qdrant": save_caption_qdrant,
 }
 

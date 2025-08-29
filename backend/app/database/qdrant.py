@@ -1,4 +1,4 @@
-import uuid
+import os
 import numpy as np
 from qdrant_client import QdrantClient, models
 from FlagEmbedding import BGEM3FlagModel
@@ -146,7 +146,7 @@ class Qdrant:
             collection_name=collection_name,
             vectors_config={
                 "dense": models.VectorParams(
-                    size=1024,
+                    size=512,
                     distance=models.Distance.COSINE
                 )
             }

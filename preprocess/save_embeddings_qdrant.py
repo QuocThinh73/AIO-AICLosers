@@ -12,6 +12,6 @@ def save_embeddings_qdrant(input_embedded_vector_dir):
     if not qdrant_client.is_collection_exists(collection_name="openclip"):
         qdrant_client.create_openclip_collection(collection_name="openclip")
 
-    for file in os.listdir(input_embedded_vector_dir):
-        if file.endswith(".json"):
-            process_video(os.path.join(input_embedded_vector_dir, file), qdrant_client)
+    for batch in os.listdir(input_embedded_vector_dir):
+        for video in os.listdir(os.path.join(input_embedded_vector_dir, batch)):
+            process_video(os.path.join(input_embedded_vector_dir, batch, video), qdrant_client)
