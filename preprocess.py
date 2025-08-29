@@ -418,7 +418,6 @@ def save_detection_elasticsearch(argv):
     else:
         print(f"Success: {result['message']}")
 
-
 def save_ocr_elasticsearch(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("input_dir", type=str)
@@ -440,64 +439,20 @@ def save_ocr_elasticsearch(argv):
         print(f"Error: {result['message']}")
     else:
         print(f"Success: {result['message']}")
-def save_embedding_faiss(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input_keyframe_dir", type=str)
-    parser.add_argument("output_dir", type=str)
-    parser.add_argument("--backbone", type=str, default="ViT-B-16")
-    parser.add_argument("--pretrained", type=str, default="dfn2b")
-    
-    args = parser.parse_args(argv)
-    
-    # Check error
-    if not os.path.exists(args.input_keyframe_dir):
-        raise ValueError("Input keyframe directory does not exist")
-    
-    # Main process
-    from preprocess.save_embedding_faiss import save_embeddings_faiss
-    result = save_embeddings_faiss(
-        args.input_keyframe_dir, 
-        args.output_dir,
-        backbone=args.backbone,
-        pretrained=args.pretrained
-    )
-    
-    if result["status"] == "success":
-        print(f"Success: {result['message']}")
-    else:
-        print(f"Error: {result['message']}")
-        sys.exit(1)
 
 def save_embedding_qdrant(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("keyframe_dir", type=str)
-    parser.add_argument("output_dir", type=str)
-    parser.add_argument("--collection_name", type=str, default="embeddings")
-    parser.add_argument("--backbone", type=str, default="ViT-B-16")
-    parser.add_argument("--pretrained", type=str, default="dfn2b")
+    parser.add_argument("embedded_vector_dir", type=str)
     
     args = parser.parse_args(argv)
     
     # Validate arguments
-    if not os.path.exists(args.keyframe_dir):
-        raise ValueError("Input keyframe directory does not exist")
+    if not os.path.exists(args.embedded_vector_dir):
+        raise ValueError("Input embedded vector directory does not exist")
     
     # Main process
-    from preprocess.save_embedding_qdrant_openclip import save_embeddings_qdrant
-    result = save_embeddings_qdrant(
-        args.keyframe_dir, 
-        args.output_dir,
-        collection_name=args.collection_name,
-        backbone=args.backbone,
-        pretrained=args.pretrained
-    )
+    from preprocess.save_embeddings_qdrant import save_embeddings_qdrant
     
-    if result["status"] == "error":
-        print(f"Error: {result['message']}")
-        sys.exit(1)
-    else:
-        print(f"Success: {result['message']}")
-        sys.exit(0)
 
 def save_caption_qdrant(argv):
     parser = argparse.ArgumentParser()
@@ -594,7 +549,6 @@ TASKS = {
     "embed_image": embed_image,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
-    "save_embedding_faiss": save_embedding_faiss,
     "save_embedding_qdrant": save_embedding_qdrant,
     "save_caption_qdrant": save_caption_qdrant,
 }
