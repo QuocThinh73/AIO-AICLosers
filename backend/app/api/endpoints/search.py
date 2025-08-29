@@ -13,10 +13,10 @@ def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_im
    search_service = SearchService()
 
    if base_search_request.use_translation:
-      base_search_request.embedding_text = search_service.translate_text(base_search_request.embedding_text) if base_search_request.use_embedding_text else base_search_request.embedding_text
-      base_search_request.captioning_text = search_service.translate_text(base_search_request.captioning_text) if base_search_request.use_captioning else base_search_request.captioning_text
-      base_search_request.ocr_text = search_service.translate_text(base_search_request.ocr_text) if base_search_request.use_ocr else base_search_request.ocr_text
-      base_search_request.object_detection_text = search_service.translate_text(base_search_request.object_detection_text) if base_search_request.use_object_detection else base_search_request.object_detection_text
+      base_search_request.embedding_text = search_service.translate_text(text=base_search_request.embedding_text, src_lang="vi", dest_lang="en") if base_search_request.use_embedding_text else base_search_request.embedding_text
+      base_search_request.captioning_text = search_service.translate_text(text=base_search_request.captioning_text, src_lang="vi", dest_lang="en") if base_search_request.use_captioning else base_search_request.captioning_text
+      base_search_request.ocr_text = search_service.translate_text(text=base_search_request.ocr_text, src_lang="vi", dest_lang="en") if base_search_request.use_ocr else base_search_request.ocr_text
+      base_search_request.object_detection_text = search_service.translate_text(text=base_search_request.object_detection_text, src_lang="vi", dest_lang="en") if base_search_request.use_object_detection else base_search_request.object_detection_text
 
    results = []
    if base_search_request.use_embedding_text:
