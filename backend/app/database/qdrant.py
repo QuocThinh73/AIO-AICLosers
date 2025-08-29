@@ -3,6 +3,7 @@ import numpy as np
 from qdrant_client import QdrantClient, models
 from FlagEmbedding import BGEM3FlagModel
 from models.openclip import OpenCLIP
+from backend.app.utils.generate_id import generate_id
 
 class Qdrant:
     def __init__(self, host, port, caption_model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True), openclip_model=OpenCLIP('ViT-B-16', pretrained='dfn2b')):
@@ -86,7 +87,7 @@ class Qdrant:
                 collection_name=collection_name,
                 points=[
                     models.PointStruct(
-                        id=uuid.uuid4(),
+                        id=generate_id(keyframe),
                         payload={
                             "keyframe": keyframe,
                             "caption": caption
@@ -154,18 +155,26 @@ class Qdrant:
     def insert_to_openclip_collection(self, embeddings, collection_name):
         for embedding in embeddings:
             keyframe = embedding["keyframe"]
-            dense_vector = embedding["dense_vector"]
+            embedded_vector = embedding["embedded_vector"]
+            keyframe_name = os.path.splitext(keyframe)[0]
+            parts = keyframe_name.split("_")
+            batch_id = parts[0]
+            video_id = parts[1]
+            frame_id = parts[2]
 
             self.client.upsert(
                 collection_name=collection_name,
                 points=[
                     models.PointStruct(
-                        id=uuid.uuid4(),
+                        id=generate_id(keyframe),
                         payload={
-                            "keyframe": keyframe
+                            "keyframe": keyframe,
+                            "batch_id": batch_id,
+                            "video_id": video_id,
+                            "frame_id": int(frame_id)
                         },
                         vector={
-                            "dense": dense_vector
+                            "dense": embedded_vector
                         }
                     )
                 ]
@@ -173,7 +182,7 @@ class Qdrant:
 
     def search_openclip(self, text, image, collection_name, limit=100):
         dense_vec = self.generate_openclip_embeddings(text=text, image=image)
-        
+
         results = self.client.query_points(
             collection_name,
             query=dense_vec,

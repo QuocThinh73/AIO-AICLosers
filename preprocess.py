@@ -442,17 +442,17 @@ def save_ocr_elasticsearch(argv):
 
 def save_embedding_qdrant(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("embedded_vector_dir", type=str)
+    parser.add_argument("input_embedded_vector_dir", type=str)
     
     args = parser.parse_args(argv)
     
     # Validate arguments
-    if not os.path.exists(args.embedded_vector_dir):
+    if not os.path.exists(args.input_embedded_vector_dir):
         raise ValueError("Input embedded vector directory does not exist")
     
     # Main process
     from preprocess.save_embeddings_qdrant import save_embeddings_qdrant
-    
+    save_embeddings_qdrant(args.input_embedded_vector_dir)
 
 def save_caption_qdrant(argv):
     parser = argparse.ArgumentParser()
