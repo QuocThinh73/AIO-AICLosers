@@ -20,10 +20,10 @@ def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_im
 
    results = []
    if base_search_request.use_embedding_text:
-      embedding_result = search_service.search_openclip(text=base_search_request.embedding_text, top_k=base_search_request.top_k)
+      embedding_result = search_service.search_openclip(text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k)
       results.append(embedding_result)
    if base_search_request.use_embedding_image:
-      embedding_result = search_service.search_openclip(image=embedding_image, top_k=base_search_request.top_k)
+      embedding_result = search_service.search_openclip(image=embedding_image, text=None, top_k=base_search_request.top_k)
       results.append(embedding_result)
    if base_search_request.use_captioning:
       captioning_result = search_service.search_caption(base_search_request.captioning_text, base_search_request.top_k)

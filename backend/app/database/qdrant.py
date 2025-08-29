@@ -171,11 +171,9 @@ class Qdrant:
                 ]
             )
 
-    def search_openclip_text(self, text, image, collection_name, limit=100):
-        query_outputs = self.generate_openclip_embeddings(text=text)
-
-        dense_vec = query_outputs["dense_vecs"][0]
-
+    def search_openclip(self, text, image, collection_name, limit=100):
+        dense_vec = self.generate_openclip_embeddings(text=text, image=image)
+        
         results = self.client.query_points(
             collection_name,
             query=dense_vec,
