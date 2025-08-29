@@ -16,6 +16,9 @@ class BaseSearchRequest(BaseModel):
     ocr_text: Optional[str] = None
     object_detection_text: Optional[str] = None
 
+    include_batch_ids: Optional[List[str]] = None
+    exclude_batch_ids: Optional[List[str]] = None
+
     top_k: int = 100
     
 

@@ -12,11 +12,11 @@ class SearchService:
     def search_caption(self, text: str, top_k: int):
         return self.qdrant.search_caption(text=text, collection_name=get_settings().CAPTION_COLLECTION_NAME, limit=top_k, prefetch_limit=top_k*3)
 
-    def search_openclip(self, text: str, image: Image, top_k: int):
+    def search_openclip(self, text: str, image: Image, top_k: int, include_batch_ids=None, exclude_batch_ids=None):
         if text:
-            return self.qdrant.search_openclip(text=text, image=None, collection_name=get_settings().OPENCLIP_COLLECTION_NAME, limit=top_k)
+            return self.qdrant.search_openclip(text=text, image=None, collection_name=get_settings().OPENCLIP_COLLECTION_NAME, limit=top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
         elif image:
-            return self.qdrant.search_openclip(text=None, image=image, collection_name=get_settings().OPENCLIP_COLLECTION_NAME, limit=top_k)
+            return self.qdrant.search_openclip(text=None, image=image, collection_name=get_settings().OPENCLIP_COLLECTION_NAME, limit=top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
 
     def search_ocr(self, ocr_text: str, top_k: int):
         pass 

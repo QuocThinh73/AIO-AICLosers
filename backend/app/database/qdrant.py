@@ -122,16 +122,16 @@ class Qdrant:
         ]
         
         # Perform reranking with ColBERT
-        results = self.client.query_points(
+        points = self.client.query_points(
             collection_name,
             prefetch=prefetch,
             query=colbert_vec,
             using="colbert",
             with_payload=True,
             limit=limit,
-        )["results"]["points"]
+        ).points
         
-        keyframes = [point.payload["keyframe"] for point in results]              
+        keyframes = [point.payload["keyframe"] for point in points]              
         
         return keyframes
 
@@ -180,16 +180,29 @@ class Qdrant:
                 ]
             )
 
-    def search_openclip(self, text, image, collection_name, limit=100):
+    def create_filter(self, include_batch_ids=None, exclude_batch_ids=None):
+        should, must_not = [], []
+
+        if include_batch_ids:
+            should.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=include_batch_ids)))
+        if exclude_batch_ids:
+            must_not.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=exclude_batch_ids)))
+        
+        if not should and not must_not:
+            return None
+        return models.Filter(should=should, must_not=must_not)
+
+    def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None):
         dense_vec = self.generate_openclip_embeddings(text=text, image=image)
 
-        results = self.client.query_points(
+        points = self.client.query_points(
             collection_name,
             query=dense_vec,
             using="dense",
             with_payload=True,
+            query_filter=self.create_filter(include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids),
             limit=limit,
-        )["results"]["points"]
+        ).points
         
-        keyframes = [point.payload["keyframe"] for point in results]
+        keyframes = [point.payload["keyframe"] for point in points]
         return keyframes
