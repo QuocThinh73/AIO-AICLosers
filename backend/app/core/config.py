@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Dict, Union
+from uuid import UUID
 from functools import lru_cache
 
 
@@ -7,14 +8,16 @@ class Settings(BaseSettings):
     API_V1_STR: str
     PROJECT_NAME: str
 
-    QDRANT_HOST: str
-    QDRANT_PORT: int
-
     ELASTICSEARCH_HOST: str
     ELASTICSEARCH_PORT: int
 
+    QDRANT_HOST: str
+    QDRANT_PORT: int
+
     OPENCLIP_COLLECTION_NAME: str
     CAPTION_COLLECTION_NAME: str
+
+    UUID_NAMESPACE: UUID
 
     # Load environment variables
     model_config = SettingsConfigDict(
