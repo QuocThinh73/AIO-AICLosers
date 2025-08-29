@@ -10,14 +10,17 @@ router = APIRouter()
 
 @router.post("/base_search")
 def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_image: Optional[UploadFile] = File(None)):
+   # Initialize search service
    search_service = SearchService()
 
+   # Translate text from Vietnamese to English if needed
    if base_search_request.use_translation:
       base_search_request.embedding_text = search_service.translate_text(text=base_search_request.embedding_text, src_lang="vi", dest_lang="en") if base_search_request.use_embedding_text else base_search_request.embedding_text
       base_search_request.captioning_text = search_service.translate_text(text=base_search_request.captioning_text, src_lang="vi", dest_lang="en") if base_search_request.use_captioning else base_search_request.captioning_text
       base_search_request.ocr_text = search_service.translate_text(text=base_search_request.ocr_text, src_lang="vi", dest_lang="en") if base_search_request.use_ocr else base_search_request.ocr_text
       base_search_request.object_detection_text = search_service.translate_text(text=base_search_request.object_detection_text, src_lang="vi", dest_lang="en") if base_search_request.use_object_detection else base_search_request.object_detection_text
 
+   # Search
    results = []
    if base_search_request.use_embedding_text:
       embedding_result = search_service.search_openclip(text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k)
@@ -35,8 +38,10 @@ def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_im
       object_detection_result = search_service.search_object(base_search_request.object_detection_text, base_search_request.top_k)
       results.append(object_detection_result)
 
+   # Rerank
    results = rrf(results, base_search_request.top_k)
 
+   # Return results
    return results
 
 @router.post("/temporal_search")
