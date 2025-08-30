@@ -269,96 +269,51 @@ def process_lesson(
     
     return {"total": len(all_results), "items": all_results}
 
-def detect_object(
-    input_keyframe_dir: str,
-    input_caption_dir: str,
-    output_detection_dir: str,
-    mode: str,
-    lesson_name: str = None,
-    video_name: str = None
-) -> Dict[str, Any]:
-    # Create output directory
+def get_detection_model():
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from models.groundingdino import GroundingDINO
+    
+    grounding_dino = GroundingDINO()
+    return grounding_dino
+
+def process_video(video_keyframe_dir, caption_file, output_dir, lesson_name, video_name, grounding_dino):
+    lesson_output_dir = os.path.join(output_dir, lesson_name)
+    os.makedirs(lesson_output_dir, exist_ok=True)
+    
+    output_file = os.path.join(lesson_output_dir, f"{lesson_name}_{video_name}_detection.json")
+    
+    video_results = process_video_keyframes(
+        video_keyframe_dir,
+        caption_file,
+        grounding_dino,
+        output_file
+    )
+
+def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, mode, lesson_name=None, video_name=None):
     os.makedirs(output_detection_dir, exist_ok=True)
     
-    # Initialize GroundingDINO model
-    grounding_dino = GroundingDINO()
+    grounding_dino = get_detection_model()
     
-    # Initialize results
-    all_results = []
-    
-    if mode == "all":
-        # Process all lessons
-        lessons = [d for d in os.listdir(input_keyframe_dir) 
-                  if os.path.isdir(os.path.join(input_keyframe_dir, d))]
-        
-        for lesson in lessons:
-            lesson_results = process_lesson(
-                os.path.join(input_keyframe_dir, lesson),
-                os.path.join(input_caption_dir, lesson),
-                os.path.join(output_detection_dir, lesson),
-                grounding_dino
-            )
-            all_results.extend(lesson_results.get("items", []))
-            
-    elif mode == "lesson":
-        # Process single lesson
-        lesson_results = process_lesson(
-            os.path.join(input_keyframe_dir, lesson_name),
-            os.path.join(input_caption_dir, lesson_name),
-            os.path.join(output_detection_dir, lesson_name),
-            grounding_dino
-        )
-        all_results = lesson_results.get("items", [])
-        
-    elif mode == "single":
-        # Process single video
-        video_dir = os.path.join(input_keyframe_dir, lesson_name, video_name)
+    if mode == "single":
+        video_keyframe_dir = os.path.join(input_keyframe_dir, lesson_name, video_name)
         caption_file = os.path.join(input_caption_dir, lesson_name, f"{lesson_name}_{video_name}_caption.json")
-        
-        # Create output directory for this lesson
-        lesson_output_dir = os.path.join(output_detection_dir, lesson_name)
-        os.makedirs(lesson_output_dir, exist_ok=True)
-        
-        output_file = os.path.join(lesson_output_dir, f"{lesson_name}_{video_name}_detection.json")
-        
-        # Process the video
-        video_results = process_video_keyframes(
-            video_dir,
-            caption_file,
-            grounding_dino,
-            output_file
-        )
-        all_results = video_results.get("items", [])
-    
-    # Create summary
-    summary = {
-        "total": len(all_results),
-        "items": all_results
-    }
-    
-    
-    # Zip detection results for easy download
-    zip_detection_results(output_detection_dir)
-    
-    return summary
-
-def zip_detection_results(output_detection_dir: str) -> str:
-    # Get base directory and name
-    base_dir = os.path.dirname(output_detection_dir)
-    dir_name = os.path.basename(output_detection_dir)
-    
-    # Create zip file path
-    zip_path = os.path.join(base_dir, f"{dir_name}.zip")
-    
-    # Print info about zip process
-    print(f"Creating zip file of detection results: {zip_path}")
-    
-    # Create zip file
-    shutil.make_archive(
-        os.path.join(base_dir, dir_name),  # Root name of the zip file
-        'zip',                            # Format
-        output_detection_dir               # Directory to zip
-    )
-    
-    print(f"Zip file created successfully at: {zip_path}")
-    return zip_path
+        process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_name, video_name, grounding_dino)
+    elif mode == "lesson":
+        lesson_keyframe_dir = os.path.join(input_keyframe_dir, lesson_name)
+        lesson_caption_dir = os.path.join(input_caption_dir, lesson_name)
+        for video_folder in sorted(os.listdir(lesson_keyframe_dir)):
+            video_keyframe_dir = os.path.join(lesson_keyframe_dir, video_folder)
+            if os.path.isdir(video_keyframe_dir):
+                caption_file = os.path.join(lesson_caption_dir, f"{lesson_name}_{video_folder}_caption.json")
+                process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_name, video_folder, grounding_dino)
+    else:
+        for lesson_folder in sorted(os.listdir(input_keyframe_dir)):
+            lesson_keyframe_dir = os.path.join(input_keyframe_dir, lesson_folder)
+            lesson_caption_dir = os.path.join(input_caption_dir, lesson_folder)
+            if os.path.isdir(lesson_keyframe_dir):
+                for video_folder in sorted(os.listdir(lesson_keyframe_dir)):
+                    video_keyframe_dir = os.path.join(lesson_keyframe_dir, video_folder)
+                    if os.path.isdir(video_keyframe_dir):
+                        caption_file = os.path.join(lesson_caption_dir, f"{lesson_folder}_{video_folder}_caption.json")
+                        process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_folder, video_folder, grounding_dino)
