@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from PIL import Image
 
 
@@ -16,8 +16,8 @@ class BaseSearchRequest(BaseModel):
     ocr_text: Optional[str] = None
     object_detection_text: Optional[str] = None
 
-    include_batch_ids: Optional[List[str]] = None
-    exclude_batch_ids: Optional[List[str]] = None
+    include_batch_ids: Optional[str] = None
+    exclude_batch_ids: Optional[str] = None
 
     top_k: int = 100
     

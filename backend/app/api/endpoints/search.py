@@ -12,6 +12,10 @@ router = APIRouter()
 
 @router.post("/base_search")
 def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_image: Optional[UploadFile] = File(None)):
+   # Convert string to list of batch ids
+   include_batch_ids = [id.strip() for id in base_search_request.include_batch_ids.split(",")] if base_search_request.include_batch_ids else None
+   exclude_batch_ids = [id.strip() for id in base_search_request.exclude_batch_ids.split(",")] if base_search_request.exclude_batch_ids else None
+   
    # Initialize search service
    search_service = SearchService()
 
@@ -19,16 +23,15 @@ def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_im
    if base_search_request.use_translation:
       base_search_request.embedding_text = asyncio.run(translate_text(text=base_search_request.embedding_text, src_lang="vi", dest_lang="en")) if base_search_request.use_embedding_text else base_search_request.embedding_text
       base_search_request.captioning_text = asyncio.run(translate_text(text=base_search_request.captioning_text, src_lang="vi", dest_lang="en")) if base_search_request.use_captioning else base_search_request.captioning_text
-      base_search_request.ocr_text = asyncio.run(translate_text(text=base_search_request.ocr_text, src_lang="vi", dest_lang="en")) if base_search_request.use_ocr else base_search_request.ocr_text
       base_search_request.object_detection_text = asyncio.run(translate_text(text=base_search_request.object_detection_text, src_lang="vi", dest_lang="en")) if base_search_request.use_object_detection else base_search_request.object_detection_text
 
    # Search
    results = []
    if base_search_request.use_embedding_text:
-      embedding_result = search_service.search_openclip(text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k, include_batch_ids=base_search_request.include_batch_ids, exclude_batch_ids=base_search_request.exclude_batch_ids)
+      embedding_result = search_service.search_openclip(text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
       results.append(embedding_result)
    if base_search_request.use_embedding_image:
-      embedding_result = search_service.search_openclip(image=embedding_image, text=None, top_k=base_search_request.top_k, include_batch_ids=base_search_request.include_batch_ids, exclude_batch_ids=base_search_request.exclude_batch_ids)
+      embedding_result = search_service.search_openclip(image=embedding_image, text=None, top_k=base_search_request.top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
       results.append(embedding_result)
    if base_search_request.use_captioning:
       captioning_result = search_service.search_caption(base_search_request.captioning_text, base_search_request.top_k)

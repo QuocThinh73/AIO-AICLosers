@@ -182,14 +182,15 @@ class Qdrant:
 
     def create_filter(self, include_batch_ids=None, exclude_batch_ids=None):
         should, must_not = [], []
-
+        print(include_batch_ids, exclude_batch_ids)
+        print(type(include_batch_ids), type(exclude_batch_ids))
         if include_batch_ids:
             should.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=include_batch_ids)))
         if exclude_batch_ids:
             must_not.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=exclude_batch_ids)))
         
         if not should and not must_not:
-            return None
+            return None 
         return models.Filter(should=should, must_not=must_not)
 
     def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None):
