@@ -38,6 +38,11 @@ function App() {
     }
   }
 
+  const buildKeyframePath = (name) => {
+    const parts = name.split("_")
+    return "keyframes/Videos_" + parts[0] + "/" + parts[0] + "_" + parts[1] + "/" + name
+  }
+
   return (
     <div>
       <form onSubmit={handleSubmit}>
@@ -72,13 +77,24 @@ function App() {
       {error && <p>{error}</p>}
 
       {keyframes.length > 0 && (
-        <div>
-          <ul>
-            {keyframes.map((name) => (
-              <li key={name}>{name}</li>
-            ))}
-          </ul>
-        </div>
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {keyframes.map((name) => {
+            const src = buildKeyframePath(name);
+            return (
+              <li key={name} style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0" }}>
+                <img
+                  src={src}
+                  alt={name}
+                  width={700}
+                  height={450}
+                  style={{ objectFit: "cover", borderRadius: 6, border: "1px solid #ddd" }}
+                  onError={(e) => { e.currentTarget.style.opacity = 0.3; }}
+                />
+                <span>{name}</span>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   )
