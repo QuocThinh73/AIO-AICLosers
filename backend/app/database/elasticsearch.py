@@ -6,24 +6,12 @@ from tqdm import tqdm
 from elasticsearch import Elasticsearch
 
 
-class MyElasticsearch:
+class Elasticsearch:
     def __init__(self, host="http://localhost:9200"):
-        """
-        Khởi tạo lớp MyElasticsearch
-        
-        Args:
-            host (str): URL của Elasticsearch server
-        """
         self.host = host
         self.es = None
         
     def connect(self):
-        """
-        Kết nối đến Elasticsearch server
-        
-        Returns:
-            bool: True nếu kết nối thành công, False nếu không
-        """
         try:
             self.es = Elasticsearch([self.host])
             if self.es.ping():
@@ -37,27 +25,9 @@ class MyElasticsearch:
             return False
     
     def index_exists(self, index_name):
-        """
-        Kiểm tra xem index có tồn tại không
-        
-        Args:
-            index_name (str): Tên của index
-            
-        Returns:
-            bool: True nếu index tồn tại, False nếu không
-        """
         return self.es.indices.exists(index=index_name)
     
     def delete_index(self, index_name):
-        """
-        Xóa index nếu tồn tại
-        
-        Args:
-            index_name (str): Tên của index
-            
-        Returns:
-            bool: True nếu xóa thành công, False nếu không
-        """
         if self.index_exists(index_name):
             self.es.indices.delete(index=index_name)
             print(f"Đã xóa index {index_name}")
@@ -65,12 +35,6 @@ class MyElasticsearch:
         return False
     
     def create_detection_index(self, index_name="groundingdino"):
-        """
-        Tạo index cho dữ liệu detection với mapping phù hợp
-        
-        Args:
-            index_name (str): Tên của index
-        """
         if self.index_exists(index_name):
             print(f"Đang xóa index {index_name} cũ...")
             self.delete_index(index_name)
@@ -106,12 +70,6 @@ class MyElasticsearch:
         print(f"Đã tạo index {index_name} với mapping cho detection")
     
     def create_ocr_index(self, index_name="ocr_results"):
-        """
-        Tạo index cho dữ liệu OCR với mapping phù hợp
-        
-        Args:
-            index_name (str): Tên của index
-        """
         if self.index_exists(index_name):
             print(f"Đang xóa index {index_name} cũ...")
             self.delete_index(index_name)
@@ -165,17 +123,6 @@ class MyElasticsearch:
         print(f"Đã tạo index {index_name} với mapping cho OCR")
     
     def index_document(self, index_name, doc_id, document):
-        """
-        Lưu document vào index
-        
-        Args:
-            index_name (str): Tên của index
-            doc_id (str): ID của document
-            document (dict): Document cần lưu
-            
-        Returns:
-            dict: Kết quả của việc lưu document
-        """
         try:
             return self.es.index(index=index_name, id=doc_id, body=document)
         except Exception as e:
@@ -183,18 +130,6 @@ class MyElasticsearch:
             return None
     
     def format_detection_data(self, video_name, keyframe, caption, objects):
-        """
-        Format dữ liệu detection để lưu vào Elasticsearch
-        
-        Args:
-            video_name (str): Tên của video
-            keyframe (str): Tên của keyframe
-            caption (str): Caption của keyframe
-            objects (list): Danh sách các object được phát hiện
-            
-        Returns:
-            tuple: (doc_id, document) - ID và document đã được format
-        """
         if "_V" in video_name:
             video_parts = video_name.split("_V")
             if len(video_parts) == 2:
@@ -235,17 +170,6 @@ class MyElasticsearch:
         return doc_id, doc
     
     def format_ocr_data(self, video_name, keyframe, text_results):
-        """
-        Format dữ liệu OCR để lưu vào Elasticsearch
-        
-        Args:
-            video_name (str): Tên của video
-            keyframe (str): Tên của keyframe
-            text_results (list): Danh sách các kết quả OCR
-            
-        Returns:
-            tuple: (doc_id, document) - ID và document đã được format
-        """
         if "_V" in video_name:
             video_parts = video_name.split("_V")
             if len(video_parts) == 2:
@@ -288,16 +212,6 @@ class MyElasticsearch:
         return doc_id, doc
     
     def index_detection_results(self, detection_dir, index_name="groundingdino"):
-        """
-        Lưu kết quả detection vào Elasticsearch
-        
-        Args:
-            detection_dir (str): Đường dẫn đến thư mục chứa kết quả detection
-            index_name (str): Tên của index
-            
-        Returns:
-            dict: Trạng thái của việc lưu kết quả
-        """
         try:
             if not self.es:
                 if not self.connect():
@@ -347,16 +261,6 @@ class MyElasticsearch:
             return {"status": "error", "message": f"Lỗi: {str(e)}"}
     
     def index_ocr_results(self, ocr_dir, index_name="ocr_results"):
-        """
-        Lưu kết quả OCR vào Elasticsearch
-        
-        Args:
-            ocr_dir (str): Đường dẫn đến thư mục chứa kết quả OCR
-            index_name (str): Tên của index
-            
-        Returns:
-            dict: Trạng thái của việc lưu kết quả
-        """
         try:
             if not self.es:
                 if not self.connect():
@@ -405,18 +309,6 @@ class MyElasticsearch:
             return {"status": "error", "message": f"Lỗi: {str(e)}"}
     
     def search_by_text(self, query, index_name, field="caption", size=10):
-        """
-        Tìm kiếm theo text trong Elasticsearch
-        
-        Args:
-            query (str): Query cần tìm kiếm
-            index_name (str): Tên của index
-            field (str): Trường cần tìm kiếm
-            size (int): Số lượng kết quả tối đa
-            
-        Returns:
-            list: Danh sách các kết quả tìm kiếm
-        """
         try:
             search_query = {
                 "size": size,
@@ -434,17 +326,6 @@ class MyElasticsearch:
             return []
     
     def search_by_video_name(self, video_name, index_name, size=100):
-        """
-        Tìm kiếm theo tên video trong Elasticsearch
-        
-        Args:
-            video_name (str): Tên video cần tìm
-            index_name (str): Tên của index
-            size (int): Số lượng kết quả tối đa
-            
-        Returns:
-            list: Danh sách các kết quả tìm kiếm
-        """
         try:
             search_query = {
                 "size": size,
@@ -462,17 +343,6 @@ class MyElasticsearch:
             return []
     
     def search_nested_objects(self, object_name, index_name="groundingdino", size=10):
-        """
-        Tìm kiếm theo tên đối tượng trong các object được phát hiện
-        
-        Args:
-            object_name (str): Tên đối tượng cần tìm
-            index_name (str): Tên của index
-            size (int): Số lượng kết quả tối đa
-            
-        Returns:
-            list: Danh sách các kết quả tìm kiếm
-        """
         try:
             search_query = {
                 "size": size,
@@ -495,17 +365,6 @@ class MyElasticsearch:
             return []
     
     def search_nested_text(self, text, index_name="ocr_results", size=10):
-        """
-        Tìm kiếm theo text trong kết quả OCR
-        
-        Args:
-            text (str): Text cần tìm
-            index_name (str): Tên của index
-            size (int): Số lượng kết quả tối đa
-            
-        Returns:
-            list: Danh sách các kết quả tìm kiếm
-        """
         try:
             search_query = {
                 "size": size,
@@ -526,16 +385,3 @@ class MyElasticsearch:
         except Exception as e:
             print(f"Lỗi khi tìm kiếm: {str(e)}")
             return []
-
-
-def ensure_elasticsearch_dependencies():
-    """
-    Đảm bảo thư viện elasticsearch đã được cài đặt
-    """
-    try:
-        import elasticsearch
-    except ImportError:
-        print("Thư viện elasticsearch chưa được cài đặt. Đang cài đặt...")
-        import subprocess
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "elasticsearch"])
-        print("Đã cài đặt elasticsearch")
