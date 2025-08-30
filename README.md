@@ -5,7 +5,6 @@
 A comprehensive video preprocessing pipeline for extracting and analyzing multimedia content, including shot detection, keyframe extraction, news anchor detection, video segmentation, ASR, OCR, and image captioning.
 
 ## Data Directory Structure
-
 ```
 data/
 ├── videos/              # Original input videos

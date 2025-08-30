@@ -11,7 +11,7 @@ def _ensure_dependencies():
     
     # Required packages
     required_packages = [
-        "transformers",  # For model loading
+        "transformers>=4.52.1",  # For InternVL3.5 model loading
         "bitsandbytes",  # For quantization
         "accelerate",   # For optimized inference
         "torch"         # PyTorch
@@ -23,9 +23,9 @@ def _ensure_dependencies():
             continue
             
         try:
-            if package == "transformers" and in_kaggle:
-                # On Kaggle, always install latest transformers from source
-                print(f"Installing {package} from source (required for latest InternVL3 support)...")
+            if package.startswith("transformers") and in_kaggle:
+                # On Kaggle, always install latest transformers from source for InternVL3.5 support
+                print(f"Installing {package} from source (required for latest InternVL3.5 support)...")
                 subprocess.check_call([sys.executable, "-m", "pip", "install", 
                                       "--upgrade", "git+https://github.com/huggingface/transformers"])
             else:
@@ -48,9 +48,26 @@ import glob
 import shutil
 from tqdm import tqdm
 
-# Import our model
+# Import our model using importlib to handle dot in filename
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models.internvl3 import InternVL3
+import importlib.util
+
+# Load InternVL35 module dynamically to handle dot in filename
+models_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models')
+model_path = os.path.join(models_dir, 'internvl3.5.py')
+
+if os.path.exists(model_path):
+    # Load module using importlib.util
+    spec = importlib.util.spec_from_file_location("internvl3_5_module", model_path)
+    internvl3_5_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(internvl3_5_module)
+    InternVL35 = internvl3_5_module.InternVL35
+else:
+    # Fallback to standard import
+    try:
+        from models.internvl3_5 import InternVL35
+    except ImportError:
+        from models.internvl3 import InternVL35
 
 
 def get_captioning_model():
@@ -58,9 +75,83 @@ def get_captioning_model():
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from models.internvl3 import InternVL3
     
-    model = InternVL3(task="image_captioning", use_quantization=True)
-    print(f"Initialized InternVL3 model on {model.device} device")
-    return model
+    try:
+        # Initialize the model (use quantization if CUDA is available)
+        model = InternVL35(task="image_captioning", use_quantization=True)
+        print(f"Initialized InternVL3.5-1B model on {model.device} device")
+        
+        # Process based on the selected mode
+        if mode == "all":
+            # Process all lessons
+            lessons = sorted(glob.glob(os.path.join(input_dir, "L*")))
+            for lesson_dir in lessons:
+                lesson_id = os.path.basename(lesson_dir)
+                print(f"Processing lesson: {lesson_id}")
+                model.process_batch(lesson_dir, output_dir)
+                
+        elif mode == "lesson" and lesson_name:
+            # Process a specific lesson
+            lesson_dir = os.path.join(input_dir, lesson_name)
+            if not os.path.exists(lesson_dir):
+                error_msg = f"Lesson directory not found: {lesson_dir}"
+                print(f"Error: {error_msg}")
+                return {"status": "error", "message": error_msg}
+                
+            print(f"Processing lesson: {lesson_name}")
+            model.process_batch(lesson_dir, output_dir)
+            
+        elif mode == "single" and lesson_name and video_name:
+            # Process a single video
+            video_dir = os.path.join(input_dir, lesson_name, video_name)
+            if not os.path.exists(video_dir):
+                error_msg = f"Video directory not found: {video_dir}"
+                print(f"Error: {error_msg}")
+                return {"status": "error", "message": error_msg}
+                
+            # Create output directory structure
+            output_lesson_dir = os.path.join(output_dir, lesson_name)
+            os.makedirs(output_lesson_dir, exist_ok=True)
+            
+            # Process the video
+            keyframes = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
+            if not keyframes:
+                error_msg = f"No keyframes found in {video_dir}"
+                print(f"Warning: {error_msg}")
+                return {"status": "error", "message": error_msg}
+                
+            video_results = []
+            for keyframe_path in tqdm(keyframes, desc=f"Processing {lesson_name}/{video_name}"):
+                keyframe_name = os.path.basename(keyframe_path)
+                caption = model.process_keyframe(keyframe_path)
+                video_results.append({
+                    "keyframe": keyframe_name,
+                    "caption": caption
+                })
+                
+            # Save results
+            output_file = os.path.join(output_lesson_dir, f"{video_name}_image_captioning.json")
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(video_results, f, indent=2, ensure_ascii=False)
+                
+            print(f"Results saved to: {output_file}")
+            
+        else:
+            error_msg = "Invalid mode or missing required parameters"
+            return {"status": "error", "message": error_msg}
+            
+        # Zip caption results for easy download
+        zip_path = zip_caption_results(output_dir)
+        
+        # Return results as dictionary (similar to object_detection.py)
+        return {"status": "success", "message": f"Caption generation completed successfully. Results zipped to {zip_path}"}
+        
+    except Exception as e:
+        print(f"Error generating captions: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
+
 
 def process_video(video_dir, output_dir, lesson_name, video_name, model):
     video_results = model.process_video(video_dir)
