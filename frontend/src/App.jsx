@@ -1,0 +1,88 @@
+import { useState } from "react"
+
+function App() {
+  const [query, setQuery] = useState("")
+  const [translate, setTranslate] = useState(true)
+  const [includeIds, setIncludeIds] = useState("")
+  const [excludeIds, setExcludeIds] = useState("")
+  const [topK, setTopK] = useState(100)
+
+  const [keyframes, setKeyframes] = useState([])
+  const [error, setError] = useState("")
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError("")
+    setKeyframes([])
+
+    try {
+      const url = "/api/search/base_search"
+      
+      const fd = new FormData()
+
+      fd.append("use_embedding_text", "true")
+      fd.append("use_translation", translate ? "true" : "false")
+      fd.append("embedding_text", query)
+      fd.append("top_k", String(topK))
+
+      if (includeIds) fd.append("include_batch_ids", includeIds)
+      if (excludeIds) fd.append("exclude_batch_ids", excludeIds)
+
+      const res = await fetch(url, {method: "POST", body: fd })
+      if (!res.ok) throw new Error("HTTP ${res.status}: ${await res.text()}")
+      
+      const data = await res.json()
+      setKeyframes(Array.from(data))
+    } catch (error) {
+      setError(error.message)
+    }
+  }
+
+  return (
+    <div>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="query">Query: </label>
+          <input id="query" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        
+        <div>
+          <label htmlFor="translate">Translate to English: </label>
+          <input id="translate" type="checkbox" checked={translate} onChange={(e) => setTranslate(e.target.checked)} />
+        </div>
+
+        <div>
+          <label htmlFor="topk">Number of results: </label>
+          <input id="topk" type="number" value={topK} onChange={(e) => setTopK(e.target.value)} />
+        </div>
+
+        <div>
+          <label htmlFor="includeIds">Include batch IDs: </label>
+          <input id="includeIds" value={includeIds} onChange={(e) => setIncludeIds(e.target.value)} />
+        </div>
+
+        <div>
+          <label htmlFor="excludeIds">Exclude batch IDs: </label>
+          <input id="excludeIds" value={excludeIds} onChange={(e) => setExcludeIds(e.target.value)} />
+        </div>
+
+        <button type="submit">Search</button>
+      </form>
+
+      {error && <p>{error}</p>}
+
+      {keyframes.length > 0 && (
+        <div>
+          <ul>
+            {keyframes.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default App
+ 

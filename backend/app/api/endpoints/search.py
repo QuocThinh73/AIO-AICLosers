@@ -11,7 +11,22 @@ router = APIRouter()
 
 
 @router.post("/base_search")
-def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_image: Optional[UploadFile] = File(None)):
+def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearchRequest.as_form), embedding_image: Optional[UploadFile] = File(None)):
+   # Debug
+   print(base_search_request.top_k, type(base_search_request.top_k))
+   print(base_search_request.use_embedding_text, type(base_search_request.use_embedding_text))
+   print(base_search_request.use_embedding_image, type(base_search_request.use_embedding_image))
+   print(base_search_request.use_captioning, type(base_search_request.use_captioning))
+   print(base_search_request.use_ocr, type(base_search_request.use_ocr))
+   print(base_search_request.use_object_detection, type(base_search_request.use_object_detection))
+   print(base_search_request.use_translation, type(base_search_request.use_translation))
+   print(base_search_request.embedding_text, type(base_search_request.embedding_text))
+   print(base_search_request.captioning_text, type(base_search_request.captioning_text))
+   print(base_search_request.ocr_text, type(base_search_request.ocr_text))
+   print(base_search_request.object_detection_text, type(base_search_request.object_detection_text))
+   print(base_search_request.include_batch_ids, type(base_search_request.include_batch_ids))
+   print(base_search_request.exclude_batch_ids, type(base_search_request.exclude_batch_ids))
+   
    # Convert string to list of batch ids
    include_batch_ids = [id.strip() for id in base_search_request.include_batch_ids.split(",")] if base_search_request.include_batch_ids else None
    exclude_batch_ids = [id.strip() for id in base_search_request.exclude_batch_ids.split(",")] if base_search_request.exclude_batch_ids else None
@@ -28,11 +43,11 @@ def base_search(base_search_request: BaseSearchRequest = Depends(), embedding_im
    # Search
    results = []
    if base_search_request.use_embedding_text:
-      embedding_result = search_service.search_openclip(text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
-      results.append(embedding_result)
+      embedding_text_result = search_service.search_openclip(text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
+      results.append(embedding_text_result)
    if base_search_request.use_embedding_image:
-      embedding_result = search_service.search_openclip(image=embedding_image, text=None, top_k=base_search_request.top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
-      results.append(embedding_result)
+      embedding_image_result = search_service.search_openclip(image=embedding_image, text=None, top_k=base_search_request.top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids)
+      results.append(embedding_image_result)
    if base_search_request.use_captioning:
       captioning_result = search_service.search_caption(base_search_request.captioning_text, base_search_request.top_k)
       results.append(captioning_result)
