@@ -3,6 +3,214 @@ import os
 import sys
 import json
 import torch
+import numpy as np
+import cv2
+from tqdm import tqdm
+
+
+def check_video_codec(video_path):
+    """Check if video uses AV1 codec using ffprobe"""
+    try:
+        cmd = [
+            'ffprobe', '-v', 'quiet', '-print_format', 'json', 
+            '-show_streams', '-select_streams', 'v:0', video_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        data = json.loads(result.stdout)
+        
+        if 'streams' in data and len(data['streams']) > 0:
+            codec_name = data['streams'][0].get('codec_name', '').lower()
+            return codec_name == 'av1'
+        return False
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+        return False
+
+
+def extract_frames_with_ffmpeg(video_path, target_height=27, target_width=48, show_progressbar=False):
+    """Extract frames using FFmpeg with software decoding for AV1 videos"""
+    import tempfile
+    import shutil
+    
+    # Create temporary directory for frames
+    temp_dir = tempfile.mkdtemp()
+    
+    try:
+        # Get total frame count first
+        cmd_count = [
+            'ffprobe', '-v', 'quiet', '-print_format', 'json',
+            '-show_streams', '-select_streams', 'v:0', video_path
+        ]
+        result = subprocess.run(cmd_count, capture_output=True, text=True, check=True)
+        data = json.loads(result.stdout)
+        
+        total_frames = 0
+        if 'streams' in data and len(data['streams']) > 0:
+            stream = data['streams'][0]
+            if 'nb_frames' in stream:
+                total_frames = int(stream['nb_frames'])
+            else:
+                # Fallback: estimate from duration and fps
+                duration = float(stream.get('duration', 0))
+                fps = eval(stream.get('avg_frame_rate', '25/1'))
+                total_frames = int(duration * fps)
+        
+        # Extract frames using FFmpeg with software decoding
+        output_pattern = os.path.join(temp_dir, 'frame_%06d.png')
+        cmd_extract = [
+            'ffmpeg', '-v', 'quiet', '-hwaccel', 'none',  # Force software decoding
+            '-i', video_path,
+            '-vf', f'scale={target_width}:{target_height}',
+            '-y', output_pattern
+        ]
+        
+        print(f"Extracting frames with FFmpeg (software decoding)...")
+        subprocess.run(cmd_extract, check=True)
+        
+        # Read extracted frames
+        frames = []
+        frame_files = sorted([f for f in os.listdir(temp_dir) if f.startswith('frame_')])
+        
+        progress_bar = tqdm(total=len(frame_files), desc="Loading frames", unit="frame") if show_progressbar else None
+        
+        for frame_file in frame_files:
+            frame_path = os.path.join(temp_dir, frame_file)
+            frame = cv2.imread(frame_path)
+            if frame is not None:
+                frames.append(frame)
+            
+            if progress_bar:
+                progress_bar.update(1)
+        
+        if progress_bar:
+            progress_bar.close()
+            
+        print(f"Extracted {len(frames)} frames using FFmpeg")
+        return np.array(frames)
+        
+    finally:
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def patch_transnetv2_inference():
+    """Patch TransNet inference.py to handle AV1 videos with FFmpeg"""
+    inference_path = "transnetv2pt/transnetv2pt/inference.py"
+    
+    if not os.path.exists(inference_path):
+        print(f"Warning: {inference_path} not found, patch will be applied when TransNet is loaded")
+        return
+    
+    # Read current inference.py
+    with open(inference_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Check if already patched
+    if 'check_video_codec' in content:
+        print("TransNet inference.py already patched for AV1 support")
+        return
+    
+    # Create patched version
+    patch_imports = '''import subprocess
+import json
+import tempfile
+import shutil
+'''
+    
+    patch_functions = '''
+def check_video_codec(video_path):
+    """Check if video uses AV1 codec using ffprobe"""
+    try:
+        cmd = [
+            'ffprobe', '-v', 'quiet', '-print_format', 'json', 
+            '-show_streams', '-select_streams', 'v:0', video_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        data = json.loads(result.stdout)
+        
+        if 'streams' in data and len(data['streams']) > 0:
+            codec_name = data['streams'][0].get('codec_name', '').lower()
+            return codec_name == 'av1'
+        return False
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+        return False
+
+
+def extract_frames_with_ffmpeg_av1(video_path, target_height=27, target_width=48, show_progressbar=False):
+    """Extract frames using FFmpeg with software decoding for AV1 videos"""
+    temp_dir = tempfile.mkdtemp()
+    
+    try:
+        # Extract frames using FFmpeg with software decoding
+        output_pattern = os.path.join(temp_dir, 'frame_%06d.png')
+        cmd_extract = [
+            'ffmpeg', '-v', 'quiet', '-hwaccel', 'none',  # Force software decoding
+            '-i', video_path,
+            '-vf', f'scale={target_width}:{target_height}',
+            '-y', output_pattern
+        ]
+        
+        logger.info(f"Extracting frames with FFmpeg (software decoding) from: {video_path}")
+        subprocess.run(cmd_extract, check=True)
+        
+        # Read extracted frames
+        frames = []
+        frame_files = sorted([f for f in os.listdir(temp_dir) if f.startswith('frame_')])
+        
+        progress_bar = tqdm(total=len(frame_files), desc="Loading frames", unit="frame") if show_progressbar else None
+        
+        for frame_file in frame_files:
+            frame_path = os.path.join(temp_dir, frame_file)
+            frame = cv2.imread(frame_path)
+            if frame is not None:
+                frames.append(frame)
+            
+            if progress_bar:
+                progress_bar.update(1)
+        
+        if progress_bar:
+            progress_bar.close()
+            
+        logger.info(f"Extracted {len(frames)} frames using FFmpeg")
+        return np.array(frames)
+        
+    finally:
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+'''
+    
+    # Find the original extract_frames_with_opencv function and modify it
+    original_function = '''def extract_frames_with_opencv(video_path: str, target_height: int = 27, target_width: int = 48, show_progressbar: bool = False):'''
+    
+    patched_function = '''def extract_frames_with_opencv(video_path: str, target_height: int = 27, target_width: int = 48, show_progressbar: bool = False):
+    """
+    Extracts frames from a video using OpenCV with optional CUDA support and progress tracking.
+    For AV1 videos, falls back to FFmpeg with software decoding.
+    """
+    # Check if video uses AV1 codec
+    if check_video_codec(video_path):
+        logger.info(f"AV1 video detected, using FFmpeg for extraction: {video_path}")
+        return extract_frames_with_ffmpeg_av1(video_path, target_height, target_width, show_progressbar)
+    
+    # Original OpenCV implementation for non-AV1 videos'''
+    
+    # Add imports at the top
+    if 'import subprocess' not in content:
+        content = content.replace('import logging', f'import logging\n{patch_imports}')
+    
+    # Add helper functions before the original extract_frames_with_opencv
+    func_pos = content.find('def extract_frames_with_opencv')
+    if func_pos != -1:
+        content = content[:func_pos] + patch_functions + '\n' + content[func_pos:]
+    
+    # Replace the function signature and add AV1 check
+    content = content.replace(original_function, patched_function)
+    
+    # Write patched file
+    with open(inference_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    
+    print("TransNet inference.py patched successfully for AV1 support")
 
 
 def get_predict_video():
@@ -22,6 +230,9 @@ def get_predict_video():
                 raise
     else:
         print(f"Repository {repo_path} already exists, using local copy.")
+    
+    # Apply AV1 patch to TransNet inference.py
+    patch_transnetv2_inference()
         
     sys.path.insert(0, os.path.abspath(repo_path))
     
@@ -38,7 +249,6 @@ def process_video(video_path, output_shot_path, predict_video):
     
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     output_file = os.path.join(output_shot_path, f"{video_name}_shots.json")
-    
     
     items = []
     for start_frame, end_frame in scenes:
