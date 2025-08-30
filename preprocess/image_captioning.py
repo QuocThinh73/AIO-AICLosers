@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-# Auto-install dependencies
 import sys
 import os
 import subprocess
@@ -74,15 +70,10 @@ else:
         from models.internvl3 import InternVL35
 
 
-def generate_captions(
-    input_dir: str,
-    output_dir: str,
-    mode: str,
-    lesson_name: str = None,
-    video_name: str = None
-) -> dict:
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
+def get_captioning_model():
+    _ensure_dependencies()
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from models.internvl3 import InternVL3
     
     try:
         # Initialize the model (use quantization if CUDA is available)
@@ -162,26 +153,38 @@ def generate_captions(
 
 
 
-def zip_caption_results(output_caption_dir: str) -> str:
-    # Get base directory and name
-    base_dir = os.path.dirname(output_caption_dir)
-    dir_name = os.path.basename(output_caption_dir)
+def process_video(video_dir, output_dir, lesson_name, video_name, model):
+    video_results = model.process_video(video_dir)
     
-    # Create zip file path
-    zip_path = os.path.join(base_dir, f"{dir_name}.zip")
+    lesson_output_dir = os.path.join(output_dir, lesson_name)
+    os.makedirs(lesson_output_dir, exist_ok=True)
     
-    # Print info about zip process
-    print(f"Creating zip file of caption results: {zip_path}")
+    output_file = os.path.join(lesson_output_dir, f"{lesson_name}_{video_name}_caption.json")
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(video_results, f, indent=2, ensure_ascii=False)
     
-    try:
-        # Create zip file
-        shutil.make_archive(
-            os.path.join(base_dir, dir_name),  # Root name of the zip file
-            'zip',                             # Format
-            output_caption_dir                  # Directory to zip
-        )
-        print(f"Zip file created successfully at: {zip_path}")
-    except Exception as e:
-        print(f"Warning: Failed to create zip file: {e}")
+    print(f"Results saved to: {output_file}")
+
+def generate_captions(input_dir, output_dir, mode, lesson_name=None, video_name=None):
+    os.makedirs(output_dir, exist_ok=True)
     
-    return zip_path
+    model = get_captioning_model()
+    
+    if mode == "single":
+        video_dir = os.path.join(input_dir, lesson_name, video_name)
+        process_video(video_dir, output_dir, lesson_name, video_name, model)
+    elif mode == "lesson":
+        lesson_dir = os.path.join(input_dir, lesson_name)
+        for video_folder in sorted(os.listdir(lesson_dir)):
+            video_dir = os.path.join(lesson_dir, video_folder)
+            if os.path.isdir(video_dir):
+                process_video(video_dir, output_dir, lesson_name, video_folder, model)
+    else:
+        for lesson_folder in sorted(os.listdir(input_dir)):
+            lesson_dir = os.path.join(input_dir, lesson_folder)
+            if os.path.isdir(lesson_dir):
+                for video_folder in sorted(os.listdir(lesson_dir)):
+                    video_dir = os.path.join(lesson_dir, video_folder)
+                    if os.path.isdir(video_dir):
+                        process_video(video_dir, output_dir, lesson_folder, video_folder, model)
+
