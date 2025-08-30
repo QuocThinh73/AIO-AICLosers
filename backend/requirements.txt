@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+qdrant-client
+faiss-cpu
+elasticsearch
+torch
+numpy
+Pillow
+python-multipart
+python-dotenv
+open-clip-torch
+transformers
+tokenizers
+safetensors
+huggingface-hub
