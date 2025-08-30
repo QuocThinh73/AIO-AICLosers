@@ -1,0 +1,25 @@
+import torch
+import open_clip
+import numpy as np
+
+class OpenCLIP():
+    def __init__(self, backbone, pretrained, device="cpu"):
+        self.device = device
+        self.model, _, self.preprocess = open_clip.create_model_and_transforms(backbone, pretrained)
+        self.model = self.model.to(self.device)
+        self.model.eval()
+        self.tokenizer = open_clip.get_tokenizer(backbone)
+
+    def encode_image(self, image):
+        image = self.preprocess(image).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            image_features = self.model.encode_image(image)
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        return image_features.cpu().numpy().astype(np.float32).reshape(-1)
+    
+    def encode_text(self, text):
+        text = self.tokenizer(text)
+        with torch.no_grad():
+            text_features = self.model.encode_text(text)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        return text_features.cpu().numpy().astype(np.float32).reshape(-1)

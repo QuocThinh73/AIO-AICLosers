@@ -1,38 +1,23 @@
 import asyncio
 from fastapi import APIRouter, UploadFile, File, Depends
 from typing import Optional
-from backend.app.models.schemas import BaseSearchRequest, TemporalSearchRequest
-from backend.app.services.search_service import SearchService
-from backend.app.utils.rerank import rrf
-from backend.app.utils.translate import translate_text
-
+from app.models.schemas import BaseSearchRequest, TemporalSearchRequest
+from app.utils.rerank import rrf
+from app.utils.translate import translate_text
+from functools import lru_cache
 
 router = APIRouter()
 
+@lru_cache()
+def get_search_service():
+   from app.services.search_service import SearchService
+   return SearchService()
 
 @router.post("/base_search")
-def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearchRequest.as_form), embedding_image: Optional[UploadFile] = File(None)):
-   # Debug
-   print(base_search_request.top_k, type(base_search_request.top_k))
-   print(base_search_request.use_embedding_text, type(base_search_request.use_embedding_text))
-   print(base_search_request.use_embedding_image, type(base_search_request.use_embedding_image))
-   print(base_search_request.use_captioning, type(base_search_request.use_captioning))
-   print(base_search_request.use_ocr, type(base_search_request.use_ocr))
-   print(base_search_request.use_object_detection, type(base_search_request.use_object_detection))
-   print(base_search_request.use_translation, type(base_search_request.use_translation))
-   print(base_search_request.embedding_text, type(base_search_request.embedding_text))
-   print(base_search_request.captioning_text, type(base_search_request.captioning_text))
-   print(base_search_request.ocr_text, type(base_search_request.ocr_text))
-   print(base_search_request.object_detection_text, type(base_search_request.object_detection_text))
-   print(base_search_request.include_batch_ids, type(base_search_request.include_batch_ids))
-   print(base_search_request.exclude_batch_ids, type(base_search_request.exclude_batch_ids))
-   
+def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearchRequest.as_form), embedding_image: Optional[UploadFile] = File(None), search_service = Depends(get_search_service)):
    # Convert string to list of batch ids
    include_batch_ids = [id.strip() for id in base_search_request.include_batch_ids.split(",")] if base_search_request.include_batch_ids else None
    exclude_batch_ids = [id.strip() for id in base_search_request.exclude_batch_ids.split(",")] if base_search_request.exclude_batch_ids else None
-   
-   # Initialize search service
-   search_service = SearchService()
 
    # Translate text from Vietnamese to English if needed
    if base_search_request.use_translation:

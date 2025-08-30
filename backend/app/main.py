@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from backend.app.api.endpoints import search
 from contextlib import asynccontextmanager
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,12 +11,10 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
 
-
 def create_app() -> FastAPI:
-    # Initialize app
     app = FastAPI(lifespan=lifespan)
 
-    # Add routers
+    from app.api.endpoints import search
     app.include_router(search.router, prefix="/api/search", tags=["search"])
-    
+
     return app

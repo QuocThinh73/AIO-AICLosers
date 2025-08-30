@@ -1,9 +1,8 @@
 import os
-import numpy as np
 from qdrant_client import QdrantClient, models
 from FlagEmbedding import BGEM3FlagModel
-from models.openclip import OpenCLIP
-from backend.app.utils.generate_id import generate_id
+from app.ml.openclip import OpenCLIP
+from app.utils.generate_id import generate_id
 
 class Qdrant:
     def __init__(self, host, port, caption_model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True), openclip_model=OpenCLIP('ViT-B-16', pretrained='dfn2b')):
@@ -182,15 +181,14 @@ class Qdrant:
 
     def create_filter(self, include_batch_ids=None, exclude_batch_ids=None):
         should, must_not = [], []
-        print(include_batch_ids, exclude_batch_ids)
-        print(type(include_batch_ids), type(exclude_batch_ids))
+
         if include_batch_ids:
             should.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=include_batch_ids)))
         if exclude_batch_ids:
             must_not.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=exclude_batch_ids)))
         
         if not should and not must_not:
-            return None 
+            return None
         return models.Filter(should=should, must_not=must_not)
 
     def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None):
