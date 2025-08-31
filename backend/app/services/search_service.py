@@ -6,12 +6,11 @@ from PIL import Image
 
 class SearchService:
     def __init__(self):
-        self.qdrant = Qdrant(host="192.168.100.37", port=6333)
-        # self.qdrant = Qdrant(host=get_settings().QDRANT_HOST, port=get_settings().QDRANT_PORT)
+        self.qdrant = Qdrant(host=get_settings().QDRANT_HOST, port=get_settings().QDRANT_PORT)
         # self.elasticsearch = Elasticsearch(host=get_settings().ELASTICSEARCH_HOST, port=get_settings().ELASTICSEARCH_PORT)
 
     def search_caption(self, text: str, top_k: int):
-        return self.qdrant.search_caption(text=text, collection_name=get_settings().CAPTION_COLLECTION_NAME, limit=top_k, prefetch_limit=top_k*3)
+        return self.qdrant.search_caption(search_query=text, collection_name=get_settings().CAPTION_COLLECTION_NAME, limit=top_k, prefetch_limit=top_k*3)
 
     def search_openclip(self, text: str, image: Image, top_k: int, include_batch_ids=None, exclude_batch_ids=None):
         if text:

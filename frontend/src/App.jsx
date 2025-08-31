@@ -2,6 +2,7 @@ import { useState } from "react"
 
 function App() {
   const [query, setQuery] = useState("")
+  const [image, setImage] = useState(null)
   const [translate, setTranslate] = useState(true)
   const [includeIds, setIncludeIds] = useState("")
   const [excludeIds, setExcludeIds] = useState("")
@@ -20,9 +21,9 @@ function App() {
       
       const fd = new FormData()
 
-      fd.append("use_embedding_text", "true")
       fd.append("use_translation", translate ? "true" : "false")
-      fd.append("embedding_text", query)
+      if (query.trim()) fd.append("embedding_text", query.trim())
+      if (image) fd.append("embedding_image", image)
       fd.append("top_k", String(topK))
 
       if (includeIds) fd.append("include_batch_ids", includeIds)
@@ -49,6 +50,11 @@ function App() {
         <div>
           <label htmlFor="query">Query: </label>
           <input id="query" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+
+        <div>
+          <label htmlFor="image">Image: </label>
+          <input id="image" type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
         </div>
         
         <div>
