@@ -24,9 +24,9 @@ async def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearc
 
    # Translate text from Vietnamese to English if needed
    if base_search_request.use_translation:
-      base_search_request.embedding_text = await translate_text(text=base_search_request.embedding_text, src_lang="vi", dest_lang="en") if base_search_request.use_embedding_text else base_search_request.embedding_text
-      base_search_request.captioning_text = await translate_text(text=base_search_request.captioning_text, src_lang="vi", dest_lang="en") if base_search_request.use_captioning else base_search_request.captioning_text
-      base_search_request.object_detection_text = await translate_text(text=base_search_request.object_detection_text, src_lang="vi", dest_lang="en") if base_search_request.use_object_detection else base_search_request.object_detection_text
+      base_search_request.embedding_text = await translate_text(text=base_search_request.embedding_text, src_lang="vi", dest_lang="en") if base_search_request.embedding_text else base_search_request.embedding_text
+      base_search_request.captioning_text = await translate_text(text=base_search_request.captioning_text, src_lang="vi", dest_lang="en") if base_search_request.captioning_text else base_search_request.captioning_text
+      base_search_request.object_detection_text = await translate_text(text=base_search_request.object_detection_text, src_lang="vi", dest_lang="en") if base_search_request.object_detection_text else base_search_request.object_detection_text
 
    # Search
    results = []
