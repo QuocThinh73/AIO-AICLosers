@@ -46,6 +46,7 @@ import os
 import json
 import glob
 import shutil
+import time
 from tqdm import tqdm
 
 # Import our model using importlib to handle dot in filename
@@ -153,6 +154,28 @@ def get_captioning_model():
 
 
 
+def zip_caption_results(output_dir):
+    """
+    Zip all caption results in the output directory for easy download
+    
+    Args:
+        output_dir (str): Path to the output directory containing caption results
+        
+    Returns:
+        str: Path to the created zip file
+    """
+    # Create a timestamp for unique zip file name
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    zip_name = f"caption_results_{timestamp}"
+    zip_path = os.path.join(os.path.dirname(output_dir), zip_name)
+    
+    # Create zip archive
+    shutil.make_archive(zip_path, 'zip', output_dir)
+    
+    print(f"Caption results zipped to {zip_path}.zip")
+    return f"{zip_path}.zip"
+
+
 def process_video(video_dir, output_dir, lesson_name, video_name, model):
     video_results = model.process_video(video_dir)
     
@@ -169,6 +192,7 @@ def generate_captions(input_dir, output_dir, mode, lesson_name=None, video_name=
     os.makedirs(output_dir, exist_ok=True)
     
     model = get_captioning_model()
+    result = {"status": "success", "message": "Caption generation completed successfully"}
     
     if mode == "single":
         video_dir = os.path.join(input_dir, lesson_name, video_name)
@@ -187,4 +211,15 @@ def generate_captions(input_dir, output_dir, mode, lesson_name=None, video_name=
                     video_dir = os.path.join(lesson_dir, video_folder)
                     if os.path.isdir(video_dir):
                         process_video(video_dir, output_dir, lesson_folder, video_folder, model)
+    
+    # Create zip file for easy download after all processing is complete
+    try:
+        zip_path = zip_caption_results(output_dir)
+        result = {"status": "success", "message": f"Caption generation completed successfully. Results zipped to {zip_path}"}
+        print(f"✅ All captions generated and zipped to {zip_path}")
+    except Exception as e:
+        print(f"Warning: Failed to zip results: {e}")
+        # Continue without zipping if there's an error
+        
+    return result
 

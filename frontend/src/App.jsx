@@ -91,8 +91,6 @@ function App() {
                 <img
                   src={src}
                   alt={name}
-                  width={700}
-                  height={450}
                   style={{ objectFit: "cover", borderRadius: 6, border: "1px solid #ddd" }}
                   onError={(e) => { e.currentTarget.style.opacity = 0.3; }}
                 />
