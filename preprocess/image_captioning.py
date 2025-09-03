@@ -163,22 +163,87 @@ def load_image_batch(image_file, input_size=448, max_num=12):
     
     return pixel_values
 
+def batch_process_images(model, image_list, batch_size=8):
+    """
+    Process images using batch processing for faster inference
+    
+    Args:
+        model: InternVL35 model instance
+        image_list: List of image file paths
+        batch_size: Number of images to process in each batch
+    
+    Returns:
+        List of captions
+    """
+    print(f"🔄 Processing {len(image_list)} images in batches of {batch_size}...")
+    
+    all_captions = []
+    
+    for i in tqdm(range(0, len(image_list), batch_size), desc="Processing batches"):
+        batch_images = image_list[i:i+batch_size]
+        
+        # Load and process images for batch
+        pixel_values_list = []
+        num_patches_list = []
+        
+        for img_path in batch_images:
+            pixel_values = load_image_batch(img_path, max_num=12).to(torch.bfloat16)
+            if torch.cuda.is_available():
+                pixel_values = pixel_values.cuda()
+            
+            pixel_values_list.append(pixel_values)
+            num_patches_list.append(pixel_values.shape[0])
+        
+        # Concatenate all images for true batch processing
+        combined_pixel_values = torch.cat(pixel_values_list, dim=0)
+        
+        # Create identical questions for each image
+        questions = [f"<image>\n{model.prompt}"] * len(batch_images)
+        
+        # Generation config for consistent output
+        generation_config = dict(
+            max_new_tokens=256,
+            do_sample=True,
+            temperature=0.3,
+            top_p=0.9
+        )
+        
+        # Use batch_chat for simultaneous processing
+        try:
+            responses = model.model.batch_chat(
+                model.tokenizer,
+                combined_pixel_values,
+                num_patches_list=num_patches_list,
+                questions=questions,
+                generation_config=generation_config
+            )
+            
+            # Clean responses and add to results
+            for response in responses:
+                all_captions.append(response.strip())
+                
+        except Exception as e:
+            print(f"Warning: Batch processing failed, falling back to sequential: {e}")
+            # Fallback to sequential processing for this batch
+            for img_path in batch_images:
+                caption = model.process_keyframe(img_path)
+                all_captions.append(caption)
+        
+        # Clean memory after each batch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+    
+    return all_captions
+
 def get_captioning_model():
     """Get captioning model with 4-bit quantization"""
     _ensure_dependencies()
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     try:
-        # 4-bit quantization config (from kaggle_internvl_official_batch.py)
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True
-        )
-        
-        # Initialize model with 4-bit quantization
-        model = InternVL35(task="image_captioning", use_quantization=True, quantization_config=quantization_config)
+        # Initialize model with 4-bit quantization (handled internally by InternVL35)
+        model = InternVL35(task="image_captioning", use_quantization=True)
         print(f"✅ Initialized InternVL3.5-1B model with 4-bit quantization on {model.device} device")
         
         # Show memory usage if CUDA available
@@ -195,18 +260,23 @@ def get_captioning_model():
 
 
 
-def process_video(video_dir, output_dir, lesson_name, video_name, model):
-    # Process all keyframes in a video directory
+def process_video(video_dir, output_dir, lesson_name, video_name, model, batch_size=8):
+    # Process all keyframes in a video directory using batch processing
     keyframes = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
     
     if not keyframes:
         print(f"Warning: No keyframes found in {video_dir}")
         return
     
+    print(f"🔄 Processing {len(keyframes)} keyframes for {lesson_name}/{video_name} with batch_size={batch_size}")
+    
+    # Use batch processing for faster inference
+    captions = batch_process_images(model, keyframes, batch_size=batch_size)
+    
+    # Format results
     video_results = []
-    for keyframe_path in tqdm(keyframes, desc=f"Processing {lesson_name}/{video_name}"):
+    for keyframe_path, caption in zip(keyframes, captions):
         keyframe_name = os.path.basename(keyframe_path)
-        caption = model.process_keyframe(keyframe_path)
         video_results.append({
             "keyframe": keyframe_name,
             "caption": caption
@@ -221,22 +291,24 @@ def process_video(video_dir, output_dir, lesson_name, video_name, model):
     
     print(f"Results saved to: {output_file}")
 
-def generate_captions(input_dir, output_dir, mode, lesson_name=None, video_name=None):
+def generate_captions(input_dir, output_dir, mode, lesson_name=None, video_name=None, batch_size=8):
     os.makedirs(output_dir, exist_ok=True)
     
     model = get_captioning_model()
-    result = {"status": "success", "message": "Caption generation completed successfully"}
+    result = {"status": "success", "message": "Caption generation completed successfully with batch processing"}
+    
+    print(f"🚀 Using batch processing with batch_size={batch_size} for optimized inference")
     
     try:
         if mode == "single":
             video_dir = os.path.join(input_dir, lesson_name, video_name)
-            process_video(video_dir, output_dir, lesson_name, video_name, model)
+            process_video(video_dir, output_dir, lesson_name, video_name, model, batch_size)
         elif mode == "lesson":
             lesson_dir = os.path.join(input_dir, lesson_name)
             for video_folder in sorted(os.listdir(lesson_dir)):
                 video_dir = os.path.join(lesson_dir, video_folder)
                 if os.path.isdir(video_dir):
-                    process_video(video_dir, output_dir, lesson_name, video_folder, model)
+                    process_video(video_dir, output_dir, lesson_name, video_folder, model, batch_size)
         else:
             for lesson_folder in sorted(os.listdir(input_dir)):
                 lesson_dir = os.path.join(input_dir, lesson_folder)
@@ -244,7 +316,7 @@ def generate_captions(input_dir, output_dir, mode, lesson_name=None, video_name=
                     for video_folder in sorted(os.listdir(lesson_dir)):
                         video_dir = os.path.join(lesson_dir, video_folder)
                         if os.path.isdir(video_dir):
-                            process_video(video_dir, output_dir, lesson_folder, video_folder, model)
+                            process_video(video_dir, output_dir, lesson_folder, video_folder, model, batch_size)
         
         return result
     except Exception as e:
