@@ -266,6 +266,7 @@ def image_captioning(argv):
     parser.add_argument("output_caption_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
     parser.add_argument("--video_name", type=str)
+    parser.add_argument("--batch_size", type=int, default=8)
     
     args = parser.parse_args(argv)
     
@@ -299,11 +300,11 @@ def image_captioning(argv):
     # Main process
     from preprocess.image_captioning import generate_captions
     if args.mode == "all":
-        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode)
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, batch_size=args.batch_size)
     elif args.mode == "lesson":
-        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name)
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name, batch_size=args.batch_size)
     elif args.mode == "single":
-        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name, args.video_name)
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name, args.video_name, batch_size=args.batch_size)
 
 def asr(argv):
     parser = argparse.ArgumentParser()
