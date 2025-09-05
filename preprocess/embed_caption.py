@@ -158,25 +158,41 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
             colbert_vec = colbert_vec.astype(float).tolist()
         
         # Xử lý lexical_weights - có thể là dict với numpy values
-        lexical_weights = embedding_output["lexical_weights"][i]
-        if isinstance(lexical_weights, dict):
-            # Chuyển đổi tất cả values trong dict sang Python float
-            lexical_weights = {k: float(v) if hasattr(v, 'item') else v for k, v in lexical_weights.items()}
-        elif hasattr(lexical_weights, 'tolist'):
-            lexical_weights = lexical_weights.astype(float).tolist()
+        try:
+            lexical_weights = embedding_output["lexical_weights"][i]
+            if isinstance(lexical_weights, dict):
+                # Chuyển đổi tất cả values trong dict sang Python float
+                lexical_weights = {k: float(v) if hasattr(v, 'item') else v for k, v in lexical_weights.items()}
+            elif hasattr(lexical_weights, 'tolist'):
+                lexical_weights = lexical_weights.astype(float).tolist()
+            elif lexical_weights is None:
+                lexical_weights = {}
+        except Exception as e:
+            print(f"Cảnh báo: Không thể xử lý lexical_weights cho {keyframe_name}: {e}")
+            lexical_weights = {}
         
         embedded_vectors.append({
             "keyframe": keyframe_name,
             "dense_vector": dense_vec,
             "colbert_vector": colbert_vec,
-            "sparse_weights": lexical_weights
+            "sparse_vector": lexical_weights  # Đổi tên thành sparse_vector như mong muốn
         })
+    
+    # In thông tin embedding đầu tiên để quan sát
+    if embedded_vectors:
+        first_embedding = embedded_vectors[0]
+        print(f"📋 Sample embedding output (keyframe: {first_embedding['keyframe']}):")
+        print(f"  - dense_vector: shape {len(first_embedding['dense_vector'])}")
+        print(f"  - colbert_vector: shape {len(first_embedding['colbert_vector'])}")
+        print(f"  - sparse_vector: type {type(first_embedding['sparse_vector'])}, size {len(first_embedding['sparse_vector']) if isinstance(first_embedding['sparse_vector'], (dict, list)) else 'N/A'}")
+        print(f"  - Output fields: {list(first_embedding.keys())}")
     
     # Lưu kết quả vào file
     os.makedirs(os.path.dirname(output_embedded_vector_path), exist_ok=True)
     with open(output_embedded_vector_path, "w", encoding="utf-8") as f:
         json.dump(embedded_vectors, f, ensure_ascii=False, indent=2)
         
+    print(f"✅ Đã lưu {len(embedded_vectors)} embeddings vào: {output_embedded_vector_path}")
     return len(embedded_vectors)
 
 def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_name=None, video_name=None, batch_size=64):
