@@ -216,7 +216,7 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
             os.makedirs(lesson_output_dir, exist_ok=True)
             
             # Tìm tất cả các file caption JSON trong bài học
-            caption_files = glob.glob(os.path.join(lesson_dir, "*_caption.json"))
+            caption_files = glob.glob(os.path.join(lesson_dir, "*.json"))
             
             if not caption_files:
                 print(f"Không tìm thấy file caption nào trong bài học {lesson}")
