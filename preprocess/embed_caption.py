@@ -147,13 +147,23 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
         # Chuyển đổi numpy arrays thành lists để serialize JSON
         dense_vec = embedding_output["dense_vecs"][i]
         if hasattr(dense_vec, 'tolist'):
-            dense_vec = dense_vec.tolist()
+            dense_vec = dense_vec.astype(float).tolist()  # Chuyển về float32/float64 trước khi tolist()
+        elif hasattr(dense_vec, 'astype'):
+            dense_vec = dense_vec.astype(float).tolist()
         
         colbert_vec = embedding_output["colbert_vecs"][i]
         if hasattr(colbert_vec, 'tolist'):
-            colbert_vec = colbert_vec.tolist()
+            colbert_vec = colbert_vec.astype(float).tolist()  # Chuyển về float32/float64 trước khi tolist()
+        elif hasattr(colbert_vec, 'astype'):
+            colbert_vec = colbert_vec.astype(float).tolist()
         
+        # Xử lý lexical_weights - có thể là dict với numpy values
         lexical_weights = embedding_output["lexical_weights"][i]
+        if isinstance(lexical_weights, dict):
+            # Chuyển đổi tất cả values trong dict sang Python float
+            lexical_weights = {k: float(v) if hasattr(v, 'item') else v for k, v in lexical_weights.items()}
+        elif hasattr(lexical_weights, 'tolist'):
+            lexical_weights = lexical_weights.astype(float).tolist()
         
         embedded_vectors.append({
             "keyframe": keyframe_name,
