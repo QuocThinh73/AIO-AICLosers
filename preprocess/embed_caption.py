@@ -2,10 +2,71 @@ import os
 import json
 import glob
 import sys
+import subprocess
 from tqdm import tqdm
-from FlagEmbedding import BGEM3FlagModel
 import torch
 import numpy as np
+
+
+def _ensure_dependencies():
+    """Đảm bảo các thư viện phụ thuộc đã được cài đặt"""
+    print("Kiểm tra và cài đặt các thư viện cần thiết...")
+    
+    # Kiểm tra xem có đang chạy trong Kaggle không
+    in_kaggle = 'KAGGLE_KERNEL_RUN_TYPE' in os.environ
+    
+    required_packages = [
+        "FlagEmbedding",
+        "transformers",
+        "accelerate",
+        "sentence-transformers"
+    ]
+    
+    for package in required_packages:
+        try:
+            # Thử import package để kiểm tra xem đã cài đặt chưa
+            if package == "FlagEmbedding":
+                try:
+                    from FlagEmbedding import BGEM3FlagModel
+                    print(f"Đã tìm thấy {package}")
+                    continue
+                except ImportError:
+                    pass
+            elif package == "transformers":
+                try:
+                    import transformers
+                    print(f"Đã tìm thấy {package}")
+                    continue
+                except ImportError:
+                    pass
+            elif package == "accelerate":
+                try:
+                    import accelerate
+                    print(f"Đã tìm thấy {package}")
+                    continue
+                except ImportError:
+                    pass
+            elif package == "sentence-transformers":
+                try:
+                    import sentence_transformers
+                    print(f"Đã tìm thấy {package}")
+                    continue
+                except ImportError:
+                    pass
+            
+            print(f"Đang cài đặt {package}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", package])
+            print(f"Đã cài đặt {package} thành công")
+                
+        except Exception as e:
+            print(f"Cảnh báo: Không thể cài đặt {package}. Lỗi: {e}")
+            # Tiếp tục vì package có thể đã được cài đặt
+
+# Đảm bảo các thư viện phụ thuộc đã được cài đặt
+_ensure_dependencies()
+
+# Import FlagEmbedding sau khi đã cài đặt
+from FlagEmbedding import BGEM3FlagModel
 
 
 def get_caption_embedder():
