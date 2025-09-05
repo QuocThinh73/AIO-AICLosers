@@ -531,6 +531,32 @@ def embed_image(argv):
         embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
                    args.lesson_name, args.video_name)
 
+def embed_caption(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=["all", "lesson"])
+    parser.add_argument("input_caption_dir", type=str)
+    parser.add_argument("output_embedded_vector_dir", type=str)
+    parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--video_name", type=str)
+    
+    args = parser.parse_args(argv)
+
+    # Check error
+    if not os.path.exists(args.input_caption_dir):
+        raise ValueError("Input caption directory does not exist")
+    
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
+            raise ValueError("Lesson caption directory does not exist")
+
+    # Main process
+    from preprocess.embed_caption import embed_caption
+    if args.mode == "all":
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode)
+    elif args.mode == "lesson":
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, args.lesson_name)
 
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
@@ -545,6 +571,7 @@ TASKS = {
     "asr": asr,
     "ocr": ocr,
     "embed_image": embed_image,
+    "embed_caption": embed_caption,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
     "save_embeddings_qdrant": save_embeddings_qdrant,
