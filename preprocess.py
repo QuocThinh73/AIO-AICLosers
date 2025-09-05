@@ -420,7 +420,6 @@ def save_detection_elasticsearch(argv):
     from preprocess.save_detection_elasticsearch import index_detection_results
     index_detection_results(args.input_dir, args.index)
 
-
 def save_ocr_elasticsearch(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("input_dir", type=str)
@@ -434,66 +433,27 @@ def save_ocr_elasticsearch(argv):
     
     # Main process
     from preprocess.save_ocr_elasticsearch import index_ocr_results
-    index_ocr_results(args.input_dir, args.index)
-
-def save_embedding_faiss(argv):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input_keyframe_dir", type=str)
-    parser.add_argument("output_dir", type=str)
-    parser.add_argument("--backbone", type=str, default="ViT-B-16")
-    parser.add_argument("--pretrained", type=str, default="dfn2b")
     
-    args = parser.parse_args(argv)
+    result = index_ocr_results(args.input_dir, args.index)
     
-    # Check error
-    if not os.path.exists(args.input_keyframe_dir):
-        raise ValueError("Input keyframe directory does not exist")
-    
-    # Main process
-    from preprocess.save_embedding_faiss import save_embeddings_faiss
-    result = save_embeddings_faiss(
-        args.input_keyframe_dir, 
-        args.output_dir,
-        backbone=args.backbone,
-        pretrained=args.pretrained
-    )
-    
-    if result["status"] == "success":
-        print(f"Success: {result['message']}")
-    else:
+    if result["status"] == "error":
         print(f"Error: {result['message']}")
-        sys.exit(1)
+    else:
+        print(f"Success: {result['message']}")
 
-def save_embedding_qdrant(argv):
+def save_embeddings_qdrant(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("keyframe_dir", type=str)
-    parser.add_argument("output_dir", type=str)
-    parser.add_argument("--collection_name", type=str, default="embeddings")
-    parser.add_argument("--backbone", type=str, default="ViT-B-16")
-    parser.add_argument("--pretrained", type=str, default="dfn2b")
+    parser.add_argument("input_embedded_vector_dir", type=str)
     
     args = parser.parse_args(argv)
     
     # Validate arguments
-    if not os.path.exists(args.keyframe_dir):
-        raise ValueError("Input keyframe directory does not exist")
+    if not os.path.exists(args.input_embedded_vector_dir):
+        raise ValueError("Input embedded vector directory does not exist")
     
     # Main process
-    from preprocess.save_embedding_qdrant_openclip import save_embeddings_qdrant
-    result = save_embeddings_qdrant(
-        args.keyframe_dir, 
-        args.output_dir,
-        collection_name=args.collection_name,
-        backbone=args.backbone,
-        pretrained=args.pretrained
-    )
-    
-    if result["status"] == "error":
-        print(f"Error: {result['message']}")
-        sys.exit(1)
-    else:
-        print(f"Success: {result['message']}")
-        sys.exit(0)
+    from preprocess.save_embeddings_qdrant import save_embeddings_qdrant
+    save_embeddings_qdrant(args.input_embedded_vector_dir)
 
 def save_caption_qdrant(argv):
     parser = argparse.ArgumentParser()
@@ -587,8 +547,7 @@ TASKS = {
     "embed_image": embed_image,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
-    "save_embedding_faiss": save_embedding_faiss,
-    "save_embedding_qdrant": save_embedding_qdrant,
+    "save_embeddings_qdrant": save_embeddings_qdrant,
     "save_caption_qdrant": save_caption_qdrant,
 }
 
