@@ -24,39 +24,42 @@ from .utils import delete_banner_and_logo
 
 
 def install_paddleocr():
-    """Install PaddleOCR with CPU-only PaddlePaddle to avoid MKL conflicts"""
+    """Install PaddleOCR with all required dependencies for Kaggle environment"""
     try:
-        # First, ensure we install CPU-only PaddlePaddle without MKL
-        # Use available version 2.6.2 (stable version from error message)
+        # Install required dependencies first
+        print("Installing required dependencies...")
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
-            "paddlepaddle==2.6.2", "--index-url", "https://pypi.org/simple/",
-            "--force-reinstall", "--no-deps", "--quiet"
+            "astor", "--quiet"
         ])
         
-        # Then install PaddleOCR
+        # Install PaddlePaddle with dependencies (remove --no-deps)
+        print("Installing PaddlePaddle 2.6.2...")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", 
+            "paddlepaddle==2.6.2", "--quiet"
+        ])
+        
+        # Install PaddleOCR
+        print("Installing PaddleOCR...")
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
             "paddleocr", "--quiet"
         ])
         
-        print("CPU-only PaddlePaddle 2.6.2 and PaddleOCR installed successfully")
+        print("PaddlePaddle 2.6.2 and PaddleOCR installed successfully with all dependencies")
     except subprocess.CalledProcessError as e:
-        print(f"Error installing PaddleOCR: {e}")
-        # Fallback: try with latest available version without --no-deps
+        print(f"Primary installation failed: {e}")
+        # Fallback: install latest versions
         try:
-            print("Trying fallback installation without version pinning...")
+            print("Trying fallback installation with latest versions...")
             subprocess.check_call([
                 sys.executable, "-m", "pip", "install", 
-                "paddlepaddle", "--quiet"
-            ])
-            subprocess.check_call([
-                sys.executable, "-m", "pip", "install", 
-                "paddleocr", "--quiet"
+                "astor", "paddlepaddle", "paddleocr", "--quiet"
             ])
             print("Fallback installation successful")
         except subprocess.CalledProcessError as e2:
-            print(f"Fallback installation also failed: {e2}")
+            print(f"All installation attempts failed: {e2}")
             raise e2
 
 
