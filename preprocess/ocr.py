@@ -87,23 +87,29 @@ def get_ocr_model():
         paddle.disable_signal_handler()
         from paddleocr import PaddleOCR
     
-    # Initialize with explicit CPU settings
+    # Initialize with minimal compatible parameters only
     try:
-        ocr = PaddleOCR(
-            use_angle_cls=True, 
-            lang='en',
-            use_gpu=False,
-            enable_mkldnn=False,  # Disable MKL-DNN
-            cpu_threads=1  # Single thread to avoid conflicts
-        )
-        print("PaddleOCR initialized successfully with CPU backend.")
+        # Try with only supported basic parameters
+        ocr = PaddleOCR(use_angle_cls=True, lang='en')
+        print("PaddleOCR initialized successfully with basic configuration.")
         return ocr
     except Exception as e:
-        print(f"Error initializing OCR: {e}")
-        # Fallback: try with minimal parameters
-        ocr = PaddleOCR(lang='en')
-        print("PaddleOCR initialized with fallback configuration.")
-        return ocr
+        print(f"Basic initialization failed: {e}")
+        try:
+            # Ultimate fallback: only language parameter
+            ocr = PaddleOCR(lang='en')
+            print("PaddleOCR initialized with minimal configuration.")
+            return ocr
+        except Exception as e2:
+            print(f"Minimal initialization also failed: {e2}")
+            try:
+                # Last resort: no parameters at all
+                ocr = PaddleOCR()
+                print("PaddleOCR initialized with default configuration.")
+                return ocr
+            except Exception as e3:
+                print(f"All initialization attempts failed: {e3}")
+                raise RuntimeError(f"Cannot initialize PaddleOCR: {e3}")
 
 def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, target_size, mask_boxes):
     keyframe_paths = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
