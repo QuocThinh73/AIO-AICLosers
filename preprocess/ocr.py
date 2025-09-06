@@ -10,10 +10,14 @@ import subprocess
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
-# Fix Intel oneMKL issues in Kaggle environment
+# Comprehensive fix for Intel oneMKL issues in Kaggle environment
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
 os.environ['MKL_THREADING_LAYER'] = 'GNU'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
 
 # Import utility functions
 from .utils import delete_banner_and_logo
@@ -22,8 +26,11 @@ from .utils import delete_banner_and_logo
 def install_paddleocr():
     """Install PaddleOCR and its dependencies via subprocess for Kaggle environment"""
     try:
-        # Install Intel MKL libraries first to avoid oneMKL errors
+        # Install MKL packages to resolve oneMKL issues
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "mkl==2021.4.0", "--quiet"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "mkl-service", "--quiet"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "intel-openmp", "--quiet"])
+        
         # Install PaddleOCR
         subprocess.check_call([sys.executable, "-m", "pip", "install", "paddlepaddle", "--quiet"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "paddleocr", "--quiet"])
@@ -34,6 +41,9 @@ def install_paddleocr():
 
 
 def get_ocr_model():
+    # Set additional environment variables before importing
+    os.environ['PADDLE_DISABLE_MKL'] = '1'
+    
     # Try to import PaddleOCR, install if not available
     try:
         from paddleocr import PaddleOCR
