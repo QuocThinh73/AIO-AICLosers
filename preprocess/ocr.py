@@ -10,131 +10,92 @@ import subprocess
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
-# GPU Configuration for Kaggle
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU
-# Only set MKL variables if CPU fallback is needed
-# os.environ['PADDLE_DISABLE_MKL'] = '1'  # Commented out for GPU usage
+# GPU Configuration for Kaggle EasyOCR
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU for EasyOCR
 
 # Import utility functions
 from .utils import delete_banner_and_logo
 
 
-def install_paddleocr():
-    """Install GPU-enabled PaddlePaddle and PaddleOCR for Kaggle"""
+def install_easyocr():
+    """Install EasyOCR with GPU support for Kaggle"""
     try:
-        print("Installing GPU-enabled PaddlePaddle for Kaggle...")
-        # Uninstall any existing PaddlePaddle first
-        subprocess.check_call([
-            sys.executable, "-m", "pip", "uninstall", "paddlepaddle", "-y", "--quiet"
-        ], stderr=subprocess.DEVNULL)
-        
-        # Try GPU-enabled PaddlePaddle first
-        try:
-            print("Attempting GPU-enabled PaddlePaddle installation...")
-            subprocess.check_call([
-                sys.executable, "-m", "pip", "install", 
-                "paddlepaddle-gpu==2.6.2", "-i", "https://pypi.org/simple/", "--quiet"
-            ])
-            print("GPU-enabled PaddlePaddle installed successfully")
-        except subprocess.CalledProcessError:
-            print("GPU version failed, falling back to CPU version...")
-            subprocess.check_call([
-                sys.executable, "-m", "pip", "install", 
-                "paddlepaddle==2.6.2", "-i", "https://pypi.org/simple/", "--quiet"
-            ])
-            print("CPU PaddlePaddle installed as fallback")
-        
-        # Install PaddleOCR
+        print("Installing EasyOCR with GPU support for Kaggle...")
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
-            "paddleocr", "--quiet"
+            "easyocr", "torch", "torchvision", "--quiet"
         ])
-        print("PaddleOCR installed successfully")
+        print("EasyOCR installed successfully with GPU support")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error installing PaddleOCR: {e}")
-        # Final fallback to basic installation
+        print(f"Error installing EasyOCR: {e}")
         try:
-            print("Trying basic installation...")
+            print("Trying basic EasyOCR installation...")
             subprocess.check_call([
                 sys.executable, "-m", "pip", "install", 
-                "paddlepaddle", "paddleocr", "--quiet"
+                "easyocr", "--quiet"
             ])
             return True
         except subprocess.CalledProcessError as e2:
-            print(f"All installation attempts failed: {e2}")
+            print(f"All EasyOCR installation attempts failed: {e2}")
             return False
 
 
 def get_ocr_model():
-    """Get PaddleOCR model with GPU support for Kaggle"""
-    import warnings
-    warnings.filterwarnings("ignore", category=UserWarning, module="paddle")
-    
+    """Get EasyOCR model with GPU support for Kaggle"""
     try:
-        # Import paddle and check GPU availability
-        import paddle
-        paddle.disable_signal_handler()
-        from paddleocr import PaddleOCR
+        import torch
+        import easyocr
         
         # Check GPU availability
-        gpu_available = paddle.device.cuda.device_count() > 0
-        print(f"GPU available: {gpu_available}")
+        gpu_available = torch.cuda.is_available()
         if gpu_available:
-            print(f"CUDA devices: {paddle.device.cuda.device_count()}")
+            device_count = torch.cuda.device_count()
+            device_name = torch.cuda.get_device_name(0) if device_count > 0 else "Unknown"
+            print(f"GPU available: {gpu_available}")
+            print(f"CUDA devices: {device_count}")
+            print(f"Device name: {device_name}")
+        else:
+            print("GPU not available, will use CPU")
             
     except ImportError:
-        print("PaddleOCR not found, installing...")
-        install_success = install_paddleocr()
+        print("EasyOCR not found, installing...")
+        install_success = install_easyocr()
         if not install_success:
-            raise RuntimeError("Failed to install PaddleOCR")
-        import paddle
-        paddle.disable_signal_handler()
-        from paddleocr import PaddleOCR
-        gpu_available = paddle.device.cuda.device_count() > 0
+            raise RuntimeError("Failed to install EasyOCR")
+        import torch
+        import easyocr
+        gpu_available = torch.cuda.is_available()
         
     except Exception as e:
         print(f"Import error: {e}, trying to reinstall...")
-        install_paddleocr()
-        import paddle
-        paddle.disable_signal_handler()
-        from paddleocr import PaddleOCR
-        gpu_available = paddle.device.cuda.device_count() > 0
+        install_easyocr()
+        import torch
+        import easyocr
+        gpu_available = torch.cuda.is_available()
     
-    # Try GPU first, then fallback to CPU
     try:
+        print("Initializing EasyOCR...")
+        # EasyOCR automatically uses GPU if available
+        reader = easyocr.Reader(['en'], gpu=gpu_available)
+        
         if gpu_available:
-            print("Initializing PaddleOCR with GPU acceleration...")
-            # For newer PaddleOCR versions, GPU is enabled by default if available
-            ocr = PaddleOCR(use_angle_cls=True, lang='en', det_model_dir=None, rec_model_dir=None)
-            print("PaddleOCR initialized successfully with GPU.")
+            print("EasyOCR initialized successfully with GPU acceleration.")
         else:
-            print("GPU not available, initializing with CPU...")
-            ocr = PaddleOCR(use_angle_cls=True, lang='en', det_model_dir=None, rec_model_dir=None)
-            print("PaddleOCR initialized successfully with CPU.")
-        return ocr
+            print("EasyOCR initialized successfully with CPU.")
+        return reader
         
     except Exception as e:
-        print(f"Error with full parameters: {e}")
+        print(f"Error initializing EasyOCR with GPU={gpu_available}: {e}")
         try:
-            # Fallback: basic initialization
-            print("Trying fallback initialization...")
-            ocr = PaddleOCR(use_angle_cls=True, lang='en')
-            print("PaddleOCR initialized with basic parameters.")
-            return ocr
+            # Fallback to CPU
+            print("Trying CPU fallback...")
+            reader = easyocr.Reader(['en'], gpu=False)
+            print("EasyOCR initialized with CPU fallback.")
+            return reader
         except Exception as e2:
-            print(f"Error with basic parameters: {e2}")
-            # If GPU fails, try with MKL disabled for CPU fallback
-            try:
-                print("GPU failed, trying CPU with MKL disabled...")
-                os.environ['PADDLE_DISABLE_MKL'] = '1'
-                os.environ['PADDLE_DISABLE_MKLML'] = '1'
-                ocr = PaddleOCR(lang='en')
-                print("PaddleOCR initialized with CPU fallback.")
-                return ocr
-            except Exception as e3:
-                print(f"All PaddleOCR attempts failed: {e3}")
-                raise RuntimeError(f"Cannot initialize PaddleOCR: {e3}")
+            print(f"All EasyOCR initialization attempts failed: {e2}")
+            raise RuntimeError(f"Cannot initialize EasyOCR: {e2}")
 
 def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, target_size, mask_boxes):
     keyframe_paths = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
@@ -177,10 +138,10 @@ def extract_text(input_dir, output_dir, mode, lesson_name=None):
                         process_video(video_dir, output_lesson_dir, lesson_folder, video_folder, ocr, target_size, mask_boxes)
 
 def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
-    """Process keyframes with EasyOCR - focus only on OCR functionality"""
+    """Process keyframes with EasyOCR - GPU accelerated OCR processing"""
     ocr_results = []
     
-    for keyframe_path in tqdm(keyframe_paths, desc="Processing keyframes with OCR"):
+    for keyframe_path in tqdm(keyframe_paths, desc="Processing keyframes with EasyOCR"):
         img_name = os.path.basename(keyframe_path)
         
         # Read image
@@ -188,29 +149,33 @@ def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
         if img is None:
             continue
             
-        # Use existing preprocessing from utils (resize + mask is handled elsewhere)
+        # Use existing preprocessing from utils
         img_resized = cv2.resize(img, target_size)
         masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
         
-        # Convert to RGB for PaddleOCR
+        # Convert to RGB for EasyOCR
         masked_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
         
-        # OCR processing (cls=True parameter removed as it's deprecated in newer PaddleOCR)
-        result = ocr.ocr(masked_rgb)
+        # EasyOCR processing
+        result = ocr.readtext(masked_rgb)
         
-        # Format results
+        # Format results to match expected structure
         frame_result = {
             "image": img_name,
             "results": []
         }
         
-        if result and isinstance(result, list) and len(result) > 0:
-            for line in result[0]:
-                # PaddleOCR returns [[bbox], [text, confidence]]
+        if result:
+            for detection in result:
+                # EasyOCR returns (bbox, text, confidence)
+                bbox, text, confidence = detection
+                
+                # Convert bbox format to match original structure
+                # EasyOCR returns [[x1,y1],[x2,y1],[x2,y2],[x1,y2]]
                 frame_result["results"].append({
-                    "text": line[1][0],
-                    "confidence": float(line[1][1]),
-                    "box": [[float(p) for p in point] for point in line[0]]
+                    "text": text,
+                    "confidence": float(confidence),
+                    "box": [[float(point[0]), float(point[1])] for point in bbox]
                 })
         
         ocr_results.append(frame_result)
