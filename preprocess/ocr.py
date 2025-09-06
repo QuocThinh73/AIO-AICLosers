@@ -14,41 +14,41 @@ from typing import Dict, Any, List, Tuple, Optional
 from .utils import delete_banner_and_logo
 
 
-def install_easyocr():
-    """Install EasyOCR and its dependencies for Kaggle environment"""
+def install_paddleocr():
+    """Install PaddleOCR exactly as used in OCR.ipynb"""
     try:
-        print("Installing EasyOCR and dependencies...")
+        print("Installing PaddlePaddle and PaddleOCR...")
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
-            "easyocr", "--quiet"
+            "paddlepaddle", "paddleocr", "--quiet"
         ])
-        print("EasyOCR installed successfully")
+        print("PaddleOCR installed successfully")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error installing EasyOCR: {e}")
+        print(f"Error installing PaddleOCR: {e}")
         return False
 
 
 def get_ocr_model():
-    """Get EasyOCR model with English language support"""
+    """Get PaddleOCR model exactly as used in OCR.ipynb"""
     try:
-        import easyocr
+        from paddleocr import PaddleOCR
     except ImportError:
-        print("EasyOCR not found, installing...")
-        install_success = install_easyocr()
+        print("PaddleOCR not found, installing...")
+        install_success = install_paddleocr()
         if not install_success:
-            raise RuntimeError("Failed to install EasyOCR")
-        import easyocr
+            raise RuntimeError("Failed to install PaddleOCR")
+        from paddleocr import PaddleOCR
     
     try:
-        # Initialize EasyOCR with English language
-        print("Initializing EasyOCR model...")
-        reader = easyocr.Reader(['en'], gpu=False)
-        print("EasyOCR initialized successfully.")
-        return reader
+        # Initialize PaddleOCR exactly as in OCR.ipynb
+        print("Initializing PaddleOCR model...")
+        ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, det_model_dir=None, rec_model_dir=None)
+        print("PaddleOCR initialized successfully.")
+        return ocr
     except Exception as e:
-        print(f"Error initializing EasyOCR: {e}")
-        raise RuntimeError(f"Cannot initialize EasyOCR: {e}")
+        print(f"Error initializing PaddleOCR: {e}")
+        raise RuntimeError(f"Cannot initialize PaddleOCR: {e}")
 
 def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, target_size, mask_boxes):
     keyframe_paths = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
@@ -57,7 +57,7 @@ def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, ta
         
         output_file = os.path.join(output_lesson_dir, f"{lesson_name}_{video_name}_ocr.json")
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(ocr_results, f, indent=2, ensure_ascii=False)
+            json.dump(ocr_results, f, ensure_ascii=False, indent=2)  # Match OCR.ipynb format
         
         print(f"OCR results saved for {lesson_name}/{video_name}: {len(ocr_results)} keyframes processed")
 
@@ -91,43 +91,40 @@ def extract_text(input_dir, output_dir, mode, lesson_name=None):
                         process_video(video_dir, output_lesson_dir, lesson_folder, video_folder, ocr, target_size, mask_boxes)
 
 def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
-    """Process keyframes with EasyOCR to extract text"""
+    """Process keyframes with EasyOCR - focus only on OCR functionality"""
     ocr_results = []
     
     for keyframe_path in tqdm(keyframe_paths, desc="Processing keyframes with OCR"):
         img_name = os.path.basename(keyframe_path)
         
-        # Read and preprocess image
+        # Read image
         img = cv2.imread(keyframe_path)
         if img is None:
             continue
             
+        # Use existing preprocessing from utils (resize + mask is handled elsewhere)
         img_resized = cv2.resize(img, target_size)
         masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
         
-        # EasyOCR expects RGB format
+        # Convert to RGB for PaddleOCR
         masked_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
         
-        # Run OCR (EasyOCR format is different from PaddleOCR)
-        result = ocr.readtext(masked_rgb)
+        # OCR processing exactly as in OCR.ipynb
+        result = ocr.ocr(masked_rgb, cls=True)
         
-        # Format results to match original structure
+        # Format results
         frame_result = {
             "image": img_name,
             "results": []
         }
         
-        if result:
-            for detection in result:
-                # EasyOCR returns (bbox, text, confidence)
-                bbox, text, confidence = detection
-                
-                # Convert bbox to match expected format
-                # EasyOCR returns [[x1,y1],[x2,y1],[x2,y2],[x1,y2]]
+        if result and isinstance(result, list) and len(result) > 0:
+            for line in result[0]:
+                # PaddleOCR returns [[bbox], [text, confidence]]
                 frame_result["results"].append({
-                    "text": text,
-                    "confidence": float(confidence),
-                    "box": [[float(point[0]), float(point[1])] for point in bbox]
+                    "text": line[1][0],
+                    "confidence": float(line[1][1]),
+                    "box": [[float(p) for p in point] for point in line[0]]
                 })
         
         ocr_results.append(frame_result)
