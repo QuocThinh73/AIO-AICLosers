@@ -10,52 +10,82 @@ import subprocess
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
-# Comprehensive fix for Intel oneMKL issues in Kaggle environment
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
-os.environ['MKL_THREADING_LAYER'] = 'GNU'
+# CRITICAL: Set these BEFORE any paddle import to avoid MKL conflicts
+os.environ['PADDLE_DISABLE_MKL'] = '1'
+os.environ['PADDLE_DISABLE_MKLML'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['NUMEXPR_NUM_THREADS'] = '1'
 os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 # Import utility functions
 from .utils import delete_banner_and_logo
 
 
 def install_paddleocr():
-    """Install PaddleOCR and its dependencies via subprocess for Kaggle environment"""
+    """Install PaddleOCR with CPU-only PaddlePaddle to avoid MKL conflicts"""
     try:
-        # Install MKL packages to resolve oneMKL issues
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "mkl==2021.4.0", "--quiet"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "mkl-service", "--quiet"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "intel-openmp", "--quiet"])
+        # First, ensure we install CPU-only PaddlePaddle without MKL
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", 
+            "paddlepaddle==2.4.2", "--index-url", "https://pypi.org/simple/",
+            "--force-reinstall", "--no-deps", "--quiet"
+        ])
         
-        # Install PaddleOCR
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "paddlepaddle", "--quiet"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "paddleocr", "--quiet"])
-        print("PaddleOCR and MKL libraries installed successfully via subprocess")
+        # Then install PaddleOCR
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", 
+            "paddleocr", "--quiet"
+        ])
+        
+        print("CPU-only PaddlePaddle and PaddleOCR installed successfully")
     except subprocess.CalledProcessError as e:
         print(f"Error installing PaddleOCR: {e}")
         raise
 
 
 def get_ocr_model():
-    # Set additional environment variables before importing
-    os.environ['PADDLE_DISABLE_MKL'] = '1'
+    # Additional runtime fix for MKL issues
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning, module="paddle")
     
     # Try to import PaddleOCR, install if not available
     try:
+        # Import in isolated way to avoid conflicts
+        import paddle
+        paddle.disable_signal_handler()
         from paddleocr import PaddleOCR
     except ImportError:
         print("PaddleOCR not found, installing...")
         install_paddleocr()
+        import paddle
+        paddle.disable_signal_handler()
+        from paddleocr import PaddleOCR
+    except Exception as e:
+        print(f"Import error: {e}, trying to reinstall...")
+        install_paddleocr()
+        import paddle
+        paddle.disable_signal_handler()
         from paddleocr import PaddleOCR
     
-    # Initialize PaddleOCR without use_gpu parameter (not supported in newer versions)
-    ocr = PaddleOCR(use_angle_cls=True, lang='en')
-    print("PaddleOCR initialized successfully.")
-    return ocr
+    # Initialize with explicit CPU settings
+    try:
+        ocr = PaddleOCR(
+            use_angle_cls=True, 
+            lang='en',
+            use_gpu=False,
+            enable_mkldnn=False,  # Disable MKL-DNN
+            cpu_threads=1  # Single thread to avoid conflicts
+        )
+        print("PaddleOCR initialized successfully with CPU backend.")
+        return ocr
+    except Exception as e:
+        print(f"Error initializing OCR: {e}")
+        # Fallback: try with minimal parameters
+        ocr = PaddleOCR(lang='en')
+        print("PaddleOCR initialized with fallback configuration.")
+        return ocr
 
 def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, target_size, mask_boxes):
     keyframe_paths = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
@@ -111,7 +141,6 @@ def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
         masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
         masked_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
         
-        # Remove cls=True parameter as it's not supported in newer PaddleOCR versions
         result = ocr.ocr(masked_rgb)
         
         frame_result = {
