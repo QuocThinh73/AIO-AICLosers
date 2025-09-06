@@ -27,9 +27,10 @@ def install_paddleocr():
     """Install PaddleOCR with CPU-only PaddlePaddle to avoid MKL conflicts"""
     try:
         # First, ensure we install CPU-only PaddlePaddle without MKL
+        # Use available version 2.6.2 (stable version from error message)
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
-            "paddlepaddle==2.4.2", "--index-url", "https://pypi.org/simple/",
+            "paddlepaddle==2.6.2", "--index-url", "https://pypi.org/simple/",
             "--force-reinstall", "--no-deps", "--quiet"
         ])
         
@@ -39,10 +40,24 @@ def install_paddleocr():
             "paddleocr", "--quiet"
         ])
         
-        print("CPU-only PaddlePaddle and PaddleOCR installed successfully")
+        print("CPU-only PaddlePaddle 2.6.2 and PaddleOCR installed successfully")
     except subprocess.CalledProcessError as e:
         print(f"Error installing PaddleOCR: {e}")
-        raise
+        # Fallback: try with latest available version without --no-deps
+        try:
+            print("Trying fallback installation without version pinning...")
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", 
+                "paddlepaddle", "--quiet"
+            ])
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", 
+                "paddleocr", "--quiet"
+            ])
+            print("Fallback installation successful")
+        except subprocess.CalledProcessError as e2:
+            print(f"Fallback installation also failed: {e2}")
+            raise e2
 
 
 def get_ocr_model():
