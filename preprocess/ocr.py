@@ -125,8 +125,8 @@ def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
         # Convert to RGB for PaddleOCR
         masked_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
         
-        # OCR processing exactly as in OCR.ipynb
-        result = ocr.ocr(masked_rgb, cls=True)
+        # OCR processing (cls=True parameter removed as it's deprecated in newer PaddleOCR)
+        result = ocr.ocr(masked_rgb)
         
         # Format results
         frame_result = {
