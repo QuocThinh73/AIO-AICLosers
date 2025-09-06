@@ -166,26 +166,26 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
             # Force convert to dict with string keys for JSON serialization
             if isinstance(lexical_weights, dict):
                 # Chuyển đổi tất cả values trong dict sang Python float
-                sparse_vector = {}
+                processed_weights = {}
                 for k, v in lexical_weights.items():
                     # Force string key and float value
-                    sparse_vector[str(k)] = float(v) if hasattr(v, 'item') else float(v) if isinstance(v, (int, float)) else v
+                    processed_weights[str(k)] = float(v) if hasattr(v, 'item') else float(v) if isinstance(v, (int, float)) else v
             elif hasattr(lexical_weights, 'tolist'):
-                sparse_vector = lexical_weights.astype(float).tolist()
+                processed_weights = lexical_weights.astype(float).tolist()
             elif lexical_weights is None:
-                sparse_vector = {}
+                processed_weights = {}
             else:
                 # Try direct conversion if possible
-                sparse_vector = {"values": [float(x) for x in lexical_weights]} if hasattr(lexical_weights, '__iter__') else {}
+                processed_weights = {"values": [float(x) for x in lexical_weights]} if hasattr(lexical_weights, '__iter__') else {}
         except Exception as e:
             print(f"Cảnh báo: Không thể xử lý lexical_weights cho {keyframe_name}: {e}")
-            sparse_vector = {}
+            processed_weights = {}
             
         item_dict = {
             "keyframe": keyframe_name,
             "dense_vector": dense_vec,
             "colbert_vector": colbert_vec,
-            "sparse_vector": sparse_vector
+            "lexical_weights": processed_weights  # Đổi tên thành lexical_weights theo đúng chuẩn mô hình
         }
         
         # Debug - print complete item for first item
@@ -202,7 +202,7 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
         print(f"📋 Sample embedding output (keyframe: {first_embedding['keyframe']}):")
         print(f"  - dense_vector: shape {len(first_embedding['dense_vector'])}")
         print(f"  - colbert_vector: shape {len(first_embedding['colbert_vector'])}")
-        print(f"  - sparse_vector: type {type(first_embedding['sparse_vector'])}, size {len(first_embedding['sparse_vector']) if isinstance(first_embedding['sparse_vector'], (dict, list)) else 'N/A'}")
+        print(f"  - lexical_weights: type {type(first_embedding['lexical_weights'])}, size {len(first_embedding['lexical_weights']) if isinstance(first_embedding['lexical_weights'], (dict, list)) else 'N/A'}")
         print(f"  - Output fields: {list(first_embedding.keys())}")
     
     # Lưu kết quả vào file
