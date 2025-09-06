@@ -10,69 +10,130 @@ import subprocess
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
-# CRITICAL: Set these BEFORE any paddle import to avoid MKL conflicts
-os.environ['PADDLE_DISABLE_MKL'] = '1'
-os.environ['PADDLE_DISABLE_MKLML'] = '1'
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
-os.environ['NUMEXPR_NUM_THREADS'] = '1'
-os.environ['OMP_NUM_THREADS'] = '1'
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+# GPU Configuration for Kaggle
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU
+# Only set MKL variables if CPU fallback is needed
+# os.environ['PADDLE_DISABLE_MKL'] = '1'  # Commented out for GPU usage
 
 # Import utility functions
 from .utils import delete_banner_and_logo
 
 
 def install_paddleocr():
-    """Install PaddleOCR exactly as used in OCR.ipynb"""
+    """Install GPU-enabled PaddlePaddle and PaddleOCR for Kaggle"""
     try:
-        print("Installing PaddlePaddle and PaddleOCR...")
+        print("Installing GPU-enabled PaddlePaddle for Kaggle...")
+        # Uninstall any existing PaddlePaddle first
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "uninstall", "paddlepaddle", "-y", "--quiet"
+        ], stderr=subprocess.DEVNULL)
+        
+        # Try GPU-enabled PaddlePaddle first
+        try:
+            print("Attempting GPU-enabled PaddlePaddle installation...")
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", 
+                "paddlepaddle-gpu==2.6.2", "-i", "https://pypi.org/simple/", "--quiet"
+            ])
+            print("GPU-enabled PaddlePaddle installed successfully")
+        except subprocess.CalledProcessError:
+            print("GPU version failed, falling back to CPU version...")
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", 
+                "paddlepaddle==2.6.2", "-i", "https://pypi.org/simple/", "--quiet"
+            ])
+            print("CPU PaddlePaddle installed as fallback")
+        
+        # Install PaddleOCR
         subprocess.check_call([
             sys.executable, "-m", "pip", "install", 
-            "paddlepaddle", "paddleocr", "--quiet"
+            "paddleocr", "--quiet"
         ])
         print("PaddleOCR installed successfully")
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error installing PaddleOCR: {e}")
-        return False
+        # Final fallback to basic installation
+        try:
+            print("Trying basic installation...")
+            subprocess.check_call([
+                sys.executable, "-m", "pip", "install", 
+                "paddlepaddle", "paddleocr", "--quiet"
+            ])
+            return True
+        except subprocess.CalledProcessError as e2:
+            print(f"All installation attempts failed: {e2}")
+            return False
 
 
 def get_ocr_model():
-    """Get PaddleOCR model exactly as used in OCR.ipynb"""
+    """Get PaddleOCR model with GPU support for Kaggle"""
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning, module="paddle")
+    
     try:
+        # Import paddle and check GPU availability
+        import paddle
+        paddle.disable_signal_handler()
         from paddleocr import PaddleOCR
+        
+        # Check GPU availability
+        gpu_available = paddle.device.cuda.device_count() > 0
+        print(f"GPU available: {gpu_available}")
+        if gpu_available:
+            print(f"CUDA devices: {paddle.device.cuda.device_count()}")
+            
     except ImportError:
         print("PaddleOCR not found, installing...")
         install_success = install_paddleocr()
         if not install_success:
             raise RuntimeError("Failed to install PaddleOCR")
+        import paddle
+        paddle.disable_signal_handler()
         from paddleocr import PaddleOCR
+        gpu_available = paddle.device.cuda.device_count() > 0
+        
+    except Exception as e:
+        print(f"Import error: {e}, trying to reinstall...")
+        install_paddleocr()
+        import paddle
+        paddle.disable_signal_handler()
+        from paddleocr import PaddleOCR
+        gpu_available = paddle.device.cuda.device_count() > 0
     
+    # Try GPU first, then fallback to CPU
     try:
-        # Initialize PaddleOCR with compatible parameters (use_gpu removed as it's deprecated)
-        print("Initializing PaddleOCR model...")
-        ocr = PaddleOCR(use_angle_cls=True, lang='en', det_model_dir=None, rec_model_dir=None)
-        print("PaddleOCR initialized successfully.")
+        if gpu_available:
+            print("Initializing PaddleOCR with GPU acceleration...")
+            # For newer PaddleOCR versions, GPU is enabled by default if available
+            ocr = PaddleOCR(use_angle_cls=True, lang='en', det_model_dir=None, rec_model_dir=None)
+            print("PaddleOCR initialized successfully with GPU.")
+        else:
+            print("GPU not available, initializing with CPU...")
+            ocr = PaddleOCR(use_angle_cls=True, lang='en', det_model_dir=None, rec_model_dir=None)
+            print("PaddleOCR initialized successfully with CPU.")
         return ocr
+        
     except Exception as e:
         print(f"Error with full parameters: {e}")
         try:
-            # Fallback: basic initialization with minimal parameters
+            # Fallback: basic initialization
             print("Trying fallback initialization...")
             ocr = PaddleOCR(use_angle_cls=True, lang='en')
             print("PaddleOCR initialized with basic parameters.")
             return ocr
         except Exception as e2:
             print(f"Error with basic parameters: {e2}")
+            # If GPU fails, try with MKL disabled for CPU fallback
             try:
-                # Last resort: only language parameter
-                print("Trying minimal initialization...")
+                print("GPU failed, trying CPU with MKL disabled...")
+                os.environ['PADDLE_DISABLE_MKL'] = '1'
+                os.environ['PADDLE_DISABLE_MKLML'] = '1'
                 ocr = PaddleOCR(lang='en')
-                print("PaddleOCR initialized with minimal parameters.")
+                print("PaddleOCR initialized with CPU fallback.")
                 return ocr
             except Exception as e3:
-                print(f"All initialization attempts failed: {e3}")
+                print(f"All PaddleOCR attempts failed: {e3}")
                 raise RuntimeError(f"Cannot initialize PaddleOCR: {e3}")
 
 def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, target_size, mask_boxes):
