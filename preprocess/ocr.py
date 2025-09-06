@@ -6,6 +6,7 @@ import shutil
 import argparse
 import cv2
 import numpy as np
+import subprocess
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
@@ -13,9 +14,29 @@ from typing import Dict, Any, List, Tuple, Optional
 from .utils import delete_banner_and_logo
 
 
+def install_paddleocr():
+    """Install PaddleOCR and its dependencies via subprocess for Kaggle environment"""
+    try:
+        # Install PaddleOCR
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "paddlepaddle", "--quiet"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "paddleocr", "--quiet"])
+        print("PaddleOCR installed successfully via subprocess")
+    except subprocess.CalledProcessError as e:
+        print(f"Error installing PaddleOCR: {e}")
+        raise
+
+
 def get_ocr_model():
-    from paddleocr import PaddleOCR
-    ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False)
+    # Try to import PaddleOCR, install if not available
+    try:
+        from paddleocr import PaddleOCR
+    except ImportError:
+        print("PaddleOCR not found, installing...")
+        install_paddleocr()
+        from paddleocr import PaddleOCR
+    
+    # Initialize PaddleOCR without use_gpu parameter (not supported in newer versions)
+    ocr = PaddleOCR(use_angle_cls=True, lang='en')
     print("PaddleOCR initialized successfully.")
     return ocr
 
@@ -91,4 +112,3 @@ def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
         ocr_results.append(frame_result)
             
     return ocr_results
-
