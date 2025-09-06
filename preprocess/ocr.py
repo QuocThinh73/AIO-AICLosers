@@ -141,7 +141,7 @@ def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
     """Process keyframes with EasyOCR - GPU accelerated OCR processing"""
     ocr_results = []
     
-    for keyframe_path in tqdm(keyframe_paths, desc="Processing keyframes with EasyOCR"):
+    for keyframe_path in tqdm(keyframe_paths, desc="Processing keyframes"):
         img_name = os.path.basename(keyframe_path)
         
         # Read image
