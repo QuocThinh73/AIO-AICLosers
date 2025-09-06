@@ -10,6 +10,15 @@ import subprocess
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
 
+# CRITICAL: Set these BEFORE any paddle import to avoid MKL conflicts
+os.environ['PADDLE_DISABLE_MKL'] = '1'
+os.environ['PADDLE_DISABLE_MKLML'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 # Import utility functions
 from .utils import delete_banner_and_logo
 
