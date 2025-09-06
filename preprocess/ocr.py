@@ -94,7 +94,8 @@ def process_keyframes(ocr, keyframe_paths, target_size, mask_boxes):
         masked_img = delete_banner_and_logo(img_resized.copy(), mask_boxes)
         masked_rgb = cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB)
         
-        result = ocr.ocr(masked_rgb, cls=True)
+        # Remove cls=True parameter as it's not supported in newer PaddleOCR versions
+        result = ocr.ocr(masked_rgb)
         
         frame_result = {
             "image": img_name,
