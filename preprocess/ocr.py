@@ -41,14 +41,30 @@ def get_ocr_model():
         from paddleocr import PaddleOCR
     
     try:
-        # Initialize PaddleOCR exactly as in OCR.ipynb
+        # Initialize PaddleOCR with compatible parameters (use_gpu removed as it's deprecated)
         print("Initializing PaddleOCR model...")
-        ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False, det_model_dir=None, rec_model_dir=None)
+        ocr = PaddleOCR(use_angle_cls=True, lang='en', det_model_dir=None, rec_model_dir=None)
         print("PaddleOCR initialized successfully.")
         return ocr
     except Exception as e:
-        print(f"Error initializing PaddleOCR: {e}")
-        raise RuntimeError(f"Cannot initialize PaddleOCR: {e}")
+        print(f"Error with full parameters: {e}")
+        try:
+            # Fallback: basic initialization with minimal parameters
+            print("Trying fallback initialization...")
+            ocr = PaddleOCR(use_angle_cls=True, lang='en')
+            print("PaddleOCR initialized with basic parameters.")
+            return ocr
+        except Exception as e2:
+            print(f"Error with basic parameters: {e2}")
+            try:
+                # Last resort: only language parameter
+                print("Trying minimal initialization...")
+                ocr = PaddleOCR(lang='en')
+                print("PaddleOCR initialized with minimal parameters.")
+                return ocr
+            except Exception as e3:
+                print(f"All initialization attempts failed: {e3}")
+                raise RuntimeError(f"Cannot initialize PaddleOCR: {e3}")
 
 def process_video(video_dir, output_lesson_dir, lesson_name, video_name, ocr, target_size, mask_boxes):
     keyframe_paths = sorted(glob.glob(os.path.join(video_dir, "*.jpg")))
