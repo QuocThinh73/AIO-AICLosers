@@ -6,7 +6,8 @@ import subprocess
 from tqdm import tqdm
 import torch
 import numpy as np
-
+import zipfile
+import shutil
 
 def _ensure_dependencies():
     """Đảm bảo các thư viện phụ thuộc đã được cài đặt"""
@@ -159,24 +160,41 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
         
         # Xử lý lexical_weights - có thể là dict với numpy values
         try:
+            print(f"Debug: Checking lexical_weights type for item {i}: {type(embedding_output['lexical_weights'][i])}")
             lexical_weights = embedding_output["lexical_weights"][i]
+            
+            # Force convert to dict with string keys for JSON serialization
             if isinstance(lexical_weights, dict):
                 # Chuyển đổi tất cả values trong dict sang Python float
-                lexical_weights = {k: float(v) if hasattr(v, 'item') else v for k, v in lexical_weights.items()}
+                sparse_vector = {}
+                for k, v in lexical_weights.items():
+                    # Force string key and float value
+                    sparse_vector[str(k)] = float(v) if hasattr(v, 'item') else float(v) if isinstance(v, (int, float)) else v
             elif hasattr(lexical_weights, 'tolist'):
-                lexical_weights = lexical_weights.astype(float).tolist()
+                sparse_vector = lexical_weights.astype(float).tolist()
             elif lexical_weights is None:
-                lexical_weights = {}
+                sparse_vector = {}
+            else:
+                # Try direct conversion if possible
+                sparse_vector = {"values": [float(x) for x in lexical_weights]} if hasattr(lexical_weights, '__iter__') else {}
         except Exception as e:
             print(f"Cảnh báo: Không thể xử lý lexical_weights cho {keyframe_name}: {e}")
-            lexical_weights = {}
-        
-        embedded_vectors.append({
+            sparse_vector = {}
+            
+        item_dict = {
             "keyframe": keyframe_name,
             "dense_vector": dense_vec,
             "colbert_vector": colbert_vec,
-            "sparse_vector": lexical_weights  # Đổi tên thành sparse_vector như mong muốn
-        })
+            "sparse_vector": sparse_vector
+        }
+        
+        # Debug - print complete item for first item
+        if i == 0:
+            print("Debug: First item keys:", list(item_dict.keys()))
+            for k, v in item_dict.items():
+                print(f"Debug: {k} type: {type(v)}")
+        
+        embedded_vectors.append(item_dict)
     
     # In thông tin embedding đầu tiên để quan sát
     if embedded_vectors:
@@ -336,4 +354,108 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
             results["message"] = f"Không có captions nào được xử lý cho video {lesson_name}/{video_name}"
             results["total_videos"] = 0
     
+    # Zip kết quả nếu có video được xử lý
+    if results.get("total_videos", 0) > 0:
+        # Zip các file đơn lẻ trước
+        for processed_video in results["processed_videos"]:
+            output_file = processed_video.get("output_file")
+            if output_file and os.path.exists(output_file):
+                zip_path = zip_single_json_file(output_file)
+                if zip_path:
+                    processed_video["output_file"] = zip_path
+        
+        # Tạo file zip tổng hợp
+        zip_path = create_zip_file(output_embedded_vector_dir)
+        results["zip_file"] = zip_path
+    
     return results
+
+def zip_single_json_file(json_file_path):
+    """
+    Tạo file zip từ một file JSON đơn lẻ
+    
+    Args:
+        json_file_path: Đường dẫn đến file JSON cần nén
+        
+    Returns:
+        str: Đường dẫn đến file zip
+    """
+    # Kiểm tra file tồn tại
+    if not os.path.exists(json_file_path):
+        print(f"Không tìm thấy file: {json_file_path}")
+        return None
+    
+    # Tạo đường dẫn file zip
+    zip_base_path = os.path.splitext(json_file_path)[0]
+    zip_path = f"{zip_base_path}.zip"
+    
+    try:
+        # Tạo file zip
+        base_dir = os.path.dirname(json_file_path)
+        file_name = os.path.basename(json_file_path)
+        
+        print(f"Đang nén file {file_name}...")
+        # Tạo file zip chỉ chứa file JSON này
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(json_file_path, arcname=file_name)
+        
+        print(f"Đã tạo file zip thành công: {zip_path}")
+        
+        # Xóa file JSON gốc để tiết kiệm không gian
+        os.remove(json_file_path)
+        print(f"Đã xóa file JSON gốc: {json_file_path}")
+        
+    except Exception as e:
+        print(f"Cảnh báo: Không thể tạo file zip cho {json_file_path}: {e}")
+        return None
+    
+    return zip_path
+
+def create_zip_file(output_embedded_vector_dir):
+    """
+    Tạo file zip từ thư mục embedding vectors (đã chứa các file zip con)
+    
+    Args:
+        output_embedded_vector_dir: Thư mục chứa các file embedding vectors đã được nén
+        
+    Returns:
+        str: Đường dẫn đến file zip
+    """
+    # Lấy thư mục cơ sở và tên
+    base_dir = os.path.dirname(output_embedded_vector_dir)
+    dir_name = os.path.basename(output_embedded_vector_dir)
+    
+    # Tạo đường dẫn file zip
+    zip_path = os.path.join(base_dir, f"{dir_name}.zip")
+    
+    # In thông tin về quá trình tạo file zip tổng hợp
+    print(f"Đang tạo file zip tổng hợp: {zip_path}")
+    
+    try:
+        # Tìm tất cả file zip con trong thư mục
+        zip_files = []
+        for root, _, _ in os.walk(output_embedded_vector_dir):
+            zip_files.extend(glob.glob(os.path.join(root, "*.zip")))
+        
+        if not zip_files:
+            print(f"Không tìm thấy file zip nào trong {output_embedded_vector_dir}")
+            # Sử dụng phương pháp nén truyền thống nếu không có file zip con
+            shutil.make_archive(
+                os.path.join(base_dir, dir_name),  # Tên gốc của file zip
+                'zip',                             # Format
+                output_embedded_vector_dir          # Thư mục cần zip
+            )
+        else:
+            # Tạo file zip mới chứa tất cả các file zip con
+            print(f"Tìm thấy {len(zip_files)} file zip con để nén")
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for zip_file in zip_files:
+                    # Lưu trữ đường dẫn tương đối trong file zip
+                    rel_path = os.path.relpath(zip_file, output_embedded_vector_dir)
+                    zipf.write(zip_file, arcname=rel_path)
+        
+        print(f"Đã tạo file zip tổng hợp thành công tại: {zip_path}")
+    except Exception as e:
+        print(f"Cảnh báo: Không thể tạo file zip tổng hợp: {e}")
+    
+    return zip_path
