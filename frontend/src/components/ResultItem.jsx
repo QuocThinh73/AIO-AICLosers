@@ -1,4 +1,4 @@
-function ResultItem({ src, name, rank }) {
+function ResultItem({ src, name, rank, onClick }) {
   return (
     <div className="group relative bg-white shadow-md">
       <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
@@ -9,6 +9,7 @@ function ResultItem({ src, name, rank }) {
         <img
           src={src}
           alt={name}
+          onClick={onClick}
           className="w-full h-48 object-fit"
           onError={(e) => {
             e.target.src =
