@@ -25,16 +25,15 @@ const makeRows = (type, payload) => {
       const { video, index } = parseKeyframe(keyframe);
       return [video, index];
     });
-  }
-  else if (type === "QA") {
+  } else if (type === "QA") {
     return payload.keyframes.map((keyframe) => {
       const { video, index } = parseKeyframe(keyframe);
       return [video, index, payload.answer];
-    })
-  };
+    });
+  }
 };
 
-const exportCSV = ( filename , type, payload ) => {
+const exportCSV = (filename, type, payload) => {
   const rows = makeRows(type, payload);
   const csv = toCsv(rows);
   downloadCsv(csv, filename);
