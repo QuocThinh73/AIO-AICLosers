@@ -13,9 +13,11 @@ class BaseSearchRequest(BaseModel):
 
     include_batch_ids: Optional[str] = None
     exclude_batch_ids: Optional[str] = None
+    include_video_ids: Optional[str] = None
+    exclude_video_ids: Optional[str] = None
 
     top_k: int = 100
-    
+
     @classmethod
     def as_form(
         cls,
@@ -28,6 +30,8 @@ class BaseSearchRequest(BaseModel):
 
         include_batch_ids: Optional[str] = Form(None),
         exclude_batch_ids: Optional[str] = Form(None),
+        include_video_ids: Optional[str] = Form(None),
+        exclude_video_ids: Optional[str] = Form(None),
 
         top_k: int = Form(100),
     ) -> "BaseSearchRequest":
@@ -39,8 +43,11 @@ class BaseSearchRequest(BaseModel):
             object_detection_text=object_detection_text,
             include_batch_ids=include_batch_ids,
             exclude_batch_ids=exclude_batch_ids,
+            include_video_ids=include_video_ids,
+            exclude_video_ids=exclude_video_ids,
             top_k=top_k,
         )
+
 
 class TemporalSearchRequest(BaseModel):
     pass

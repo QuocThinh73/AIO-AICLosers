@@ -7,6 +7,8 @@ function SearchBar({ onSearch }) {
   const [translate, setTranslate] = useState(true);
   const [includeBatchIds, setIncludeBatchIds] = useState("");
   const [excludeBatchIds, setExcludeBatchIds] = useState("");
+  const [includeVideoIds, setIncludeVideoIds] = useState("");
+  const [excludeVideoIds, setExcludeVideoIds] = useState("");
   const [topK, setTopK] = useState(100);
 
   function handleSubmit(e) {
@@ -18,6 +20,8 @@ function SearchBar({ onSearch }) {
       translate,
       includeBatchIds,
       excludeBatchIds,
+      includeVideoIds,
+      excludeVideoIds,
       topK,
     });
   }
@@ -109,7 +113,7 @@ function SearchBar({ onSearch }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Translation
@@ -129,6 +133,26 @@ function SearchBar({ onSearch }) {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label
+              htmlFor="topK"
+              className="block text-sm font-medium text-gray-700"
+            >
+              TopK
+            </label>
+            <input
+              id="topK"
+              type="number"
+              value={topK}
+              onChange={(e) => setTopK(parseInt(e.target.value || "1", 10))}
+              min={1}
+              max={1000}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="space-y-2">
             <label
               htmlFor="includeBatchIds"
@@ -163,18 +187,32 @@ function SearchBar({ onSearch }) {
 
           <div className="space-y-2">
             <label
-              htmlFor="topK"
+              htmlFor="includeVideoIds"
               className="block text-sm font-medium text-gray-700"
             >
-              TopK
+              Include Video IDs
             </label>
             <input
-              id="topK"
-              type="number"
-              value={topK}
-              onChange={(e) => setTopK(parseInt(e.target.value || "1", 10))}
-              min={1}
-              max={1000}
+              id="includeVideoIds"
+              type="text"
+              value={includeVideoIds}
+              onChange={(e) => setIncludeVideoIds(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="excludeVideoIds"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Exclude Video IDs
+            </label>
+            <input
+              id="excludeVideoIds"
+              type="text"
+              value={excludeVideoIds}
+              onChange={(e) => setExcludeVideoIds(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg"
             />
           </div>

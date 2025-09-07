@@ -4,21 +4,45 @@ from FlagEmbedding import BGEM3FlagModel
 from app.ml.openclip import OpenCLIP
 from app.utils.generate_id import generate_id
 
+
 class Qdrant:
     def __init__(self, host, port, caption_model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True), openclip_model=OpenCLIP('ViT-B-16', pretrained='dfn2b')):
         self.client = QdrantClient(host=host, port=port)
         self.caption_model = caption_model
         self.openclip_model = openclip_model
-        
+
+    def _create_filter(self, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
+        should, must_not = [], []
+
+        if include_batch_ids:
+            should.append(models.FieldCondition(key="batch_id",
+                          match=models.MatchAny(any=include_batch_ids)))
+
+        if include_video_ids:
+            should.append(models.FieldCondition(key="video_id",
+                          match=models.MatchAny(any=include_video_ids)))
+
+        if exclude_batch_ids:
+            must_not.append(models.FieldCondition(
+                key="batch_id", match=models.MatchAny(any=exclude_batch_ids)))
+
+        if exclude_video_ids:
+            must_not.append(models.FieldCondition(
+                key="video_id", match=models.MatchAny(any=exclude_video_ids)))
+
+        if not should and not must_not:
+            return None
+        return models.Filter(should=should, must_not=must_not)
+
     def is_collection_exists(self, collection_name):
         """Check if collection exists in Qdrant"""
         return self.client.collection_exists(collection_name)
-        
+
     def create_sparse_vector(self, sparse_data):
         """Convert BGE-M3 sparse output to Qdrant sparse vector format"""
         sparse_indices = []
         sparse_values = []
-        
+
         for key, value in sparse_data.items():
             # Only process positive values
             if float(value) > 0:
@@ -28,48 +52,48 @@ class Qdrant:
                         key = int(key)
                     else:
                         continue
-                    
+
                 sparse_indices.append(key)
                 sparse_values.append(float(value))
-        
+
         return models.SparseVector(
             indices=sparse_indices,
             values=sparse_values
         )
-        
+
     def generate_caption_embeddings(self, text):
         return self.caption_model.encode(
-            [text], 
+            [text],
             return_dense=True,
             return_sparse=True,
             return_colbert_vecs=True
         )
-        
+
     def create_caption_collection(self, collection_name):
         self.client.create_collection(
             collection_name=collection_name,
-        vectors_config={
-            "dense": models.VectorParams(
-                size=1024,
-                distance=models.Distance.COSINE
-            ),
-            "colbert": models.VectorParams(
-                size=1024,
-                distance=models.Distance.COSINE,
-                multivector_config=models.MultiVectorConfig(
-                    comparator=models.MultiVectorComparator.MAX_SIM
+            vectors_config={
+                "dense": models.VectorParams(
+                    size=1024,
+                    distance=models.Distance.COSINE
                 ),
-            )
-        },
-        sparse_vectors_config={
-            "sparse": models.SparseVectorParams(
-                index=models.SparseIndexParams(
-                    on_disk=True
+                "colbert": models.VectorParams(
+                    size=1024,
+                    distance=models.Distance.COSINE,
+                    multivector_config=models.MultiVectorConfig(
+                        comparator=models.MultiVectorComparator.MAX_SIM
+                    ),
                 )
-            )
-        },
-    )
-    
+            },
+            sparse_vectors_config={
+                "sparse": models.SparseVectorParams(
+                    index=models.SparseIndexParams(
+                        on_disk=True
+                    )
+                )
+            },
+        )
+
     def insert_to_caption_collection(self, embeddings, collection_name):
         for embedding in embeddings:
             keyframe = embedding["keyframe"]
@@ -80,7 +104,12 @@ class Qdrant:
 
             # Convert sparse weights to Qdrant format
             qdrant_sparse = self.create_sparse_vector(sparse_data)
-            
+            keyframe_name = os.path.splitext(keyframe)[0]
+            parts = keyframe_name.split("_")
+            batch_id = parts[0]
+            video_id = parts[1]
+            frame_id = parts[2]
+
             # Insert into Qdrant
             self.client.upsert(
                 collection_name=collection_name,
@@ -89,7 +118,10 @@ class Qdrant:
                         id=generate_id(keyframe),
                         payload={
                             "keyframe": keyframe,
-                            "caption": caption
+                            "caption": caption,
+                            "batch_id": batch_id,
+                            "video_id": video_id,
+                            "frame_id": int(frame_id)
                         },
                         vector={
                             "dense": dense_vector,
@@ -99,15 +131,15 @@ class Qdrant:
                     )
                 ]
             )
-        
-    def search_caption(self, search_query, collection_name, limit=100, prefetch_limit=300):
+
+    def search_caption(self, search_query, collection_name, limit=100, prefetch_limit=300, include_video_ids=None, exclude_video_ids=None):
         # Generate caption embeddings for the query
         query_outputs = self.generate_caption_embeddings(search_query)
-        
+
         dense_vec = query_outputs["dense_vecs"][0]
         sparse_vec = query_outputs["lexical_weights"][0]
         colbert_vec = query_outputs["colbert_vecs"][0]
-        
+
         # Set up prefetch for hybrid search
         prefetch = [
             models.Prefetch(
@@ -119,7 +151,7 @@ class Qdrant:
                 using="dense",
                 limit=prefetch_limit)
         ]
-        
+
         # Perform reranking with ColBERT
         points = self.client.query_points(
             collection_name,
@@ -128,10 +160,12 @@ class Qdrant:
             using="colbert",
             with_payload=True,
             limit=limit,
+            query_filter=self._create_filter(
+                include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
         ).points
-        
-        keyframes = [point.payload["keyframe"] for point in points]              
-        
+
+        keyframes = [point.payload["keyframe"] for point in points]
+
         return keyframes
 
     def generate_openclip_embeddings(self, text, image):
@@ -179,19 +213,7 @@ class Qdrant:
                 ]
             )
 
-    def create_filter(self, include_batch_ids=None, exclude_batch_ids=None):
-        should, must_not = [], []
-
-        if include_batch_ids:
-            should.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=include_batch_ids)))
-        if exclude_batch_ids:
-            must_not.append(models.FieldCondition(key="batch_id", match=models.MatchAny(any=exclude_batch_ids)))
-        
-        if not should and not must_not:
-            return None
-        return models.Filter(should=should, must_not=must_not)
-
-    def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None):
+    def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
         dense_vec = self.generate_openclip_embeddings(text=text, image=image)
 
         points = self.client.query_points(
@@ -199,9 +221,10 @@ class Qdrant:
             query=dense_vec,
             using="dense",
             with_payload=True,
-            query_filter=self.create_filter(include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids),
+            query_filter=self._create_filter(
+                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
             limit=limit,
         ).points
-        
+
         keyframes = [point.payload["keyframe"] for point in points]
         return keyframes

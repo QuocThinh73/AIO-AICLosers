@@ -5,6 +5,8 @@ const baseSearch = async ({
   translate,
   includeBatchIds,
   excludeBatchIds,
+  includeVideoIds,
+  excludeVideoIds,
   topK,
 }) => {
   const fd = new FormData();
@@ -18,6 +20,10 @@ const baseSearch = async ({
     fd.append("include_batch_ids", includeBatchIds.trim());
   if (excludeBatchIds?.trim())
     fd.append("exclude_batch_ids", excludeBatchIds.trim());
+  if (includeVideoIds?.trim())
+    fd.append("include_video_ids", includeVideoIds.trim());
+  if (excludeVideoIds?.trim())
+    fd.append("exclude_video_ids", excludeVideoIds.trim());
 
   const res = await fetch("/api/search/base_search", {
     method: "POST",
