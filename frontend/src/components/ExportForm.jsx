@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import exportCSV from "../services/csvExport";
 import TextInput from "./TextInput";
 import ExportTypeSelector from "./ExportTypeSelector";
