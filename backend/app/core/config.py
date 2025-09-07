@@ -7,10 +7,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     API_V1_STR: str
     PROJECT_NAME: str
-
-    ELASTICSEARCH_HOST: str
-    ELASTICSEARCH_PORT: int
-
+    
     QDRANT_HOST: str
     QDRANT_PORT: int
 
