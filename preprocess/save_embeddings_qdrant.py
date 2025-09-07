@@ -2,7 +2,6 @@ import os
 from backend.app.database.qdrant import Qdrant
 from preprocess.utils import load_json
 
-
 def process_video(embedded_vector_file_path, qdrant_client):
     embedded_vectors = load_json(embedded_vector_file_path)
     qdrant_client.insert_to_openclip_collection(embeddings=embedded_vectors, collection_name="openclip")

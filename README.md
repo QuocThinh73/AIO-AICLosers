@@ -84,7 +84,7 @@ Copy to .env
 #### 2.4. Run backend
 
 ```bash
-uvicorn app.ain:create_app --host 0.0.0.0 --port 8000 --factory
+uvicorn app.main:create_app --host 0.0.0.0 --port 8000 --factory
 ```
 
 ### 3. Frontend

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import SearchBar from "./components/SearchBar";
 import baseSearch from "./services/searchApi";
-import ResultList from "./components/ResultList";
+import ResultContainer from "./components/ResultContainer";
 
 
 function App() {
@@ -20,7 +20,7 @@ function App() {
   return (
     <div>
       <SearchBar onSearch={handleSearch} />
-      <ResultList keyframes={keyframes} />
+      <ResultContainer keyframes={keyframes} />
     </div>
   )
 }
