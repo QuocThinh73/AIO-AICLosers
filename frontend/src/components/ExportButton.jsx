@@ -18,7 +18,8 @@ function ExportButton({ keyframes }) {
   }, []);
 
   const onExport = () => {
-    exportCSV({ type, keyframes, filename, answer });
+    const payload = { keyframes, answer };
+    exportCSV(filename, type, payload);
     setOpen(false);
   };
 
@@ -58,11 +59,11 @@ function ExportButton({ keyframes }) {
                 <input
                   type="radio"
                   name="exportType"
-                  value="VQA"
-                  checked={type === "VQA"}
-                  onChange={() => setType("VQA")}
+                  value="QA"
+                  checked={type === "QA"}
+                  onChange={() => setType("QA")}
                 />
-                <span className="text-sm">VQA</span>
+                <span className="text-sm">QA</span>
               </label>
             </div>
           </div>
@@ -79,10 +80,10 @@ function ExportButton({ keyframes }) {
             />
           </div>
 
-          {type === "VQA" && (
+          {type === "QA" && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Answer (VQA)
+                Answer (QA)
               </label>
               <input
                 type="text"

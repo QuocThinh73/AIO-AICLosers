@@ -2,12 +2,12 @@ from app.database.qdrant import Qdrant
 from app.database.elasticsearch import Elasticsearch
 from app.core.config import get_settings
 from PIL import Image
+from functools import lru_cache
 
 
 class SearchService:
     def __init__(self):
         self.qdrant = Qdrant(host=get_settings().QDRANT_HOST, port=get_settings().QDRANT_PORT)
-        # self.elasticsearch = Elasticsearch(host=get_settings().ELASTICSEARCH_HOST, port=get_settings().ELASTICSEARCH_PORT)
 
     def search_caption(self, text: str, top_k: int):
         return self.qdrant.search_caption(search_query=text, collection_name=get_settings().CAPTION_COLLECTION_NAME, limit=top_k, prefetch_limit=top_k*3)
@@ -23,3 +23,8 @@ class SearchService:
 
     def search_object(self, text: str, top_k: int):
         pass
+
+@lru_cache()
+def get_search_service():
+   from app.services.search_service import SearchService
+   return SearchService()
