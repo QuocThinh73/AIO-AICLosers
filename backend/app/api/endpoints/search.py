@@ -4,17 +4,13 @@ from typing import Optional
 from app.models.schemas import BaseSearchRequest, TemporalSearchRequest
 from app.utils.rerank import rrf
 from app.utils.translate import translate_text
-from functools import lru_cache
 from io import BytesIO
 from PIL import Image
+from app.services.search_service import get_search_service
 
 
 router = APIRouter()
 
-@lru_cache()
-def get_search_service():
-   from app.services.search_service import SearchService
-   return SearchService()
 
 @router.post("/base_search")
 async def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearchRequest.as_form), embedding_image: Optional[UploadFile] = File(None), search_service = Depends(get_search_service)):

@@ -3,7 +3,6 @@ import SearchBar from "./components/SearchBar";
 import baseSearch from "./services/searchApi";
 import ResultContainer from "./components/ResultContainer";
 
-
 function App() {
   const [keyframes, setKeyframes] = useState([]);
 
@@ -11,7 +10,9 @@ function App() {
     setKeyframes([]);
     try {
       const results = await baseSearch(params);
-      setKeyframes(Array.isArray(results) ? results : Array.from(results ?? []));
+      setKeyframes(
+        Array.isArray(results) ? results : Array.from(results ?? [])
+      );
     } catch (error) {
       console.error(error);
     }
@@ -22,7 +23,7 @@ function App() {
       <SearchBar onSearch={handleSearch} />
       <ResultContainer keyframes={keyframes} />
     </div>
-  )
+  );
 }
 
 export default App;

@@ -111,7 +111,7 @@ class Qdrant:
         # Set up prefetch for hybrid search
         prefetch = [
             models.Prefetch(
-                query=qdrant_sparse,
+                query=sparse_vec,
                 using="sparse",
                 limit=prefetch_limit),
             models.Prefetch(

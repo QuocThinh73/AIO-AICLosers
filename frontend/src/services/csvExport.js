@@ -1,7 +1,4 @@
-const toCsv = (rows) => {
-  const body = rows.map((cols) => cols.join(", ")).join("\n") + "\n";
-  return `${body}`;
-};
+const toCsv = (rows) => rows.map((cols) => cols.join(", ")).join("\n") + "\n";
 
 const downloadCsv = (content, filename) => {
   const blob = new Blob(["\uFEFF" + content], {
@@ -15,25 +12,29 @@ const downloadCsv = (content, filename) => {
   URL.revokeObjectURL(url);
 };
 
-const makeKISRows = (keyframes) =>
-  keyframes.map((keyframe) => {
-    const parts = String(keyframe).split("_");
-    const video = `${parts[0]}_${parts[1]}`;
-    const index = parts[2];
-    return [video, index];
-  });
+const parseKeyframe = (keyframe) => {
+  const parts = String(keyframe).split(".")[0].split("_");
+  const video = `${parts[0]}_${parts[1]}`;
+  const index = Number(parts[2]);
+  return { video, index };
+};
 
-const makeVQARows = (keyframes, answer) =>
-  keyframes.map((keyframe) => {
-    const parts = String(keyframe).split("_");
-    const video = `${parts[0]}_${parts[1]}`;
-    const index = parts[2];
-    return [video, index, answer];
-  });
+const makeRows = (type, payload) => {
+  if (type === "KIS") {
+    return payload.keyframes.map((keyframe) => {
+      const { video, index } = parseKeyframe(keyframe);
+      return [video, index];
+    });
+  } else if (type === "QA") {
+    return payload.keyframes.map((keyframe) => {
+      const { video, index } = parseKeyframe(keyframe);
+      return [video, index, payload.answer];
+    });
+  }
+};
 
-const exportCSV = ({ type, keyframes, filename, answer }) => {
-  const rows =
-    type === "KIS" ? makeKISRows(keyframes) : makeVQARows(keyframes, answer);
+const exportCSV = (filename, type, payload) => {
+  const rows = makeRows(type, payload);
   const csv = toCsv(rows);
   downloadCsv(csv, filename);
 };
