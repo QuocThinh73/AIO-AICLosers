@@ -36,7 +36,7 @@ function SearchBar({ onSearch }) {
   return (
     <div className="w-full mx-auto p-6 bg-white shadow-lg border border-gray-200">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="space-y-2">
             <label
               htmlFor="query"
@@ -111,9 +111,7 @@ function SearchBar({ onSearch }) {
               </p>
             )}
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
               Translation

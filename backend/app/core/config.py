@@ -7,7 +7,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     API_V1_STR: str
     PROJECT_NAME: str
-    
+
     QDRANT_HOST: str
     QDRANT_PORT: int
 

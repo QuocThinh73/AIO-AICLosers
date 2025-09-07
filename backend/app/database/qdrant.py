@@ -12,15 +12,15 @@ class Qdrant:
         self.openclip_model = openclip_model
 
     def _create_filter(self, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
-        should, must_not = [], []
+        must, must_not = [], []
 
         if include_batch_ids:
-            should.append(models.FieldCondition(key="batch_id",
-                          match=models.MatchAny(any=include_batch_ids)))
+            must.append(models.FieldCondition(key="batch_id",
+                                              match=models.MatchAny(any=include_batch_ids)))
 
         if include_video_ids:
-            should.append(models.FieldCondition(key="video_id",
-                          match=models.MatchAny(any=include_video_ids)))
+            must.append(models.FieldCondition(key="video_id",
+                                              match=models.MatchAny(any=include_video_ids)))
 
         if exclude_batch_ids:
             must_not.append(models.FieldCondition(
@@ -30,9 +30,9 @@ class Qdrant:
             must_not.append(models.FieldCondition(
                 key="video_id", match=models.MatchAny(any=exclude_video_ids)))
 
-        if not should and not must_not:
+        if not must and not must_not:
             return None
-        return models.Filter(should=should, must_not=must_not)
+        return models.Filter(must=must, must_not=must_not)
 
     def is_collection_exists(self, collection_name):
         """Check if collection exists in Qdrant"""
