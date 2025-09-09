@@ -8,6 +8,9 @@ import torch
 import numpy as np
 import zipfile
 import shutil
+import gc
+import tempfile
+import psutil
 
 def _ensure_dependencies():
     """Đảm bảo các thư viện phụ thuộc đã được cài đặt"""
@@ -73,8 +76,18 @@ from FlagEmbedding import BGEM3FlagModel
 def get_caption_embedder():
     """Khởi tạo BGEM3 model để tạo embedding cho captions"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Khởi tạo BGEM3FlagModel trên thiết bị: {device}")
-    return BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, device=device)
+    print(f"# Kiểm tra dung lượng trước khi bắt đầu")
+    initial_space = check_disk_space()
+    if initial_space < 2.0:  # Ít hơn 2GB
+        print("⚠️ Cảnh báo: Dung lượng ổ đĩa thấp, đang dọn dẹp...")
+        cleanup_cache()
+        check_disk_space()
+    
+    # Khởi tạo model embedding với cấu hình tiết kiệm bộ nhớ
+    print("🔥 Đang khởi tạo BGE-M3 model...")
+    caption_embedder = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True, device='auto')
+    print("✅ Đã khởi tạo model thành công!")
+    return caption_embedder
 
 def generate_caption_embeddings_batch(caption_embedder, texts, batch_size=64):
     """
@@ -88,13 +101,28 @@ def generate_caption_embeddings_batch(caption_embedder, texts, batch_size=64):
     Returns:
         dict: chứa dense_vecs, lexical_weights, colbert_vecs
     """
-    return caption_embedder.encode(
-        texts,
-        batch_size=batch_size,
-        return_dense=True,
-        return_sparse=True,
-        return_colbert_vecs=True,
-    )
+    # Chia thành batches nhỏ hơn để tránh hết memory
+    embedded_vectors = []
+    
+    # Giảm batch size nếu có nhiều captions
+    dynamic_batch_size = min(batch_size, 16) if len(texts) > 100 else batch_size
+    
+    for i in range(0, len(texts), dynamic_batch_size):
+        batch_texts = texts[i:i+dynamic_batch_size]
+        
+        print(f"  📊 Đang embedding batch {i//dynamic_batch_size + 1}/{(len(texts) + dynamic_batch_size - 1)//dynamic_batch_size} ({len(batch_texts)} captions)...")
+        
+        # Tạo embeddings với context manager để cleanup tự động
+        with torch.no_grad():
+            embedding_output = caption_embedder.encode(
+                batch_texts,
+                return_dense=True,
+                return_sparse=True,  
+                return_colbert_vecs=True
+            )
+        embedded_vectors.append(embedding_output)
+    
+    return embedded_vectors
 
 def process_video(caption_file_path, output_embedded_vector_path, caption_embedder, batch_size=64):
     """
@@ -195,6 +223,12 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
                 print(f"Debug: {k} type: {type(v)}")
         
         embedded_vectors.append(item_dict)
+        
+        # Cleanup sau mỗi batch
+        del embedding_output
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
     # In thông tin embedding đầu tiên để quan sát
     if embedded_vectors:
@@ -213,7 +247,52 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
     print(f"✅ Đã lưu {len(embedded_vectors)} embeddings vào: {output_embedded_vector_path}")
     return len(embedded_vectors)
 
-def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_name=None, video_name=None, batch_size=64):
+def check_disk_space():
+    """Kiểm tra dung lượng ổ đĩa còn lại"""
+    try:
+        import shutil
+        total, used, free = shutil.disk_usage("/")
+        free_gb = free / (1024**3)
+        print(f"💾 Dung lượng ổ đĩa còn lại: {free_gb:.2f} GB")
+        return free_gb
+    except:
+        return 0
+
+def cleanup_cache():
+    """Dọn dẹp cache và temp files"""
+    try:
+        # Dọn cache của transformers
+        cache_dirs = [
+            os.path.expanduser("~/.cache/huggingface"),
+            os.path.expanduser("~/.cache/torch"),
+            "/tmp",
+            "/var/tmp"
+        ]
+        
+        for cache_dir in cache_dirs:
+            if os.path.exists(cache_dir):
+                try:
+                    for item in os.listdir(cache_dir):
+                        item_path = os.path.join(cache_dir, item)
+                        if os.path.isfile(item_path):
+                            os.remove(item_path)
+                        elif os.path.isdir(item_path):
+                            shutil.rmtree(item_path, ignore_errors=True)
+                    print(f"🧹 Đã dọn cache: {cache_dir}")
+                except:
+                    pass
+        
+        # Dọn PyTorch cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Force garbage collection
+        gc.collect()
+        
+    except Exception as e:
+        print(f"Cảnh báo: Không thể dọn cache hoàn toàn: {e}")
+
+def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_name=None, video_name=None, batch_size=32):
     """
     Tạo embeddings cho captions sử dụng BGEM3FlagModel với batch processing
 
@@ -277,6 +356,13 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
                 output_path = os.path.join(lesson_output_dir, f"{video_id}_embedded_caption.json")
                 
                 print(f"Đang xử lý {lesson}/{video_id}...")
+                
+                # Kiểm tra dung lượng trước mỗi video
+                free_space = check_disk_space()
+                if free_space < 1.0:  # Ít hơn 1GB
+                    print("⚠️ Dung lượng thấp, đang dọn dẹp...")
+                    cleanup_cache()
+                
                 num_processed = process_video(caption_file, output_path, caption_embedder, batch_size)
                 
                 if num_processed > 0:
@@ -293,6 +379,11 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
                         "captions": num_processed,
                         "output_file": final_output_path
                     })
+                    
+                    # Dọn dẹp sau mỗi video
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
         
         results["status"] = "success"
         results["message"] = f"Đã xử lý {total_processed} videos từ {len(lessons)} bài học"
