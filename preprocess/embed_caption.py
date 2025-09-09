@@ -99,10 +99,12 @@ def generate_caption_embeddings_batch(caption_embedder, texts, batch_size=64):
         batch_size: int - kích thước batch
     
     Returns:
-        dict: chứa dense_vecs, lexical_weights, colbert_vecs
+        dict: chứa dense_vecs, lexical_weights, colbert_vecs đã được concatenate từ tất cả batches
     """
-    # Chia thành batches nhỏ hơn để tránh hết memory
-    embedded_vectors = []
+    # Khởi tạo lists để chứa kết quả từ tất cả batches
+    all_dense_vecs = []
+    all_lexical_weights = []
+    all_colbert_vecs = []
     
     # Giảm batch size nếu có nhiều captions
     dynamic_batch_size = min(batch_size, 16) if len(texts) > 100 else batch_size
@@ -114,15 +116,30 @@ def generate_caption_embeddings_batch(caption_embedder, texts, batch_size=64):
         
         # Tạo embeddings với context manager để cleanup tự động
         with torch.no_grad():
-            embedding_output = caption_embedder.encode(
+            batch_output = caption_embedder.encode(
                 batch_texts,
                 return_dense=True,
                 return_sparse=True,  
                 return_colbert_vecs=True
             )
-        embedded_vectors.append(embedding_output)
+        
+        # Collect kết quả từ batch này
+        all_dense_vecs.extend(batch_output["dense_vecs"])
+        all_lexical_weights.extend(batch_output["lexical_weights"]) 
+        all_colbert_vecs.extend(batch_output["colbert_vecs"])
+        
+        # Cleanup sau mỗi batch
+        del batch_output
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
-    return embedded_vectors
+    # Trả về dictionary với format đúng
+    return {
+        "dense_vecs": all_dense_vecs,
+        "lexical_weights": all_lexical_weights,
+        "colbert_vecs": all_colbert_vecs
+    }
 
 def process_video(caption_file_path, output_embedded_vector_path, caption_embedder, batch_size=64):
     """
