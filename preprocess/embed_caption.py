@@ -185,7 +185,7 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
             "keyframe": keyframe_name,
             "dense_vector": dense_vec,
             "colbert_vector": colbert_vec,
-            "lexical_weights": processed_weights  # Đổi tên thành lexical_weights theo đúng chuẩn mô hình
+            "lexical_weights": processed_weights 
         }
         
         # Debug - print complete item for first item
@@ -281,11 +281,17 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
                 
                 if num_processed > 0:
                     total_processed += 1
+                    
+                    # Nén file ngay sau khi xử lý xong để tiết kiệm bộ nhớ
+                    print(f"🗜️ Đang nén kết quả cho {lesson}/{video_id}...")
+                    zip_path = zip_single_json_file(output_path)
+                    final_output_path = zip_path if zip_path else output_path
+                    
                     results["processed_videos"].append({
                         "lesson": lesson,
                         "video": video_id,
                         "captions": num_processed,
-                        "output_file": output_path
+                        "output_file": final_output_path
                     })
         
         results["status"] = "success"
@@ -306,6 +312,7 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
         for caption_file in caption_files:
             # Lấy tên video từ tên file caption
             base_name = os.path.basename(caption_file)
+            # Ví dụ: L01_V001_caption.json -> L01_V001
             video_id = base_name.replace('_caption.json', '')
             
             output_path = os.path.join(lesson_output_dir, f"{video_id}_embedded_caption.json")
@@ -315,11 +322,17 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
             
             if num_processed > 0:
                 total_processed += 1
+                
+                # Nén file ngay sau khi xử lý xong để tiết kiệm bộ nhớ
+                print(f"Đang nén kết quả cho {lesson_name}/{video_id}...")
+                zip_path = zip_single_json_file(output_path)
+                final_output_path = zip_path if zip_path else output_path
+                
                 results["processed_videos"].append({
                     "lesson": lesson_name,
                     "video": video_id,
                     "captions": num_processed,
-                    "output_file": output_path
+                    "output_file": final_output_path
                 })
         
         results["status"] = "success"
@@ -340,11 +353,16 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
         num_processed = process_video(caption_file, output_path, caption_embedder, batch_size)
         
         if num_processed > 0:
+            # Nén file ngay sau khi xử lý xong để tiết kiệm bộ nhớ
+            print(f"🗜️ Đang nén kết quả cho {lesson_name}/{video_name}...")
+            zip_path = zip_single_json_file(output_path)
+            final_output_path = zip_path if zip_path else output_path
+            
             results["processed_videos"].append({
                 "lesson": lesson_name,
                 "video": video_name,
                 "captions": num_processed,
-                "output_file": output_path
+                "output_file": final_output_path
             })
             results["status"] = "success"
             results["message"] = f"Đã xử lý video {lesson_name}/{video_name} với {num_processed} captions"
@@ -354,17 +372,10 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
             results["message"] = f"Không có captions nào được xử lý cho video {lesson_name}/{video_name}"
             results["total_videos"] = 0
     
-    # Zip kết quả nếu có video được xử lý
+    # Tạo file zip tổng hợp nếu có video được xử lý
     if results.get("total_videos", 0) > 0:
-        # Zip các file đơn lẻ trước
-        for processed_video in results["processed_videos"]:
-            output_file = processed_video.get("output_file")
-            if output_file and os.path.exists(output_file):
-                zip_path = zip_single_json_file(output_file)
-                if zip_path:
-                    processed_video["output_file"] = zip_path
-        
-        # Tạo file zip tổng hợp
+        # Các file đơn lẻ đã được nén ngay sau khi xử lý
+        # Chỉ cần tạo file zip tổng hợp từ các file zip con
         zip_path = create_zip_file(output_embedded_vector_dir)
         results["zip_file"] = zip_path
     
