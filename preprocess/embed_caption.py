@@ -188,7 +188,6 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
         
         # Xử lý lexical_weights - có thể là dict với numpy values
         try:
-            print(f"Debug: Checking lexical_weights type for item {i}: {type(embedding_output['lexical_weights'][i])}")
             lexical_weights = embedding_output["lexical_weights"][i]
             
             # Force convert to dict with string keys for JSON serialization
@@ -259,38 +258,57 @@ def check_disk_space():
         return 0
 
 def cleanup_cache():
-    """Dọn dẹp cache và temp files"""
+    """Dọn dẹp cache và temp files một cách an toàn"""
     try:
-        # Dọn cache của transformers
-        cache_dirs = [
-            os.path.expanduser("~/.cache/huggingface"),
-            os.path.expanduser("~/.cache/torch"),
+        print("🧹 Bắt đầu dọn dẹp cache an toàn...")
+        
+        # Chỉ dọn các thư mục cache cũ, không phải đang sử dụng
+        safe_cache_dirs = [
             "/tmp",
             "/var/tmp"
         ]
         
-        for cache_dir in cache_dirs:
+        # Dọn các file cũ hơn 1 giờ trong cache dirs
+        import time
+        current_time = time.time()
+        
+        for cache_dir in safe_cache_dirs:
             if os.path.exists(cache_dir):
                 try:
+                    cleaned_count = 0
                     for item in os.listdir(cache_dir):
                         item_path = os.path.join(cache_dir, item)
-                        if os.path.isfile(item_path):
-                            os.remove(item_path)
-                        elif os.path.isdir(item_path):
-                            shutil.rmtree(item_path, ignore_errors=True)
-                    print(f"🧹 Đã dọn cache: {cache_dir}")
-                except:
-                    pass
+                        try:
+                            # Chỉ xóa file cũ hơn 1 giờ để tránh conflict
+                            if os.path.getmtime(item_path) < (current_time - 3600):
+                                if os.path.isfile(item_path):
+                                    os.remove(item_path)
+                                    cleaned_count += 1
+                                elif os.path.isdir(item_path):
+                                    shutil.rmtree(item_path, ignore_errors=True)
+                                    cleaned_count += 1
+                        except (OSError, PermissionError):
+                            # Bỏ qua file đang được sử dụng
+                            continue
+                    
+                    if cleaned_count > 0:
+                        print(f"🧹 Đã dọn {cleaned_count} items trong {cache_dir}")
+                except (PermissionError, OSError):
+                    # Bỏ qua nếu không có quyền truy cập
+                    continue
         
-        # Dọn PyTorch cache
+        # Dọn PyTorch cache (an toàn)
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+            print("🧹 Đã dọn CUDA cache")
         
-        # Force garbage collection
+        # Force garbage collection (luôn an toàn)
         gc.collect()
+        print("🧹 Đã hoàn thành garbage collection")
         
     except Exception as e:
-        print(f"Cảnh báo: Không thể dọn cache hoàn toàn: {e}")
+        print(f"Cảnh báo: Cleanup gặp lỗi nhưng không ảnh hưởng đến chương trình: {e}")
+        # Không raise exception để tránh dừng chương trình
 
 def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_name=None, video_name=None, batch_size=32):
     """
@@ -361,7 +379,8 @@ def embed_caption(input_caption_dir, output_embedded_vector_dir, mode, lesson_na
                 free_space = check_disk_space()
                 if free_space < 1.0:  # Ít hơn 1GB
                     print("⚠️ Dung lượng thấp, đang dọn dẹp...")
-                    cleanup_cache()
+                    # Có thể tắt cleanup bằng cách comment dòng dưới nếu gặp vấn đề
+                    cleanup_cache()  # AUTO_CLEANUP_ENABLED=True
                 
                 num_processed = process_video(caption_file, output_path, caption_embedder, batch_size)
                 
