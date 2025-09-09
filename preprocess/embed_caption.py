@@ -183,106 +183,134 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
     
     # Tạo embeddings bằng batch processing
     print(f"Đang tạo embeddings với batch_size={batch_size}...")
+    
+    # Thay đổi cấu trúc để tránh UnboundLocalError
+    embedding_output = None
     try:
         embedding_output = generate_caption_embeddings_batch(
             caption_embedder, caption_texts, batch_size=batch_size
         )
-        
-        if embedding_output is None:
-            print("❌ Lỗi: generate_caption_embeddings_batch trả về None")
-            return 0
-        
-        if not isinstance(embedding_output, dict):
-            print(f"❌ Lỗi: embedding_output không phải dict, là {type(embedding_output)}")
-            return 0
-            
-        required_keys = ["dense_vecs", "lexical_weights", "colbert_vecs"]
-        for key in required_keys:
-            if key not in embedding_output:
-                print(f"❌ Lỗi: Thiếu key '{key}' trong embedding_output")
-                return 0
-                
-        print(f"✅ Đã tạo embeddings thành công cho {len(embedding_output['dense_vecs'])} captions")
-        
     except Exception as e:
         print(f"❌ Lỗi khi tạo embeddings: {e}")
         return 0
+        
+    # Kiểm tra kết quả embeddings
+    if embedding_output is None:
+        print("❌ Lỗi: generate_caption_embeddings_batch trả về None")
+        return 0
     
+    if not isinstance(embedding_output, dict):
+        print(f"❌ Lỗi: embedding_output không phải dict, là {type(embedding_output)}")
+        return 0
+        
+    required_keys = ["dense_vecs", "lexical_weights", "colbert_vecs"]
+    for key in required_keys:
+        if key not in embedding_output:
+            print(f"❌ Lỗi: Thiếu key '{key}' trong embedding_output")
+            return 0
+    
+    # Kiểm tra độ dài các vectors
+    vecs_length = len(embedding_output["dense_vecs"])
+    if vecs_length != len(keyframe_names):
+        print(f"❌ Lỗi: Số lượng dense_vecs ({vecs_length}) không khớp với số captions ({len(keyframe_names)})")
+        return 0
+        
+    print(f"✅ Đã tạo embeddings thành công cho {vecs_length} captions")
+    
+    # Đến đây, embedding_output đã được xác định là hợp lệ
     # Tạo kết quả embedded vectors
     embedded_vectors = []
-    for i, keyframe_name in enumerate(keyframe_names):
-        # Chuyển đổi numpy arrays thành lists để serialize JSON
-        dense_vec = embedding_output["dense_vecs"][i]
-        if hasattr(dense_vec, 'tolist'):
-            dense_vec = dense_vec.astype(float).tolist()  # Chuyển về float32/float64 trước khi tolist()
-        elif hasattr(dense_vec, 'astype'):
-            dense_vec = dense_vec.astype(float).tolist()
-        
-        colbert_vec = embedding_output["colbert_vecs"][i]
-        if hasattr(colbert_vec, 'tolist'):
-            colbert_vec = colbert_vec.astype(float).tolist()  # Chuyển về float32/float64 trước khi tolist()
-        elif hasattr(colbert_vec, 'astype'):
-            colbert_vec = colbert_vec.astype(float).tolist()
-        
-        # Xử lý lexical_weights - có thể là dict với numpy values
-        try:
-            lexical_weights = embedding_output["lexical_weights"][i]
+    
+    try:
+        for i, keyframe_name in enumerate(keyframe_names):
+            # Chuyển đổi numpy arrays thành lists để serialize JSON
+            dense_vec = embedding_output["dense_vecs"][i]
+            if hasattr(dense_vec, 'tolist'):
+                dense_vec = dense_vec.astype(float).tolist()  # Chuyển về float32/float64 trước khi tolist()
+            elif hasattr(dense_vec, 'astype'):
+                dense_vec = dense_vec.astype(float).tolist()
             
-            # Force convert to dict with string keys for JSON serialization
-            if isinstance(lexical_weights, dict):
-                # Chuyển đổi tất cả values trong dict sang Python float
-                processed_weights = {}
-                for k, v in lexical_weights.items():
-                    # Force string key and float value
-                    processed_weights[str(k)] = float(v) if hasattr(v, 'item') else float(v) if isinstance(v, (int, float)) else v
-            elif hasattr(lexical_weights, 'tolist'):
-                processed_weights = lexical_weights.astype(float).tolist()
-            elif lexical_weights is None:
-                processed_weights = {}
-            else:
-                # Try direct conversion if possible
-                processed_weights = {"values": [float(x) for x in lexical_weights]} if hasattr(lexical_weights, '__iter__') else {}
-        except Exception as e:
-            print(f"Cảnh báo: Không thể xử lý lexical_weights cho {keyframe_name}: {e}")
-            processed_weights = {}
+            colbert_vec = embedding_output["colbert_vecs"][i]
+            if hasattr(colbert_vec, 'tolist'):
+                colbert_vec = colbert_vec.astype(float).tolist()  # Chuyển về float32/float64 trước khi tolist()
+            elif hasattr(colbert_vec, 'astype'):
+                colbert_vec = colbert_vec.astype(float).tolist()
             
-        item_dict = {
-            "keyframe": keyframe_name,
-            "dense_vector": dense_vec,
-            "colbert_vector": colbert_vec,
-            "lexical_weights": processed_weights 
-        }
-        
-        # Debug - print complete item for first item
-        if i == 0:
-            print("Debug: First item keys:", list(item_dict.keys()))
-            for k, v in item_dict.items():
-                print(f"Debug: {k} type: {type(v)}")
-        
-        embedded_vectors.append(item_dict)
-        
-        # Cleanup sau mỗi batch
+            # Xử lý lexical_weights - có thể là dict với numpy values
+            processed_weights = {}  # Default empty dict
+            try:
+                lexical_weights = embedding_output["lexical_weights"][i]
+                
+                # Force convert to dict with string keys for JSON serialization
+                if isinstance(lexical_weights, dict):
+                    # Chuyển đổi tất cả values trong dict sang Python float
+                    processed_weights = {}
+                    for k, v in lexical_weights.items():
+                        # Force string key and float value
+                        processed_weights[str(k)] = float(v) if hasattr(v, 'item') else float(v) if isinstance(v, (int, float)) else v
+                elif hasattr(lexical_weights, 'tolist'):
+                    processed_weights = lexical_weights.astype(float).tolist()
+                elif lexical_weights is None:
+                    processed_weights = {}
+                else:
+                    # Try direct conversion if possible
+                    processed_weights = {"values": [float(x) for x in lexical_weights]} if hasattr(lexical_weights, '__iter__') else {}
+            except Exception as e:
+                print(f"Cảnh báo: Không thể xử lý lexical_weights cho {keyframe_name}: {e}")
+                processed_weights = {}  # Ensure it's defined even on exception
+                
+            item_dict = {
+                "keyframe": keyframe_name,
+                "dense_vector": dense_vec,
+                "colbert_vector": colbert_vec,
+                "lexical_weights": processed_weights 
+            }
+            
+            # Debug - print complete item for first item
+            if i == 0:
+                print("Debug: First item keys:", list(item_dict.keys()))
+                for k, v in item_dict.items():
+                    print(f"Debug: {k} type: {type(v)}")
+            
+            embedded_vectors.append(item_dict)
+            
+            # Cleanup after each item to save memory
+            if i % 100 == 0 and i > 0:  # Cleanup every 100 items
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                
+        # In thông tin embedding đầu tiên để quan sát
+        if embedded_vectors:
+            first_embedding = embedded_vectors[0]
+            print(f"📋 Sample embedding output (keyframe: {first_embedding['keyframe']}):") 
+            print(f"  - dense_vector: shape {len(first_embedding['dense_vector'])}") 
+            print(f"  - colbert_vector: shape {len(first_embedding['colbert_vector'])}") 
+            print(f"  - lexical_weights: type {type(first_embedding['lexical_weights'])}, size {len(first_embedding['lexical_weights']) if isinstance(first_embedding['lexical_weights'], (dict, list)) else 'N/A'}") 
+            print(f"  - Output fields: {list(first_embedding.keys())}") 
+            
+        # Sau khi xử lý xong tất cả items, clean up embedding_output
         del embedding_output
         gc.collect()
         if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
-    # In thông tin embedding đầu tiên để quan sát
-    if embedded_vectors:
-        first_embedding = embedded_vectors[0]
-        print(f"📋 Sample embedding output (keyframe: {first_embedding['keyframe']}):")
-        print(f"  - dense_vector: shape {len(first_embedding['dense_vector'])}")
-        print(f"  - colbert_vector: shape {len(first_embedding['colbert_vector'])}")
-        print(f"  - lexical_weights: type {type(first_embedding['lexical_weights'])}, size {len(first_embedding['lexical_weights']) if isinstance(first_embedding['lexical_weights'], (dict, list)) else 'N/A'}")
-        print(f"  - Output fields: {list(first_embedding.keys())}")
-    
-    # Lưu kết quả vào file
-    os.makedirs(os.path.dirname(output_embedded_vector_path), exist_ok=True)
-    with open(output_embedded_vector_path, "w", encoding="utf-8") as f:
-        json.dump(embedded_vectors, f, ensure_ascii=False, indent=2)
+            torch.cuda.empty_cache()    
+        # Lưu kết quả vào file
+        os.makedirs(os.path.dirname(output_embedded_vector_path), exist_ok=True)
+        with open(output_embedded_vector_path, "w", encoding="utf-8") as f:
+            json.dump(embedded_vectors, f, ensure_ascii=False, indent=2)
+            
+        print(f"✅ Đã lưu {len(embedded_vectors)} embeddings vào: {output_embedded_vector_path}")
+        return len(embedded_vectors)
         
-    print(f"✅ Đã lưu {len(embedded_vectors)} embeddings vào: {output_embedded_vector_path}")
-    return len(embedded_vectors)
+    except Exception as e:
+        print(f"❌ Lỗi khi xử lý và lưu embeddings: {str(e)}")
+        # Try to clean up memory
+        if 'embedding_output' in locals():
+            del embedding_output
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        return 0
 
 def check_disk_space():
     """Kiểm tra dung lượng ổ đĩa còn lại"""
