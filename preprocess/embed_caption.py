@@ -183,9 +183,30 @@ def process_video(caption_file_path, output_embedded_vector_path, caption_embedd
     
     # Tạo embeddings bằng batch processing
     print(f"Đang tạo embeddings với batch_size={batch_size}...")
-    embedding_output = generate_caption_embeddings_batch(
-        caption_embedder, caption_texts, batch_size=batch_size
-    )
+    try:
+        embedding_output = generate_caption_embeddings_batch(
+            caption_embedder, caption_texts, batch_size=batch_size
+        )
+        
+        if embedding_output is None:
+            print("❌ Lỗi: generate_caption_embeddings_batch trả về None")
+            return 0
+        
+        if not isinstance(embedding_output, dict):
+            print(f"❌ Lỗi: embedding_output không phải dict, là {type(embedding_output)}")
+            return 0
+            
+        required_keys = ["dense_vecs", "lexical_weights", "colbert_vecs"]
+        for key in required_keys:
+            if key not in embedding_output:
+                print(f"❌ Lỗi: Thiếu key '{key}' trong embedding_output")
+                return 0
+                
+        print(f"✅ Đã tạo embeddings thành công cho {len(embedding_output['dense_vecs'])} captions")
+        
+    except Exception as e:
+        print(f"❌ Lỗi khi tạo embeddings: {e}")
+        return 0
     
     # Tạo kết quả embedded vectors
     embedded_vectors = []
