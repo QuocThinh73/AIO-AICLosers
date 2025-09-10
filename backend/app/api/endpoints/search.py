@@ -1,4 +1,3 @@
-import asyncio
 from fastapi import APIRouter, UploadFile, File, Depends
 from typing import Optional
 from app.models.schemas import BaseSearchRequest, TemporalSearchRequest

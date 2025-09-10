@@ -19,9 +19,6 @@
 │   │   ├── components/     # React components
 │   │   ├── services/       # API service calls
 │   │   └── assets/         # Static assets
-│   ├── public/
-│   │   ├── keyframes/      # Keyframes folder
-│   │   └── videos/         # Videos folder
 │   └── package.json
 ├── preprocess/              # Video preprocessing pipeline
 │   ├── {task_name}.py      # Preprocessing task

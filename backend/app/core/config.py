@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Dict, Union
 from uuid import UUID
 from functools import lru_cache
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -15,6 +16,12 @@ class Settings(BaseSettings):
     CAPTION_COLLECTION_NAME: str
 
     UUID_NAMESPACE: UUID
+
+    MEDIA_VIDEO_DIR: Path
+    MEDIA_KEYFRAME_DIR: Path
+    MEDIA_URL_PREFIX: str
+
+    FPS_PATH: Path
 
     # Load environment variables
     model_config = SettingsConfigDict(

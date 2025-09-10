@@ -1,19 +1,29 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import useClickOutside from "../hooks/useClickOutside";
-import { parseKeyframe, buildVideoSrcFromKeyframe } from "../utils/keyframe";
+import {
+  buildVideoSrcFromKeyframe,
+  keyframeToTimestamp,
+} from "../utils/keyframe";
 
-function VideoModel({ keyframe, onClose }) {
+function VideoModal({ keyframe, onClose }) {
   const wrapperRef = useRef(null);
   const videoRef = useRef(null);
   useClickOutside(wrapperRef, onClose);
 
-  const { video_id, index } = useMemo(
-    () => parseKeyframe(keyframe),
-    [keyframe]
-  );
+  const [startTime, setStartTime] = useState(0);
 
-  const fps = 30;
-  const startTime = index / fps;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const startTime = await keyframeToTimestamp(keyframe);
+      if (cancelled) return;
+      setStartTime(startTime);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [keyframe]);
+
   const videoSrc = useMemo(
     () => buildVideoSrcFromKeyframe(keyframe),
     [keyframe]
@@ -37,10 +47,7 @@ function VideoModel({ keyframe, onClose }) {
         ref={wrapperRef}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div className="text-sm font-medium text-gray-700 truncate">
-            {video_id} • frame {index} (~{startTime.toFixed(2)}s @ {fps}fps)
-          </div>
+        <div className="flex justify-end px-4 py-3 border-b">
           <button
             type="button"
             onClick={onClose}
@@ -49,27 +56,21 @@ function VideoModel({ keyframe, onClose }) {
             Close
           </button>
         </div>
+
         <div className="p-4">
           <video
-            src={videoSrc}
             ref={videoRef}
-            onLoadedData={handleLoaded}
-            onError={(e) => {
-              e.target.src =
-                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik02MCAxMDBDODAgODAgMTIwIDgwIDE0MCAxMDBDMTYwIDEyMCAxNDAgMTQwIDEyMCAxNDBDMTAwIDE0MCA4MCAxMjAgNjAgMTAwWiIgZmlsbD0iI0QxRDVETyIvPgo8L3N2Zz4K";
-            }}
+            src={videoSrc}
             className="w-full max-h-[70vh] rounded-lg"
             controls
             playsInline
             preload="metadata"
+            onLoadedMetadata={handleLoaded}
           />
-          <div className="mt-2 text-xs text-gray-500 break-all">
-            Source: <code>{videoSrc}</code>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default VideoModel;
+export default VideoModal;
