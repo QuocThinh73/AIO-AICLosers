@@ -19,9 +19,6 @@
 │   │   ├── components/     # React components
 │   │   ├── services/       # API service calls
 │   │   └── assets/         # Static assets
-│   ├── public/
-│   │   ├── keyframes/      # Keyframes folder
-│   │   └── videos/         # Videos folder
 │   └── package.json
 ├── preprocess/              # Video preprocessing pipeline
 │   ├── {task_name}.py      # Preprocessing task
@@ -66,9 +63,6 @@ pip install -r requirements.txt
 ```
 API_V1_STR=/api
 PROJECT_NAME=AIO-AIClosers
-
-ELASTICSEARCH_HOST=localhost
-ELASTICSEARCH_PORT=8888
 
 QDRANT_HOST=192.168.100.37
 QDRANT_PORT=6333

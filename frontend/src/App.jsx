@@ -17,7 +17,7 @@ function App() {
       console.error(error);
     }
   }
-
+  console.log(keyframes);
   return (
     <div>
       <SearchBar onSearch={handleSearch} />
