@@ -64,13 +64,19 @@ pip install -r requirements.txt
 API_V1_STR=/api
 PROJECT_NAME=AIO-AIClosers
 
-QDRANT_HOST=192.168.100.37
+QDRANT_HOST=localhost
 QDRANT_PORT=6333
 
 CAPTION_COLLECTION_NAME=caption
 OPENCLIP_COLLECTION_NAME=openclip
 
 UUID_NAMESPACE=11111111-2222-3333-4444-555555555555
+
+MEDIA_VIDEO_DIR=<your-video-dir>
+MEDIA_KEYFRAME_DIR=<your-keyframe-dir>
+MEDIA_URL_PREFIX=/media
+
+FPS_PATH=<your-video-fps-file>
 ```
 
 Copy to .env
