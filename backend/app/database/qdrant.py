@@ -1,8 +1,8 @@
 import os
 from qdrant_client import QdrantClient, models
 from FlagEmbedding import BGEM3FlagModel
-from app.ml.openclip import OpenCLIP
-from app.utils.generate_id import generate_id
+from backend.app.ml.openclip import OpenCLIP
+from backend.app.utils.generate_id import generate_id
 
 
 class Qdrant:
@@ -18,6 +18,14 @@ class Qdrant:
     def generate_caption_embeddings(self, text):
         return self.caption_model.encode(
             [text],
+            return_dense=True,
+            return_sparse=True,
+            return_colbert_vecs=True
+        )
+
+    def generate_caption_embeddings_batch(self, texts):
+        return self.caption_model.encode(
+            texts,
             return_dense=True,
             return_sparse=True,
             return_colbert_vecs=True
@@ -81,55 +89,41 @@ class Qdrant:
             },
         )
 
-    def _build_caption_map(self, captions):
-        res = {}
-        for item in captions:
-            keyframe = item["keyframe"]
-            caption = item["caption"]
-            res[keyframe] = caption
-        return res
+    def _chunk(self, xs, n):
+        for i in range(0, len(xs), n):
+            yield xs[i:i+n]
 
-    def insert_to_collection(self, openclip_embeddings, captions, collection_name):
-        caption_map = self._build_caption_map(captions)
-        for embedding in openclip_embeddings:
-            keyframe = embedding["keyframe"]
+    def insert_to_collection(self, items, collection_name, batch_points):
+        batches = list(self._chunk(items, batch_points))
+        for i, batch in enumerate(batches, start=1):
+            print(f"Inserting batch {i} of {len(batches)}")
+            texts = [(it.get("caption") or "") for it in batch]
+            enc = self.generate_caption_embeddings_batch(texts)
+            dense_list = enc["dense_vecs"]
+            colbert_list = enc["colbert_vecs"]
+            sparse_list = enc["lexical_weights"]
 
-            # OpenCLIP vector
-            openclip_dense = embedding["embedded_vector"]
-
-            # Caption vectors
-            caption_embeddings = self.generate_caption_embeddings(
-                caption_map[keyframe])
-            caption_dense = caption_embeddings["dense_vecs"][0]
-            caption_colbert = caption_embeddings["colbert_vecs"][0]
-            caption_sparse = self._create_sparse_vector(
-                caption_embeddings["lexical_weights"][0])
-
-            # Payload
-            keyframe_name = os.path.splitext(keyframe)[0]
-            parts = keyframe_name.split("_")
-            batch_id, video_id, frame_id = parts
-
-            self.client.upsert(
-                collection_name=collection_name,
-                points=[
-                    models.PointStruct(
-                        id=generate_id(keyframe),
-                        payload={
-                            "keyframe": keyframe,
-                            "batch_id": batch_id,
-                            "video_id": video_id,
-                            "frame_id": int(frame_id)
-                        },
-                        vector={
-                            "openclip_dense": openclip_dense,
-                            "caption_dense": caption_dense,
-                            "caption_colbert": caption_colbert,
-                            "caption_sparse": caption_sparse
-                        }
-                    )
-                ]
-            )
+            points = []
+            for it, c_dense, c_colbert, c_sparse in zip(batch, dense_list, colbert_list, sparse_list):
+                kf = it["keyframe"]
+                vec = it.get("embedded_vector") or it.get(
+                    "embed_vector") or it.get("embedd_vector")
+                base = os.path.basename(kf)
+                stem = os.path.splitext(base)[0]
+                b, v, f = stem.split("_")
+                points.append(models.PointStruct(
+                    id=generate_id(kf),
+                    payload={"keyframe": kf, "batch_id": b,
+                             "video_id": v, "frame_id": int(f)},
+                    vector={
+                        "openclip_dense": vec,
+                        "caption_dense": c_dense,
+                        "caption_colbert": c_colbert,
+                        "caption_sparse": self._create_sparse_vector(c_sparse),
+                    }
+                ))
+            self.client.upsert(collection_name=collection_name,
+                               points=points, wait=(i == len(batches)))
 
     def search_caption(self, search_query, collection_name, limit=100, prefetch_limit=300):
         # Generate caption embeddings for the query
