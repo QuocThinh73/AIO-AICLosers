@@ -329,7 +329,26 @@ def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, m
     
     if mode == "single":
         video_keyframe_dir = os.path.join(input_keyframe_dir, lesson_name, video_name)
-        caption_file = os.path.join(input_caption_dir, lesson_name, f"{lesson_name}_{video_name}_caption.json")
+        
+        # Try multiple caption filename patterns
+        caption_file_patterns = [
+            os.path.join(input_caption_dir, lesson_name, f"{video_name}_caption.json"),
+            os.path.join(input_caption_dir, lesson_name, f"{lesson_name}_{video_name}_caption.json")
+        ]
+        
+        # Find the first existing caption file
+        caption_file = None
+        for pattern in caption_file_patterns:
+            if os.path.exists(pattern):
+                caption_file = pattern
+                print(f"Found caption file: {caption_file}")
+                break
+        
+        if caption_file is None:
+            # If no pattern matches, default to the simple format but print a warning
+            caption_file = caption_file_patterns[0]
+            print(f"Warning: No caption file found, will try to use: {caption_file}")
+            
         process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_name, video_name, grounding_dino)
     elif mode == "lesson":
         lesson_keyframe_dir = os.path.join(input_keyframe_dir, lesson_name)
@@ -337,7 +356,25 @@ def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, m
         for video_folder in sorted(os.listdir(lesson_keyframe_dir)):
             video_keyframe_dir = os.path.join(lesson_keyframe_dir, video_folder)
             if os.path.isdir(video_keyframe_dir):
-                caption_file = os.path.join(lesson_caption_dir, f"{lesson_name}_{video_folder}_caption.json")
+                # Try multiple caption filename patterns
+                caption_file_patterns = [
+                    os.path.join(lesson_caption_dir, f"{video_folder}_caption.json"),
+                    os.path.join(lesson_caption_dir, f"{lesson_name}_{video_folder}_caption.json")
+                ]
+                
+                # Find the first existing caption file
+                caption_file = None
+                for pattern in caption_file_patterns:
+                    if os.path.exists(pattern):
+                        caption_file = pattern
+                        print(f"Found caption file: {caption_file}")
+                        break
+                
+                if caption_file is None:
+                    # If no pattern matches, default to the simple format but print a warning
+                    caption_file = caption_file_patterns[0]
+                    print(f"Warning: No caption file found, will try to use: {caption_file}")
+                    
                 process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_name, video_folder, grounding_dino)
     else:
         for lesson_folder in sorted(os.listdir(input_keyframe_dir)):
@@ -347,5 +384,23 @@ def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, m
                 for video_folder in sorted(os.listdir(lesson_keyframe_dir)):
                     video_keyframe_dir = os.path.join(lesson_keyframe_dir, video_folder)
                     if os.path.isdir(video_keyframe_dir):
-                        caption_file = os.path.join(lesson_caption_dir, f"{lesson_folder}_{video_folder}_caption.json")
+                        # Try multiple caption filename patterns
+                        caption_file_patterns = [
+                            os.path.join(lesson_caption_dir, f"{video_folder}_caption.json"),
+                            os.path.join(lesson_caption_dir, f"{lesson_folder}_{video_folder}_caption.json")
+                        ]
+                        
+                        # Find the first existing caption file
+                        caption_file = None
+                        for pattern in caption_file_patterns:
+                            if os.path.exists(pattern):
+                                caption_file = pattern
+                                print(f"Found caption file: {caption_file}")
+                                break
+                        
+                        if caption_file is None:
+                            # If no pattern matches, default to the simple format but print a warning
+                            caption_file = caption_file_patterns[0]
+                            print(f"Warning: No caption file found, will try to use: {caption_file}")
+                            
                         process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_folder, video_folder, grounding_dino)
