@@ -8,9 +8,41 @@ from PIL import Image
 from models.groundingdino import GroundingDINO
 
 def extract_objects_from_caption(caption: str) -> List[str]:
-    # Remove unnecessary meta text
-    caption = caption.replace("The image appears to be", "")
-    caption = caption.replace("The image shows", "")
+    # Remove unnecessary meta text - common patterns in image captions
+    noise_phrases = [
+        "The image appears to be", 
+        "The image shows",
+        "In this image,", 
+        "This image depicts", 
+        "This is a photo of",
+        "This is an image of",
+        "The photo shows",
+        "The picture displays",
+        "The scene depicts",
+        "The photograph contains",
+        "The picture shows",
+        "This is a screenshot of",
+        "This is a picture of",
+        "This is a photograph of",
+        "The image contains",
+        "The image consists of",
+        "The image features",
+        "As seen in the image,",
+        "The visual shows",
+        "The frame captures",
+        "The shot depicts",
+        "Visible in this image are",
+        "The image portrays",
+        "The image represents",
+        "The image illustrates",
+        "We can see",
+        "I can see",
+        "One can observe"
+    ]
+    
+    # Apply all replacements
+    for phrase in noise_phrases:
+        caption = caption.replace(phrase, "")
     
     # List to store prompt segments
     prompts = []
