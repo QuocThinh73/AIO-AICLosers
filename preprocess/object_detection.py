@@ -2,6 +2,8 @@ import os
 import json
 import glob
 import shutil
+import zipfile
+from datetime import datetime
 from typing import Dict, List, Any
 from PIL import Image
 
@@ -322,7 +324,56 @@ def process_video(video_keyframe_dir, caption_file, output_dir, lesson_name, vid
         output_file
     )
 
-def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, mode, lesson_name=None, video_name=None):
+def zip_detection_results(output_detection_dir, zip_filename=None):
+    """
+    Zip all detection results in the specified directory
+    
+    Args:
+        output_detection_dir: Directory containing detection results
+        zip_filename: Name of the zip file to create (default: auto-generated based on timestamp)
+        
+    Returns:
+        str: Path to the created zip file, or None if failed
+    """
+    if not os.path.exists(output_detection_dir):
+        print(f"Error: Output directory {output_detection_dir} does not exist")
+        return None
+    
+    # Create a default zip filename if not provided
+    if not zip_filename:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"detection_results_{timestamp}.zip"
+    
+    # Make sure the zip filename has .zip extension
+    if not zip_filename.lower().endswith('.zip'):
+        zip_filename += '.zip'
+    
+    # Full path to the zip file
+    zip_path = os.path.join(os.path.dirname(output_detection_dir), zip_filename)
+    
+    try:
+        print(f"Creating zip file: {zip_path}")
+        
+        # Create a new zip file
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Walk through the directory and add all files
+            for root, _, files in os.walk(output_detection_dir):
+                for file in files:
+                    if file.endswith(".json"):
+                        file_path = os.path.join(root, file)
+                        # Get relative path for the zip structure
+                        rel_path = os.path.relpath(file_path, os.path.dirname(output_detection_dir))
+                        zipf.write(file_path, rel_path)
+                        print(f"Added to zip: {rel_path}")
+        
+        print(f"✅ Successfully created zip file: {zip_path}")
+        return zip_path
+    
+    except Exception as e:
+        print(f"❌ Error creating zip file: {e}")
+        return None
+
+def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, mode, lesson_name=None, video_name=None, create_zip=True):
     os.makedirs(output_detection_dir, exist_ok=True)
     
     grounding_dino = get_detection_model()
@@ -404,3 +455,9 @@ def detect_object(input_keyframe_dir, input_caption_dir, output_detection_dir, m
                             print(f"Warning: No caption file found, will try to use: {caption_file}")
                             
                         process_video(video_keyframe_dir, caption_file, output_detection_dir, lesson_folder, video_folder, grounding_dino)
+    
+    # Create a zip file of all detection results if requested
+    if create_zip:
+        zip_path = zip_detection_results(output_detection_dir)
+        if zip_path:
+            print(f"\n📦 Detection results have been zipped and are ready for download: {zip_path}")
