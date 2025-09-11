@@ -642,6 +642,7 @@ def save_to_qdrant(argv):
     parser.add_argument("input_embedded_vector_dir", type=str)
     parser.add_argument("input_caption_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--batch_points", type=int)
 
     args = parser.parse_args(argv)
 
@@ -662,10 +663,10 @@ def save_to_qdrant(argv):
     from preprocess.save_to_qdrant import save_to_qdrant
     if args.mode == "all":
         save_to_qdrant(args.input_embedded_vector_dir,
-                       args.input_caption_dir, args.mode)
+                       args.input_caption_dir, args.mode, args.batch_points)
     elif args.mode == "lesson":
         save_to_qdrant(args.input_embedded_vector_dir, args.input_caption_dir,
-                       args.mode, args.lesson_name)
+                       args.mode, args.lesson_name, args.batch_points)
 
 
 TASKS = {

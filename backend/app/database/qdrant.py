@@ -7,13 +7,19 @@ from backend.app.utils.generate_id import generate_id
 
 class Qdrant:
     def __init__(self, host, port, caption_model=BGEM3FlagModel('BAAI/bge-m3', use_fp16=True), openclip_model=OpenCLIP('ViT-B-16', pretrained='dfn2b')):
-        self.client = QdrantClient(host=host, port=port)
+        self.client = QdrantClient(
+            host=host,
+            port=port,           # REST
+            grpc_port=6334,      # gRPC phải mở
+            prefer_grpc=True,    # ưu tiên gRPC, không fallback nếu gRPC sẵn sàng
+            timeout=60.0,
+        )
         self.caption_model = caption_model
         self.openclip_model = openclip_model
 
     def is_collection_exists(self, collection_name):
-        """Check if collection exists in Qdrant"""
-        return self.client.collection_exists(collection_name)
+        cols = self.client.get_collections().collections
+        return any(c.name == collection_name for c in cols)
 
     def generate_caption_embeddings(self, text):
         return self.caption_model.encode(
@@ -94,6 +100,8 @@ class Qdrant:
             yield xs[i:i+n]
 
     def insert_to_collection(self, items, collection_name, batch_points):
+        print(
+            f"Inserting {len(items)} items to collection {collection_name} in batches of {batch_points}")
         batches = list(self._chunk(items, batch_points))
         for i, batch in enumerate(batches, start=1):
             print(f"Inserting batch {i} of {len(batches)}")
@@ -119,7 +127,7 @@ class Qdrant:
                         "openclip_dense": vec,
                         "caption_dense": c_dense,
                         "caption_colbert": c_colbert,
-                        "caption_sparse": self._create_sparse_vector(c_sparse),
+                        "caption_sparse": self._create_sparse_vector(c_sparse)
                     }
                 ))
             self.client.upsert(collection_name=collection_name,

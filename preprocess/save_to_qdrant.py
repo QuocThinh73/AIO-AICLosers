@@ -6,7 +6,9 @@ from preprocess.utils import load_json
 
 def _build_items(emb_path: str, cap_path: str) -> List[Dict]:
     embs = load_json(emb_path)
+    print(f"Loaded {len(embs)} embedded vectors")
     caps = load_json(cap_path)
+    print(f"Loaded {len(caps)} captions")
     m = {}
     for c in caps:
         k = c["keyframe"]
@@ -24,17 +26,18 @@ def _build_items(emb_path: str, cap_path: str) -> List[Dict]:
         s = os.path.splitext(b)[0]
         out.append({"keyframe": k, "embedded_vector": vec,
                    "caption": (m.get(k) or m.get(b) or m.get(s) or "")})
+    print(f"Processed {len(out)} items")
     return out
 
 
 def process_video(emb_path, cap_path, qdrant_client, collection_name, batch_points):
+    print(f"Processing video {emb_path} and {cap_path}")
     items = _build_items(emb_path, cap_path)
     qdrant_client.insert_to_collection(
         items=items, collection_name=collection_name, batch_points=batch_points)
 
 
-def save_to_qdrant(input_embedded_vector_dir, input_caption_dir, mode, lesson_name=None,
-                   collection_name="AIC2025", batch_points=64):
+def save_to_qdrant(input_embedded_vector_dir, input_caption_dir, mode, lesson_name=None, batch_points=64, collection_name="AIC2025"):
     q = Qdrant(host="localhost", port=6333)
     if not q.is_collection_exists(collection_name):
         q.create_collection(collection_name)
