@@ -531,6 +531,49 @@ def embed_image(argv):
         embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
                    args.lesson_name, args.video_name)
 
+def embed_caption(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=["all", "lesson", "video"])
+    parser.add_argument("input_caption_dir", type=str)
+    parser.add_argument("output_embedded_vector_dir", type=str)
+    parser.add_argument("--lesson_name", type=str)
+    parser.add_argument("--video_name", type=str)
+    parser.add_argument("--batch_size", type=int, default=64)
+    
+    args = parser.parse_args(argv)
+
+    # Check error
+    if not os.path.exists(args.input_caption_dir):
+        raise ValueError("Input caption directory does not exist")
+    
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
+            raise ValueError("Lesson caption directory does not exist")
+    
+    elif args.mode == "video":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is video")
+        if not args.video_name:
+            raise ValueError("Video name is required when mode is video")
+        
+        lesson_caption_dir = os.path.join(args.input_caption_dir, args.lesson_name)
+        if not os.path.exists(lesson_caption_dir):
+            raise ValueError(f"Lesson caption directory does not exist: {lesson_caption_dir}")
+        
+        caption_file = os.path.join(lesson_caption_dir, f"{args.lesson_name}_{args.video_name}_caption.json")
+        if not os.path.exists(caption_file):
+            raise ValueError(f"Caption file does not exist: {caption_file}")
+
+    # Main process
+    from preprocess.embed_caption import embed_caption
+    if args.mode == "all":
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, batch_size=args.batch_size)
+    elif args.mode == "lesson":
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, args.lesson_name, batch_size=args.batch_size)
+    elif args.mode == "video":
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, args.lesson_name, args.video_name, batch_size=args.batch_size)
 
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
@@ -545,6 +588,7 @@ TASKS = {
     "asr": asr,
     "ocr": ocr,
     "embed_image": embed_image,
+    "embed_caption": embed_caption,
     "save_detection_elasticsearch": save_detection_elasticsearch,
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
     "save_embeddings_qdrant": save_embeddings_qdrant,
