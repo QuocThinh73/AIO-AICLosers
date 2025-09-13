@@ -121,8 +121,13 @@ class Qdrant:
                 batch_id, video_id, frame_id = stem.split("_")
                 points.append(models.PointStruct(
                     id=generate_id(keyframe),
-                    payload={"keyframe": keyframe, "batch_id": batch_id,
-                             "video_id": video_id, "frame_id": int(frame_id)},
+                    payload={
+                        "keyframe": keyframe,
+                        "batch_id": batch_id,
+                        "video_id": video_id,
+                        "frame_id": int(frame_id),
+                        "caption": item["caption"]
+                    },
                     vector={
                         "openclip_dense": openclip_dense,
                         "caption_dense": caption_dense,
@@ -132,7 +137,7 @@ class Qdrant:
             self.client.upsert(collection_name=collection_name,
                                points=points, wait=False)
 
-    def search_caption(self, search_query, collection_name, limit=100):
+    def search_caption(self, search_query, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
         caption_embeddings = self.generate_caption_embeddings([search_query])
 
         caption_dense = caption_embeddings["dense_vecs"][0]
@@ -140,8 +145,10 @@ class Qdrant:
         points = self.client.query_points(
             collection_name,
             query=caption_dense,
-            using="dense",
+            using="caption_dense",
             with_payload=True,
+            query_filter=self._create_filter(
+                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
             limit=limit,
         ).points
 
@@ -149,16 +156,16 @@ class Qdrant:
 
         return keyframes
 
-    def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None):
+    def search_openclip(self, text, image, collection_name, limit=100, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
         dense_vec = self.generate_openclip_embeddings(text=text, image=image)
 
         points = self.client.query_points(
             collection_name,
             query=dense_vec,
-            using="dense",
+            using="openclip_dense",
             with_payload=True,
             query_filter=self._create_filter(
-                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids),
+                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
             limit=limit,
         ).points
 

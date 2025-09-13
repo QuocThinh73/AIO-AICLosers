@@ -10,7 +10,7 @@ const parseKeyframe = (keyframe) => {
 
 const buildImageSrcFromKeyframe = (keyframe) => {
   const { batch_id, video_id } = parseKeyframe(keyframe);
-  return `/media/keyframes/Videos_${batch_id}/${batch_id}_${video_id}/${keyframe}`;
+  return `/media/keyframes/${batch_id}/${batch_id}_${video_id}/${keyframe}`;
 };
 
 const buildVideoSrcFromKeyframe = (keyframe) => {

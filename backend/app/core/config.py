@@ -11,10 +11,7 @@ class Settings(BaseSettings):
 
     QDRANT_HOST: str
     QDRANT_PORT: int
-
-    OPENCLIP_COLLECTION_NAME: str
-    CAPTION_COLLECTION_NAME: str
-
+    COLLECTION_NAME: str
     UUID_NAMESPACE: UUID
 
     MEDIA_VIDEO_DIR: Path

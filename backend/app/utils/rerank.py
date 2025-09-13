@@ -12,4 +12,6 @@ def rrf(results: List[dict], top_k: int = 100, k: int = 60):
         for result in results:
             for rank, keyframe in enumerate(result, start=1):
                 rrf_scores[keyframe] += 1 / (rank + k)
-        return sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+        reranked_results = sorted(
+            rrf_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+        return [result[0] for result in reranked_results]
