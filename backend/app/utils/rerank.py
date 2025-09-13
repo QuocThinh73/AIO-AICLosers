@@ -2,7 +2,7 @@ from typing import List
 from collections import defaultdict
 
 
-def rrf(results: List[dict], top_k: int = 100, k: int = 60):
+def rrf(results: List[dict], top_k: int, k: int = 60):
     if len(results) == 0:
         return []
     elif len(results) == 1:
