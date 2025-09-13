@@ -9,26 +9,28 @@ def shot_boundary_detection(argv):
     parser.add_argument("input_video_dir", type=str)
     parser.add_argument("output_shot_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_video_dir):
         raise ValueError("Input video directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_video_dir, args.lesson_name)):
             raise ValueError("Lesson video directory does not exist")
-        
+
     # Main process
     from preprocess.shot_boundary_detection import detect_shot_boundary
     if args.mode == "all":
-        detect_shot_boundary(args.input_video_dir, args.output_shot_dir, args.mode)
+        detect_shot_boundary(args.input_video_dir,
+                             args.output_shot_dir, args.mode)
     elif args.mode == "lesson":
-        detect_shot_boundary(args.input_video_dir, args.output_shot_dir, args.mode, args.lesson_name)
-    
+        detect_shot_boundary(args.input_video_dir,
+                             args.output_shot_dir, args.mode, args.lesson_name)
+
 
 def keyframe_extraction(argv):
     parser = argparse.ArgumentParser()
@@ -37,16 +39,16 @@ def keyframe_extraction(argv):
     parser.add_argument("input_shot_dir", type=str)
     parser.add_argument("output_keyframe_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_video_dir):
         raise ValueError("Input video directory does not exist")
-    
+
     if not os.path.exists(args.input_shot_dir):
         raise ValueError("Input shot directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
@@ -54,28 +56,34 @@ def keyframe_extraction(argv):
             raise ValueError("Lesson video's directory does not exist")
         if not os.path.exists(os.path.join(args.input_shot_dir, args.lesson_name)):
             raise ValueError("Lesson shot's directory does not exist")
-        
+
     # Main process
     from preprocess.keyframe_extraction import extract_keyframe
     if args.mode == "all":
-        extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode)
+        extract_keyframe(args.input_video_dir, args.input_shot_dir,
+                         args.output_keyframe_dir, args.mode)
     elif args.mode == "lesson":
-        extract_keyframe(args.input_video_dir, args.input_shot_dir, args.output_keyframe_dir, args.mode, args.lesson_name)
+        extract_keyframe(args.input_video_dir, args.input_shot_dir,
+                         args.output_keyframe_dir, args.mode, args.lesson_name)
+
 
 def build_mapping_json(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_keyframe_dir", type=str, help="Directory containing keyframe images")
-    parser.add_argument("output_dir", type=str, help="Output directory where mapping.json will be created")
+    parser.add_argument("input_keyframe_dir", type=str,
+                        help="Directory containing keyframe images")
+    parser.add_argument("output_dir", type=str,
+                        help="Output directory where mapping.json will be created")
 
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
+
     # Main process
     from preprocess.build_mapping_json import build_mapping_json
     build_mapping_json(args.input_keyframe_dir, args.output_dir)
+
 
 def news_anchor_detection(argv):
     parser = argparse.ArgumentParser()
@@ -85,23 +93,26 @@ def news_anchor_detection(argv):
     parser.add_argument("--lesson_name", type=str)
 
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
             raise ValueError("Lesson keyframe's directory does not exist")
-    
+
     # Main process
     from preprocess.news_anchor_detection import detect_news_anchor
     if args.mode == "all":
-        detect_news_anchor(args.input_keyframe_dir, args.output_news_anchor_dir, args.mode)
+        detect_news_anchor(args.input_keyframe_dir,
+                           args.output_news_anchor_dir, args.mode)
     elif args.mode == "lesson":
-        detect_news_anchor(args.input_keyframe_dir, args.output_news_anchor_dir, args.mode, args.lesson_name)
+        detect_news_anchor(args.input_keyframe_dir,
+                           args.output_news_anchor_dir, args.mode, args.lesson_name)
+
 
 def news_segmentation(argv):
     parser = argparse.ArgumentParser()
@@ -112,14 +123,14 @@ def news_segmentation(argv):
     parser.add_argument("--lesson_name", type=str)
 
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
+
     if not os.path.exists(args.input_news_anchor_dir):
         raise ValueError("Input news anchor directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
@@ -127,13 +138,16 @@ def news_segmentation(argv):
             raise ValueError("Lesson keyframe's directory does not exist")
         if not os.path.exists(os.path.join(args.input_news_anchor_dir, args.lesson_name)):
             raise ValueError("Lesson news anchor's directory does not exist")
-    
+
     # Main process
     from preprocess.news_segmentation import segment_news
     if args.mode == "all":
-        segment_news(args.input_keyframe_dir, args.input_news_anchor_dir, args.output_news_segment_dir, args.mode)
+        segment_news(args.input_keyframe_dir, args.input_news_anchor_dir,
+                     args.output_news_segment_dir, args.mode)
     elif args.mode == "lesson":
-        segment_news(args.input_keyframe_dir, args.input_news_anchor_dir, args.output_news_segment_dir, args.mode, args.lesson_name)
+        segment_news(args.input_keyframe_dir, args.input_news_anchor_dir,
+                     args.output_news_segment_dir, args.mode, args.lesson_name)
+
 
 def subvideo_extraction(argv):
     parser = argparse.ArgumentParser()
@@ -143,22 +157,22 @@ def subvideo_extraction(argv):
     parser.add_argument("output_subvideo_dir", type=str)
     parser.add_argument("ffmpeg_bin", type=str)
     parser.add_argument("--lesson_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_video_dir):
         raise ValueError("Input video directory does not exist")
-    
+
     if not os.path.exists(args.input_segment_dir):
         raise ValueError("Input segment directory does not exist")
-    
+
     if not args.ffmpeg_bin:
         raise ValueError("FFmpeg binary path is required")
-    
+
     if not os.path.exists(args.ffmpeg_bin):
         raise ValueError("FFmpeg binary does not exist at the specified path")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
@@ -166,13 +180,16 @@ def subvideo_extraction(argv):
             raise ValueError("Lesson video's directory does not exist")
         if not os.path.exists(os.path.join(args.input_segment_dir, args.lesson_name)):
             raise ValueError("Lesson segment's directory does not exist")
-    
+
     # Main process
     from preprocess.subvideo_extraction import extract_subvideo
     if args.mode == "all":
-        extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.ffmpeg_bin)
+        extract_subvideo(args.input_video_dir, args.input_segment_dir,
+                         args.output_subvideo_dir, args.mode, args.ffmpeg_bin)
     elif args.mode == "lesson":
-        extract_subvideo(args.input_video_dir, args.input_segment_dir, args.output_subvideo_dir, args.mode, args.ffmpeg_bin, args.lesson_name)
+        extract_subvideo(args.input_video_dir, args.input_segment_dir,
+                         args.output_subvideo_dir, args.mode, args.ffmpeg_bin, args.lesson_name)
+
 
 def remove_noise_keyframes(argv):
     parser = argparse.ArgumentParser()
@@ -180,16 +197,16 @@ def remove_noise_keyframes(argv):
     parser.add_argument("keyframe_dir", type=str)
     parser.add_argument("news_anchor_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.keyframe_dir):
         raise ValueError("Keyframe directory does not exist")
-    
+
     if not os.path.exists(args.news_anchor_dir):
         raise ValueError("News anchor directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
@@ -197,13 +214,16 @@ def remove_noise_keyframes(argv):
             raise ValueError("Lesson keyframe directory does not exist")
         if not os.path.exists(os.path.join(args.news_anchor_dir, args.lesson_name)):
             raise ValueError("Lesson news anchor directory does not exist")
-    
+
     # Main process
     from preprocess.remove_noise_keyframes import remove_noise_keyframes
     if args.mode == "all":
-        remove_noise_keyframes(args.keyframe_dir, args.news_anchor_dir, args.mode)
+        remove_noise_keyframes(
+            args.keyframe_dir, args.news_anchor_dir, args.mode)
     elif args.mode == "lesson":
-        remove_noise_keyframes(args.keyframe_dir, args.news_anchor_dir, args.mode, args.lesson_name)
+        remove_noise_keyframes(
+            args.keyframe_dir, args.news_anchor_dir, args.mode, args.lesson_name)
+
 
 def object_detection(argv):
     parser = argparse.ArgumentParser()
@@ -213,51 +233,60 @@ def object_detection(argv):
     parser.add_argument("output_detection_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
     parser.add_argument("--video_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
+
     if not os.path.exists(args.input_caption_dir):
         raise ValueError("Input caption directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
-            raise ValueError(f"Lesson keyframe directory does not exist: {os.path.join(args.input_keyframe_dir, args.lesson_name)}")
+            raise ValueError(
+                f"Lesson keyframe directory does not exist: {os.path.join(args.input_keyframe_dir, args.lesson_name)}")
         if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
-            raise ValueError(f"Lesson caption directory does not exist: {os.path.join(args.input_caption_dir, args.lesson_name)}")
-    
+            raise ValueError(
+                f"Lesson caption directory does not exist: {os.path.join(args.input_caption_dir, args.lesson_name)}")
+
     elif args.mode == "single":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is single")
         if not args.video_name:
             raise ValueError("Video name is required when mode is single")
-        
-        lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+
+        lesson_keyframe_dir = os.path.join(
+            args.input_keyframe_dir, args.lesson_name)
         if not os.path.exists(lesson_keyframe_dir):
-            raise ValueError(f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
-        
+            raise ValueError(
+                f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
+
         video_keyframe_dir = os.path.join(lesson_keyframe_dir, args.video_name)
         if not os.path.exists(video_keyframe_dir):
-            raise ValueError(f"Video keyframe directory does not exist: {video_keyframe_dir}")
-        
-        caption_file = os.path.join(args.input_caption_dir, args.lesson_name, 
-                                  f"{args.lesson_name}_{args.video_name}_caption.json")
+            raise ValueError(
+                f"Video keyframe directory does not exist: {video_keyframe_dir}")
+
+        caption_file = os.path.join(args.input_caption_dir, args.lesson_name,
+                                    f"{args.lesson_name}_{args.video_name}_caption.json")
         if not os.path.exists(caption_file):
             raise ValueError(f"Caption file does not exist: {caption_file}")
-    
+
     # Main process
     from preprocess.object_detection import detect_object
     if args.mode == "all":
-        detect_object(args.input_keyframe_dir, args.input_caption_dir, args.output_detection_dir, args.mode)
+        detect_object(args.input_keyframe_dir, args.input_caption_dir,
+                      args.output_detection_dir, args.mode)
     elif args.mode == "lesson":
-        detect_object(args.input_keyframe_dir, args.input_caption_dir, args.output_detection_dir, args.mode, args.lesson_name)
+        detect_object(args.input_keyframe_dir, args.input_caption_dir,
+                      args.output_detection_dir, args.mode, args.lesson_name)
     elif args.mode == "single":
-        detect_object(args.input_keyframe_dir, args.input_caption_dir, args.output_detection_dir, args.mode, args.lesson_name, args.video_name)
+        detect_object(args.input_keyframe_dir, args.input_caption_dir,
+                      args.output_detection_dir, args.mode, args.lesson_name, args.video_name)
+
 
 def image_captioning(argv):
     parser = argparse.ArgumentParser()
@@ -267,44 +296,53 @@ def image_captioning(argv):
     parser.add_argument("--lesson_name", type=str)
     parser.add_argument("--video_name", type=str)
     parser.add_argument("--batch_size", type=int, default=8)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
+
     os.makedirs(args.output_caption_dir, exist_ok=True)
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
-        lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+        lesson_keyframe_dir = os.path.join(
+            args.input_keyframe_dir, args.lesson_name)
         if not os.path.exists(lesson_keyframe_dir):
-            raise ValueError(f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
-    
+            raise ValueError(
+                f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
+
     elif args.mode == "single":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is single")
         if not args.video_name:
             raise ValueError("Video name is required when mode is single")
-        
-        lesson_keyframe_dir = os.path.join(args.input_keyframe_dir, args.lesson_name)
+
+        lesson_keyframe_dir = os.path.join(
+            args.input_keyframe_dir, args.lesson_name)
         if not os.path.exists(lesson_keyframe_dir):
-            raise ValueError(f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
-        
+            raise ValueError(
+                f"Lesson keyframe directory does not exist: {lesson_keyframe_dir}")
+
         video_keyframe_dir = os.path.join(lesson_keyframe_dir, args.video_name)
         if not os.path.exists(video_keyframe_dir):
-            raise ValueError(f"Video keyframe directory does not exist: {video_keyframe_dir}")
-    
+            raise ValueError(
+                f"Video keyframe directory does not exist: {video_keyframe_dir}")
+
     # Main process
     from preprocess.image_captioning import generate_captions
     if args.mode == "all":
-        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, batch_size=args.batch_size)
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir,
+                          args.mode, batch_size=args.batch_size)
     elif args.mode == "lesson":
-        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name, batch_size=args.batch_size)
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir,
+                          args.mode, args.lesson_name, batch_size=args.batch_size)
     elif args.mode == "single":
-        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode, args.lesson_name, args.video_name, batch_size=args.batch_size)
+        generate_captions(args.input_keyframe_dir, args.output_caption_dir, args.mode,
+                          args.lesson_name, args.video_name, batch_size=args.batch_size)
+
 
 def asr(argv):
     parser = argparse.ArgumentParser()
@@ -312,53 +350,59 @@ def asr(argv):
     parser.add_argument("input_video_dir", type=str)
     parser.add_argument("output_transcript_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_video_dir):
         raise ValueError("Input video directory does not exist")
-        
+
     if args.mode == "lesson" and not args.lesson_name:
         raise ValueError("Lesson name is required when mode is 'lesson'")
-        
+
     if args.mode == "lesson":
         lesson_path = os.path.join(args.input_video_dir, args.lesson_name)
         if not os.path.exists(lesson_path):
-            raise ValueError(f"Lesson directory {args.lesson_name} does not exist in {args.input_video_dir}")
-    
+            raise ValueError(
+                f"Lesson directory {args.lesson_name} does not exist in {args.input_video_dir}")
+
     # Main process
     from preprocess.asr import transcribe_audio
     if args.mode == "all":
-        transcribe_audio(args.input_video_dir, args.output_transcript_dir, args.mode)
+        transcribe_audio(args.input_video_dir,
+                         args.output_transcript_dir, args.mode)
     elif args.mode == "lesson":
-        transcribe_audio(args.input_video_dir, args.output_transcript_dir, args.mode, args.lesson_name)
-    
+        transcribe_audio(args.input_video_dir,
+                         args.output_transcript_dir, args.mode, args.lesson_name)
+
+
 def ocr(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=["all", "lesson"])
     parser.add_argument("input_dir", type=str)
     parser.add_argument("output_dir", type=str)
     parser.add_argument("--lesson_name", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_dir):
         raise ValueError("Input directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_dir, args.lesson_name)):
             raise ValueError("Lesson directory does not exist")
-    
+
     # Main process
     from preprocess.ocr import extract_text
     if args.mode == "all":
         extract_text(args.input_dir, args.output_dir, args.mode)
     elif args.mode == "lesson":
-        extract_text(args.input_dir, args.output_dir, args.mode, args.lesson_name)
+        extract_text(args.input_dir, args.output_dir,
+                     args.mode, args.lesson_name)
+
 
 def embed_image(argv):
     parser = argparse.ArgumentParser()
@@ -376,7 +420,7 @@ def embed_image(argv):
     # Check error
     if not os.path.exists(args.input_keyframe_dir):
         raise ValueError("Input keyframe directory does not exist")
-    
+
     if not os.path.exists(args.input_mapping_json):
         raise ValueError("Input mapping json does not exist")
 
@@ -385,7 +429,7 @@ def embed_image(argv):
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
             raise ValueError("Lesson keyframe directory does not exist")
-    
+
     if args.mode == "video":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is video")
@@ -395,65 +439,72 @@ def embed_image(argv):
             raise ValueError("Lesson keyframe directory does not exist")
         if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name, args.video_name)):
             raise ValueError("Video keyframe directory does not exist")
-    
+
     # Main process
     from preprocess.embed_image import embed_image
     if args.mode == "all":
-        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
+        embed_image(args.input_keyframe_dir, args.input_mapping_json,
+                    args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
     elif args.mode == "lesson":
-        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name)
+        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir,
+                    args.mode, args.backbone, args.pretrained, args.lesson_name)
     elif args.mode == "video":
-        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, args.lesson_name, args.video_name)
-    
+        embed_image(args.input_keyframe_dir, args.input_mapping_json, args.output_embedded_vector_dir,
+                    args.mode, args.backbone, args.pretrained, args.lesson_name, args.video_name)
+
+
 def save_detection_elasticsearch(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("input_dir", type=str)
     parser.add_argument("--index", type=str, default="groundingdino")
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_dir):
         raise ValueError("Input directory does not exist")
-    
+
     # Main process
     from preprocess.save_detection_elasticsearch import index_detection_results
     index_detection_results(args.input_dir, args.index)
+
 
 def save_ocr_elasticsearch(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("input_dir", type=str)
     parser.add_argument("--index", type=str, default="ocr")
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.input_dir):
         raise ValueError("Input directory does not exist")
-    
+
     # Main process
     from preprocess.save_ocr_elasticsearch import index_ocr_results
-    
+
     result = index_ocr_results(args.input_dir, args.index)
-    
+
     if result["status"] == "error":
         print(f"Error: {result['message']}")
     else:
         print(f"Success: {result['message']}")
 
+
 def save_embeddings_qdrant(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("input_embedded_vector_dir", type=str)
-    
+
     args = parser.parse_args(argv)
-    
+
     # Validate arguments
     if not os.path.exists(args.input_embedded_vector_dir):
         raise ValueError("Input embedded vector directory does not exist")
-    
+
     # Main process
     from preprocess.save_embeddings_qdrant import save_embeddings_qdrant
     save_embeddings_qdrant(args.input_embedded_vector_dir)
+
 
 def save_caption_qdrant(argv):
     parser = argparse.ArgumentParser()
@@ -461,31 +512,32 @@ def save_caption_qdrant(argv):
     parser.add_argument("keyframe_dir", type=str)
     parser.add_argument("output_dir", type=str)
     parser.add_argument("--collection_name", type=str, default="captions")
-    
+
     args = parser.parse_args(argv)
-    
+
     # Check error
     if not os.path.exists(args.caption_dir):
         raise ValueError("Caption directory does not exist")
-    
+
     if not os.path.exists(args.keyframe_dir):
         raise ValueError("Keyframe directory does not exist")
-    
+
     # Main process
-    from preprocess.save_caption_qdrant import save_captions_qdrant   
+    from preprocess.save_caption_qdrant import save_captions_qdrant
     result = save_captions_qdrant(
         caption_dir=args.caption_dir,
-        keyframe_dir=args.keyframe_dir, 
+        keyframe_dir=args.keyframe_dir,
         output_dir=args.output_dir,
         collection_name=args.collection_name
     )
-    
+
     if result["status"] == "error":
         print(f"Error: {result['message']}")
         sys.exit(1)
     else:
         print(f"Success: {result['message']}")
         sys.exit(0)
+
 
 def embed_image(argv):
     parser = argparse.ArgumentParser()
@@ -508,7 +560,7 @@ def embed_image(argv):
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name)):
             raise ValueError("Lesson keyframe directory does not exist")
-    
+
     if args.mode == "video":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is video")
@@ -518,18 +570,20 @@ def embed_image(argv):
             raise ValueError("Lesson keyframe directory does not exist")
         if not os.path.exists(os.path.join(args.input_keyframe_dir, args.lesson_name, args.video_name)):
             raise ValueError("Video keyframe directory does not exist")
-    
+
     # Main process
     from preprocess.embed_image import embed_image
-    
+
     if args.mode == "all":
-        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir,
+                    args.mode, args.backbone, args.pretrained)
     elif args.mode == "lesson":
-        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
-                   args.lesson_name)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained,
+                    args.lesson_name)
     elif args.mode == "video":
-        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained, 
-                   args.lesson_name, args.video_name)
+        embed_image(args.input_keyframe_dir, args.output_embedded_vector_dir, args.mode, args.backbone, args.pretrained,
+                    args.lesson_name, args.video_name)
+
 
 def embed_caption(argv):
     parser = argparse.ArgumentParser()
@@ -539,41 +593,82 @@ def embed_caption(argv):
     parser.add_argument("--lesson_name", type=str)
     parser.add_argument("--video_name", type=str)
     parser.add_argument("--batch_size", type=int, default=64)
-    
+
     args = parser.parse_args(argv)
 
     # Check error
     if not os.path.exists(args.input_caption_dir):
         raise ValueError("Input caption directory does not exist")
-    
+
     if args.mode == "lesson":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is lesson")
         if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
             raise ValueError("Lesson caption directory does not exist")
-    
+
     elif args.mode == "video":
         if not args.lesson_name:
             raise ValueError("Lesson name is required when mode is video")
         if not args.video_name:
             raise ValueError("Video name is required when mode is video")
-        
-        lesson_caption_dir = os.path.join(args.input_caption_dir, args.lesson_name)
+
+        lesson_caption_dir = os.path.join(
+            args.input_caption_dir, args.lesson_name)
         if not os.path.exists(lesson_caption_dir):
-            raise ValueError(f"Lesson caption directory does not exist: {lesson_caption_dir}")
-        
-        caption_file = os.path.join(lesson_caption_dir, f"{args.lesson_name}_{args.video_name}_caption.json")
+            raise ValueError(
+                f"Lesson caption directory does not exist: {lesson_caption_dir}")
+
+        caption_file = os.path.join(
+            lesson_caption_dir, f"{args.lesson_name}_{args.video_name}_caption.json")
         if not os.path.exists(caption_file):
             raise ValueError(f"Caption file does not exist: {caption_file}")
 
     # Main process
     from preprocess.embed_caption import embed_caption
     if args.mode == "all":
-        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, batch_size=args.batch_size)
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir,
+                      args.mode, batch_size=args.batch_size)
     elif args.mode == "lesson":
-        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, args.lesson_name, batch_size=args.batch_size)
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir,
+                      args.mode, args.lesson_name, batch_size=args.batch_size)
     elif args.mode == "video":
-        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir, args.mode, args.lesson_name, args.video_name, batch_size=args.batch_size)
+        embed_caption(args.input_caption_dir, args.output_embedded_vector_dir,
+                      args.mode, args.lesson_name, args.video_name, batch_size=args.batch_size)
+
+
+def save_to_qdrant(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_embedded_vector_dir", type=str)
+    parser.add_argument("input_caption_dir", type=str)
+    parser.add_argument("mode", choices=["all", "lesson"])
+    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--lesson_name", type=str)
+
+    args = parser.parse_args(argv)
+
+    # Check error
+    if not os.path.exists(args.input_embedded_vector_dir):
+        raise ValueError("Input embedded vector directory does not exist")
+    if not os.path.exists(args.input_caption_dir):
+        raise ValueError("Input caption directory does not exist")
+
+    if args.mode == "lesson":
+        if not args.lesson_name:
+            raise ValueError("Lesson name is required when mode is lesson")
+        if not os.path.exists(os.path.join(args.input_embedded_vector_dir, args.lesson_name)):
+            raise ValueError("Lesson embedded vector directory does not exist")
+        if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
+            raise ValueError("Lesson caption directory does not exist")
+
+    # Main process
+    from preprocess.save_to_qdrant import save_to_qdrant
+    if args.mode == "all":
+        save_to_qdrant(args.input_embedded_vector_dir,
+                       args.input_caption_dir, args.mode, batch_size=args.batch_size)
+    elif args.mode == "lesson":
+        save_to_qdrant(args.input_embedded_vector_dir, args.input_caption_dir,
+                       args.mode, batch_size=args.batch_size, lesson_name=args.lesson_name)
+
 
 TASKS = {
     "shot_boundary_detection": shot_boundary_detection,
@@ -593,6 +688,7 @@ TASKS = {
     "save_ocr_elasticsearch": save_ocr_elasticsearch,
     "save_embeddings_qdrant": save_embeddings_qdrant,
     "save_caption_qdrant": save_caption_qdrant,
+    "save_to_qdrant": save_to_qdrant,
 }
 
 if __name__ == "__main__":
@@ -602,10 +698,10 @@ if __name__ == "__main__":
         for task in TASKS:
             print(f"- {task}")
         sys.exit(1)
-    
+
     task = sys.argv[1]
     argv = sys.argv[2:]
-    
+
     if task in TASKS:
         TASKS[task](argv)
     else:
