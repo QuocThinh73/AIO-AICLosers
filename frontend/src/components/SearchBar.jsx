@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function SearchBar({ onSearch }) {
+function SearchBar({ onSearch, englishQuery }) {
   const [query, setQuery] = useState("");
   const [ocr, setOcr] = useState("");
   const [image, setImage] = useState(null);
@@ -129,6 +129,9 @@ function SearchBar({ onSearch }) {
                 </span>
               </label>
             </div>
+            {englishQuery && (
+              <p className="text-sm text-gray-700 mt-1">{englishQuery}</p>
+            )}
           </div>
 
           <div className="space-y-2">
