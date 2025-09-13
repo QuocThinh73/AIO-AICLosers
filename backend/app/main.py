@@ -3,12 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 from app.api.endpoints import search, video
 from app.core.config import get_settings
+from app.services.search_service import get_search_service
+from app.services.video_service import get_video_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-
+    get_settings()
+    get_search_service()
+    get_video_service()
     # Running
     yield
 

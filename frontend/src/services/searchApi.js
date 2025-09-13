@@ -11,7 +11,10 @@ const baseSearch = async ({
 }) => {
   const fd = new FormData();
   fd.append("use_translation", translate ? "true" : "false");
-  if (query?.trim()) fd.append("embedding_text", query.trim());
+  if (query?.trim()) {
+    fd.append("embedding_text", query.trim());
+    fd.append("captioning_text", query.trim());
+  }
   if (ocr?.trim()) fd.append("ocr_text", ocr.trim());
   if (image) fd.append("embedding_image", image);
   fd.append("top_k", String(Number(topK) || 100));
