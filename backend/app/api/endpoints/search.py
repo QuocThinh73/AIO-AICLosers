@@ -55,8 +55,16 @@ async def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearc
     # Rerank
     results = rrf(results, base_search_request.top_k)
 
+    # Response
+    response = {
+        "results": results
+    }
+
+    if base_search_request.use_translation:
+        response["english_query"] = base_search_request.embedding_text
+
     # Return results
-    return results
+    return response
 
 
 @router.post("/temporal_search")
