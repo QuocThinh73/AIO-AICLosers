@@ -11,7 +11,7 @@ class SearchService:
                              port=get_settings().QDRANT_PORT)
 
     def search_caption(self, text: str, top_k: int, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
-        return self.qdrant.search_caption(search_query=text, collection_name=get_settings().COLLECTION_NAME, limit=top_k, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+        return self.qdrant.search_caption(search_query=text, collection_name=get_settings().COLLECTION_NAME, limit=top_k, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
 
     def search_openclip(self, text: str, image: Image, top_k: int, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
         if text:

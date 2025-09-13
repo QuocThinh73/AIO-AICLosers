@@ -144,18 +144,20 @@ class Qdrant:
         caption_sparse = self._create_sparse_vector(
             caption_embeddings["lexical_weights"][0])
 
+        filter = self._create_filter(include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids,
+                                     include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+
         points = self.client.query_points(
             collection_name,
             prefetch=[
                 models.Prefetch(query=caption_dense,
-                                using="caption_dense", limit=limit*2),
+                                using="caption_dense", limit=limit*2, filter=filter),
                 models.Prefetch(query=caption_sparse,
-                                using="caption_sparse", limit=limit*2),
+                                using="caption_sparse", limit=limit*2, filter=filter),
             ],
             query=models.FusionQuery(fusion=models.Fusion.RRF),
             with_payload=True,
-            query_filter=self._create_filter(
-                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
+            query_filter=filter,
             limit=limit,
         ).points
 
@@ -167,13 +169,15 @@ class Qdrant:
         openclip_dense = self.generate_openclip_embeddings(
             text=text, image=image)
 
+        filter = self._create_filter(include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids,
+                                     include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+
         points = self.client.query_points(
             collection_name,
             query=openclip_dense,
             using="openclip_dense",
             with_payload=True,
-            query_filter=self._create_filter(
-                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
+            query_filter=filter,
             limit=limit,
         ).points
 
