@@ -9,7 +9,7 @@ from app.utils.generate_id import generate_id
 class Qdrant:
     def __init__(self, host, port, caption_model=None, openclip_model=None):
         self.client = QdrantClient(
-            host=host, port=port, grpc_port=6334, prefer_grpc=True)
+            host=host, port=port)
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.caption_model = caption_model or BGEM3FlagModel(
@@ -166,9 +166,9 @@ class Qdrant:
             collection_name,
             prefetch=[
                 models.Prefetch(query=caption_dense,
-                                using="caption_dense", limit=limit*2),
+                                using="caption_dense", limit=limit*2, filter=filter),
                 models.Prefetch(query=caption_sparse,
-                                using="caption_sparse", limit=limit*2),
+                                using="caption_sparse", limit=limit*2, filter=filter),
             ],
             query=models.FusionQuery(fusion=models.Fusion.RRF),
             with_payload=True,

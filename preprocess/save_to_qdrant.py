@@ -27,7 +27,7 @@ def _build_items(emb_path: str, cap_path: str, ocr_path: str) -> List[Dict]:
             "keyframe": keyframe,
             "embedded_vector": embedded_vector,
             "caption": captions_map[keyframe],
-            "ocr": ocr_map[keyframe]
+            "ocr": ocr_map.get(keyframe, [])
         })
     return results
 
