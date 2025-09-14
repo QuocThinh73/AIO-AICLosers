@@ -638,9 +638,10 @@ def embed_caption(argv):
 
 def save_to_qdrant(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=["all", "lesson"])
     parser.add_argument("input_embedded_vector_dir", type=str)
     parser.add_argument("input_caption_dir", type=str)
-    parser.add_argument("mode", choices=["all", "lesson"])
+    parser.add_argument("input_ocr_dir", type=str)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lesson_name", type=str)
 
@@ -651,6 +652,8 @@ def save_to_qdrant(argv):
         raise ValueError("Input embedded vector directory does not exist")
     if not os.path.exists(args.input_caption_dir):
         raise ValueError("Input caption directory does not exist")
+    if not os.path.exists(args.input_ocr_dir):
+        raise ValueError("Input ocr directory does not exist")
 
     if args.mode == "lesson":
         if not args.lesson_name:
@@ -659,15 +662,17 @@ def save_to_qdrant(argv):
             raise ValueError("Lesson embedded vector directory does not exist")
         if not os.path.exists(os.path.join(args.input_caption_dir, args.lesson_name)):
             raise ValueError("Lesson caption directory does not exist")
+        if not os.path.exists(os.path.join(args.input_ocr_dir, args.lesson_name)):
+            raise ValueError("Lesson ocr directory does not exist")
 
     # Main process
     from preprocess.save_to_qdrant import save_to_qdrant
     if args.mode == "all":
         save_to_qdrant(args.input_embedded_vector_dir,
-                       args.input_caption_dir, args.mode, batch_size=args.batch_size)
+                       args.input_caption_dir, args.input_ocr_dir, args.mode, batch_size=args.batch_size)
     elif args.mode == "lesson":
         save_to_qdrant(args.input_embedded_vector_dir, args.input_caption_dir,
-                       args.mode, batch_size=args.batch_size, lesson_name=args.lesson_name)
+                       args.input_ocr_dir, args.mode, batch_size=args.batch_size, lesson_name=args.lesson_name)
 
 
 TASKS = {

@@ -21,6 +21,7 @@ async def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearc
     exclude_batch_ids = to_list(base_search_request.exclude_batch_ids)
     include_video_ids = to_list(base_search_request.include_video_ids)
     exclude_video_ids = to_list(base_search_request.exclude_video_ids)
+    ocr = to_list(base_search_request.ocr_text)
 
     # Translate text from Vietnamese to English if needed
     if base_search_request.use_translation:
@@ -32,24 +33,20 @@ async def base_search(base_search_request: BaseSearchRequest = Depends(BaseSearc
     results = []
     if base_search_request.embedding_text:
         embedding_text_result = search_service.search_openclip(
-            text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+            text=base_search_request.embedding_text, image=None, top_k=base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids, ocr=ocr)
         results.append(embedding_text_result)
     if embedding_image:
         embedding_image = Image.open(BytesIO(await embedding_image.read())).convert("RGB")
         embedding_image_result = search_service.search_openclip(
-            image=embedding_image, text=None, top_k=base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+            image=embedding_image, text=None, top_k=base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids, ocr=ocr)
         results.append(embedding_image_result)
     if base_search_request.captioning_text:
         captioning_result = search_service.search_caption(
-            base_search_request.captioning_text, base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+            base_search_request.captioning_text, base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids, ocr=ocr)
         results.append(captioning_result)
-    if base_search_request.ocr_text:
-        ocr_result = search_service.search_ocr(
-            base_search_request.ocr_text, base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
-        results.append(ocr_result)
     if base_search_request.object_detection_text:
         object_detection_result = search_service.search_object(
-            base_search_request.object_detection_text, base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids)
+            base_search_request.object_detection_text, base_search_request.top_k*2, include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids, ocr=ocr)
         results.append(object_detection_result)
 
     # Rerank

@@ -8,7 +8,8 @@ from app.utils.generate_id import generate_id
 
 class Qdrant:
     def __init__(self, host, port, caption_model=None, openclip_model=None):
-        self.client = QdrantClient(host=host, port=port)
+        self.client = QdrantClient(
+            host=host, port=port, grpc_port=6334, prefer_grpc=True)
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.caption_model = caption_model or BGEM3FlagModel(
@@ -40,7 +41,7 @@ class Qdrant:
             values=sparse_values
         )
 
-    def _create_filter(self, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
+    def _create_filter(self, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None, ocr=None):
         must, must_not = [], []
 
         if include_batch_ids:
@@ -58,6 +59,12 @@ class Qdrant:
         if exclude_video_ids:
             must_not.append(models.FieldCondition(
                 key="video_id", match=models.MatchAny(any=exclude_video_ids)))
+
+        if ocr:
+            should_terms = [models.FieldCondition(
+                key="text", match=models.MatchText(text=t.lower())) for t in ocr]
+            must.append(models.NestedCondition(nested=models.Nested(
+                key="ocr", filter=models.Filter(should=should_terms))))
 
         if not must and not must_not:
             return None
@@ -116,9 +123,15 @@ class Qdrant:
             for item, caption_dense, caption_sparse in zip(batch, captions_dense, captions_sparse):
                 keyframe = item["keyframe"]
                 openclip_dense = item["embedded_vector"]
+                ocr = [
+                    {"text": r["text"].lower(), "box": r["box"]}
+                    for r in item["ocr"]
+                ]
+
                 base = os.path.basename(keyframe)
                 stem = os.path.splitext(base)[0]
                 batch_id, video_id, frame_id = stem.split("_")
+
                 points.append(models.PointStruct(
                     id=generate_id(keyframe),
                     payload={
@@ -126,7 +139,8 @@ class Qdrant:
                         "batch_id": batch_id,
                         "video_id": video_id,
                         "frame_id": int(frame_id),
-                        "caption": item["caption"]
+                        "caption": item["caption"],
+                        "ocr": ocr
                     },
                     vector={
                         "openclip_dense": openclip_dense,
@@ -134,15 +148,19 @@ class Qdrant:
                         "caption_sparse": caption_sparse,
                     }
                 ))
+
             self.client.upsert(collection_name=collection_name,
                                points=points, wait=False)
 
-    def search_caption(self, search_query, collection_name, limit, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
+    def search_caption(self, search_query, collection_name, limit, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None, ocr=None):
         caption_embeddings = self.generate_caption_embeddings([search_query])
 
         caption_dense = caption_embeddings["dense_vecs"][0]
         caption_sparse = self._create_sparse_vector(
             caption_embeddings["lexical_weights"][0])
+
+        filter = self._create_filter(
+            include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids, ocr=ocr)
 
         points = self.client.query_points(
             collection_name,
@@ -154,8 +172,7 @@ class Qdrant:
             ],
             query=models.FusionQuery(fusion=models.Fusion.RRF),
             with_payload=True,
-            query_filter=self._create_filter(
-                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
+            query_filter=filter,
             limit=limit,
         ).points
 
@@ -163,17 +180,19 @@ class Qdrant:
 
         return keyframes
 
-    def search_openclip(self, text, image, collection_name, limit, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None):
+    def search_openclip(self, text, image, collection_name, limit, include_batch_ids=None, exclude_batch_ids=None, include_video_ids=None, exclude_video_ids=None, ocr=None):
         openclip_dense = self.generate_openclip_embeddings(
             text=text, image=image)
+
+        filter = self._create_filter(
+            include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids, ocr=ocr)
 
         points = self.client.query_points(
             collection_name,
             query=openclip_dense,
             using="openclip_dense",
             with_payload=True,
-            query_filter=self._create_filter(
-                include_batch_ids=include_batch_ids, exclude_batch_ids=exclude_batch_ids, include_video_ids=include_video_ids, exclude_video_ids=exclude_video_ids),
+            query_filter=filter,
             limit=limit,
         ).points
 
