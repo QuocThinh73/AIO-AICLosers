@@ -49,5 +49,19 @@ class BaseSearchRequest(BaseModel):
         )
 
 
+class TemporalEvent(BaseModel):
+    """Đại diện cho một sự kiện cần tìm kiếm theo thứ tự thời gian"""
+    query: str  # Truy vấn tìm kiếm (text)
+    event_id: str  # ID để xác định sự kiện (E1, E2...)
+
 class TemporalSearchRequest(BaseModel):
-    pass
+    """Request model cho tìm kiếm theo thứ tự thời gian"""
+    events: list[TemporalEvent]  # Danh sách các sự kiện cần tìm theo thứ tự
+    top_k: int = 100  # Số kết quả tối đa trả về cho mỗi event
+    use_translation: bool = False  # Có dịch query hay không
+    
+    # Các tham số lọc (tương tự BaseSearchRequest)
+    include_batch_ids: Optional[str] = None
+    exclude_batch_ids: Optional[str] = None
+    include_video_ids: Optional[str] = None
+    exclude_video_ids: Optional[str] = None
